@@ -110,3 +110,5 @@ The upstream MIT copyright is retained verbatim in [LICENSE](LICENSE), with
 [third-party notices](THIRD_PARTY_NOTICES.md). The product name, vendor, descriptions,
 URLs and logo are deployment configuration. Branding does not change openEHR standards
 or imply authorship of upstream components, EY certification or clinical validation.
+
+Archetype Designer users: see the [integration guide](docs/ARCHETYPE_DESIGNER_INTEGRATION.md) for shared model repositories, file exchange and the current synchronization limits.

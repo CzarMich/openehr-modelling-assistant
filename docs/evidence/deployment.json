@@ -2,8 +2,8 @@
   "assistant": {
     "revision": "467c52882e6546e4d276824428a92eefafb5230f",
     "endpoint": "https://openehr-modelling.sandbox.hygeoniq.com/mcp",
-    "validation": "https://github.com/CzarMich/openehr-modelling-assistant/actions/runs/36276053833",
-    "deployment": "https://github.com/CzarMich/openehr-modelling-assistant/actions/runs/36276145229",
+    "validation": "https://github.com/CzarMich/openehr-modelling-assistant-fork-archive/actions/runs/36276053833",
+    "deployment": "https://github.com/CzarMich/openehr-modelling-assistant-fork-archive/actions/runs/36276145229",
     "result": "success"
   },
   "amyterm": {
@@ -29,5 +29,30 @@
     "harbor_gc_job": 187,
     "harbor_gc_result": "Success",
     "policy": "Preserve container references and recent rollback images; Harbor requires both push and pull activity older than cutoff. Docker age does not prove last use."
+  },
+  "repository_migration": {
+    "active_repository": "CzarMich/openehr-modelling-assistant",
+    "github_id": 1389854562,
+    "fork": false,
+    "parent": null,
+    "archive": "CzarMich/openehr-modelling-assistant-fork-archive",
+    "archive_github_id": 1389742347,
+    "archive_read_only": true,
+    "archive_deployment_secrets_removed": true,
+    "git_history_preserved": true,
+    "verified_workflows": [
+      {
+        "conclusion": "success",
+        "status": "completed",
+        "url": "https://github.com/CzarMich/openehr-modelling-assistant/actions/runs/36277658469",
+        "workflowName": "Deploy openEHR Modelling Assistant"
+      },
+      {
+        "conclusion": "success",
+        "status": "completed",
+        "url": "https://github.com/CzarMich/openehr-modelling-assistant/actions/runs/36277576378",
+        "workflowName": "PR validation"
+      }
+    ]
   }
 }

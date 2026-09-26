@@ -2,7 +2,7 @@
 
 ## Delivered scope
 
-The fork is named **openEHR Modelling Assistant**, with repository `CzarMich/openehr-modelling-assistant` and directory `/home/hyq/workspace/openehr-modelling-assistant`. Original MIT copyright and attribution remain intact. The application is independent of the AmCDR checkout, upstream hosting, client plugins, model-provider SDKs and a CDR.
+The standalone project is named **openEHR Modelling Assistant**, with repository `CzarMich/openehr-modelling-assistant` and directory `/home/hyq/workspace/openehr-modelling-assistant`. Original MIT copyright and attribution remain intact. The application is independent of the AmCDR checkout, upstream hosting, client plugins, model-provider SDKs and a CDR.
 
 The implementation exposes 31 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
 
@@ -53,3 +53,5 @@ Target MCP endpoint: `https://openehr-modelling.sandbox.hygeoniq.com/mcp`. `.git
 The VPS uses `/opt/openehr-modelling-assistant`, an existing valid wildcard TLS certificate, loopback-bound Compose services and a dedicated model volume. Runtime secrets live in `config/runtime.env`; local client credentials are in `/home/hyq/.config/openehr-modelling-assistant/client.env` with restrictive permissions. Secret values are never included here. See [deployment](DEPLOYMENT.md), [configuration](CONFIGURATION.md), [security](SECURITY.md) and [Microsoft integration](MICROSOFT_AGENT_INTEGRATION.md).
 
 AmyTerm delivery now builds images on the hosted acceptance runner, transfers checksummed artifacts to the trusted publisher, then verifies GitOps, development and VPS rollout. It no longer rebuilds on the Kubernetes host. This followed a measured disk-pressure outage; raising guards, restoring ingress and reclaiming unused images/cache restored all cluster deployments. Cleanup preserved containers, persistent volumes and rollback images. Harbor garbage collection completed successfully. The exact cleanup counts are in the deployment evidence.
+
+The active GitHub repository was recreated independently with a new repository identity, preserving Git history. GitHub confirms `fork:false` and no parent. The former fork is read-only at `CzarMich/openehr-modelling-assistant-fork-archive`; its deployment credentials were removed. Historical workflow evidence links point to that archive. Required MIT attribution remains intact. See [Archetype Designer integration](ARCHETYPE_DESIGNER_INTEGRATION.md) for the verified repository connection path and current adapter limits.
