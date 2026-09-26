@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tools;
+namespace OpenEHR\Assistant\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Helpers\SearchTokenizer;
+use OpenEHR\Assistant\Helpers\SearchTokenizer;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Exception\ToolCallException;
@@ -44,25 +44,32 @@ final class GuideService
      * Use this tool when you need to locate the right guidance on demand.
      * It returns short, task-relevant chunks and meta-data so the model can decide which guide to pull next with `guide_get`.
      *
+     *
      * @param string $query
      *   The query string describing what guidance you need (e.g. "cardinality vs occurrences", "slot constraints"). Leave empty to search all guides.
+     *
      *
      * @param string|null $category
      *   Optional guide category filter. Categories: authoring guides for archetypes/templates/AQL/simplified_formats, plus "specs" (per-document openEHR spec digests) and "howto" (toolchain how-to guides). Omit to search all categories.
      *
+     *
      * @param string|null $taskType
      *   Optional task hint (e.g. "lint", "review", "refactor", "author"). When supplied it adds a small ranking boost to guides whose title, abstract, or indexed headings mention it. It only reorders guides the query already matched: it never filters, and never makes a guide the query did not match appear in the results.
+     *
      *
      * @param int $maxResults
      *   The maximum number of guides to return; defaults to 10 and must be between 1 and 50 (values outside that range are rejected, not clamped). `total` reports how many guides matched before this cap.
      *
+     *
      * @param int $snippetChars
      *   The maximum length of each returned snippet in characters; defaults to 220 and must be between 80 and 1200 (values outside that range are rejected, not clamped).
+     *
      *
      * @param int $topCandidates
      *   Retained for backward compatibility and no longer limits what is searched. Every
      *   guide in scope is scored over its full body text, so recall does not depend on
      *   this value.
+     *
      *
      * @return array{items: list<array<string, string|int>>, total: int}
      *   A list of matching guides with short snippets and URIs, plus `total` — the total
@@ -116,7 +123,7 @@ final class GuideService
         int $topCandidates = self::DEFAULT_TOP_CANDIDATES,
     ): array
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('Tool invoked.');
         $query = trim($query);
         $category = trim((string)($category ?? ''));
         $taskType = trim((string)($taskType ?? ''));
@@ -234,14 +241,18 @@ final class GuideService
      * Use this tool to retrieve an openEHR guide for a specific processing or implementation task around archetypes, templates, AQL, simplified formats, spec digests, or toolchain how-tos.
      * Such guides describe modelling workflows, best practices, syntax checklists, principal rules, anti-patterns, normative spec digests, and other guidance on demand.
      *
+     *
      * @param string $uri
      *   Canonical guide URI (openehr://guides/{category}/{name}). Optional when category and name are provided.
+     *
      *
      * @param string|null $category
      *   Guide category (authoring guides for archetypes/templates/AQL/simplified_formats, plus "specs" per-document spec digests and "howto" toolchain guides). Optional when URI is provided.
      *
+     *
      * @param string $name
      *   Guide filename without extension. Optional when URI is provided.
+     *
      *
      * @return EmbeddedResource
      *   The selected guide markdown content.
@@ -259,7 +270,7 @@ final class GuideService
         string $name = '',
     ): EmbeddedResource
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('Tool invoked.');
         $uri = trim($uri);
         $category = trim((string)($category ?? ''));
         $name = trim($name);
@@ -301,8 +312,10 @@ final class GuideService
      * This tool is a targeted cheatsheet retrieval for common ADL constraint idioms.
      * Provide the symptom or pattern (e.g. "occurrences vs cardinality", "coded text", "slots") to receive matching examples.
      *
+     *
      * @param string $pattern
      *   Symptom or pattern string to search within the ADL idioms cheatsheet.
+     *
      *
      * @return array{items: list<array<string, string>>, total: int}
      *   Matching idiom snippets with headings and canonical guide URIs, plus `total` — the
@@ -339,7 +352,7 @@ final class GuideService
     )]
     public function adlIdiomLookup(string $pattern): array
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('Tool invoked.');
         $pattern = trim($pattern);
         if ($pattern === '') {
             return ['items' => [], 'total' => 0];
@@ -388,7 +401,8 @@ final class GuideService
         return ['items' => $items, 'total' => $totalMatches];
     }
 
-    /** @return array<int, array{title: string, category: string, name: string, resourceUri: string, abstract: string, headings: array<int, string>}> */
+    /**
+     * @return array<int, array{title: string, category: string, name: string, resourceUri: string, abstract: string, headings: array<int, string>}> */
     private function loadGuideIndex(): array
     {
         if ($this->guideIndex === null) {
@@ -398,7 +412,8 @@ final class GuideService
         return $this->guideIndex;
     }
 
-    /** @return array<int, array{title: string, category: string, name: string, resourceUri: string, abstract: string, headings: array<int, string>}> */
+    /**
+     * @return array<int, array{title: string, category: string, name: string, resourceUri: string, abstract: string, headings: array<int, string>}> */
     private function buildGuideIndex(): array
     {
         if (!is_dir(self::GUIDE_DIR) || !is_readable(self::GUIDE_DIR)) {
@@ -469,7 +484,8 @@ final class GuideService
         return $fallback;
     }
 
-    /** @return array<int, array{title: string, level: int, content: string}> */
+    /**
+     * @return array<int, array{title: string, level: int, content: string}> */
     private function parseSections(string $content): array
     {
         $lines = preg_split('/\r?\n/', $content) ?: [];
@@ -504,6 +520,7 @@ final class GuideService
     }
 
     /**
+     *
      * @return list<string>
      * @see SearchTokenizer::tokenize() for the tokenization rules.
      */
@@ -614,7 +631,8 @@ final class GuideService
         return $this->limitText(implode(' ', $paragraph), 280);
     }
 
-    /** @return array<int, string> */
+    /**
+     * @return array<int, string> */
     private function extractHeadings(string $content): array
     {
         preg_match_all('/^#{2,3}\s+(.+)$/m', $content, $matches);
@@ -634,7 +652,9 @@ final class GuideService
     }
 
     /**
+     *
      * @param string $uri
+     *
      * @return array{string, string}
      */
     private function parseGuideUri(string $uri): array

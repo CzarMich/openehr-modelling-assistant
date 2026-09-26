@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Tools;
+namespace OpenEHR\Assistant\Tests\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Tools\ExamplesService;
+use OpenEHR\Assistant\Tools\ExamplesService;
 use Mcp\Schema\Content\EmbeddedResource;
 use Mcp\Schema\Content\TextResourceContents;
 use PHPUnit\Framework\Attributes\CoversClass;

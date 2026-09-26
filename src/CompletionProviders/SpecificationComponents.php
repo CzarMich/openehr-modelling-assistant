@@ -1,6 +1,6 @@
 <?php
 
-namespace Cadasto\OpenEHR\MCP\Assistant\CompletionProviders;
+namespace OpenEHR\Assistant\CompletionProviders;
 
 use Mcp\Capability\Completion\ProviderInterface;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -13,10 +13,15 @@ readonly final class DesignOrReviewAql extends AbstractPrompt
     /**
      * Design or review an AQL query, based on the provided inputs and AQL guides.
      *
+     *
      * @param mixed $task_type design | review
+     *
      * @param mixed $query_intent Clinical question or query intent
+     *
      * @param mixed $template_or_archetypes Target template or archetypes (optional)
+     *
      * @param mixed $existing_aql Existing AQL — optional for design, required when task_type is review
+     *
      * @return PromptMessage[]
      */
     public function __invoke(

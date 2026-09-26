@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -13,9 +13,13 @@ readonly final class ExplainSimplifiedFormat extends AbstractPrompt
     /**
      * Explain a Flat or Structured (simplified) format instance using the Simplified Formats guides.
      *
+     *
      * @param mixed $json_payload Flat or Structured JSON to explain
+     *
      * @param mixed $template_id Target template, if known (optional)
+     *
      * @param mixed $context Use case, audience (optional)
+     *
      * @return PromptMessage[]
      */
     public function __invoke(

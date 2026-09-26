@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Tools;
+namespace OpenEHR\Assistant\Tests\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Apis\CkmClient;
-use Cadasto\OpenEHR\MCP\Assistant\Tests\Helpers\OutputSchemaValidator;
-use Cadasto\OpenEHR\MCP\Assistant\Tools\CkmService;
+use OpenEHR\Assistant\Apis\CkmClient;
+use OpenEHR\Assistant\Tests\Helpers\OutputSchemaValidator;
+use OpenEHR\Assistant\Tools\CkmService;
 use GuzzleHttp\Psr7\Response;
 use Mcp\Capability\Attribute\McpTool;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;

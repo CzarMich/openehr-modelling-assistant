@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Helpers;
+namespace OpenEHR\Assistant\Tests\Helpers;
 
 use InvalidArgumentException;
 
@@ -48,6 +48,23 @@ final class OutputSchemaValidator
         self::assertKeywordsSupported($schema, $path);
 
         $type = $schema['type'] ?? null;
+        if (is_array($type)) {
+            foreach ($type as $candidate) {
+                if ($candidate === 'null' && $data === null) {
+                    return;
+                }
+                if ($candidate === 'null') {
+                    continue;
+                }
+                try {
+                    self::assertValid($data, array_replace($schema, ['type' => $candidate]), $path);
+                    return;
+                } catch (InvalidArgumentException) {
+                    // Try the next explicitly advertised union branch.
+                }
+            }
+            throw new InvalidArgumentException("$path: no allowed type matches the value and its constraints");
+        }
 
         // Object keywords used to be honoured only when `type: 'object'` was literally
         // present. A sub-schema written as `['required' => [...], 'properties' => [...]]` —

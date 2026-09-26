@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Prompts;
+namespace OpenEHR\Assistant\Tests\Prompts;
 
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\AbstractPrompt;
+use OpenEHR\Assistant\Prompts\AbstractPrompt;
 use Mcp\Exception\PromptGetException;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -20,7 +20,7 @@ use ReflectionNamedType;
 #[CoversNothing]
 final class PromptArgumentSubstitutionTest extends TestCase
 {
-    private const string PROMPTS_NAMESPACE = 'Cadasto\\OpenEHR\\MCP\\Assistant\\Prompts\\';
+    private const string PROMPTS_NAMESPACE = 'OpenEHR\\Assistant\\Prompts\\';
 
     /**
      * One legal token per argument constrained to a closed vocabulary. The generic
@@ -205,7 +205,7 @@ final class PromptArgumentSubstitutionTest extends TestCase
         // fires and the model rewrites an artefact the user asked it only to review. The
         // four sibling prompts used to advertise three different vocabularies, so a client
         // could plausibly send AQL's `review-existing` to the template prompt.
-        $prompt = new \Cadasto\OpenEHR\MCP\Assistant\Prompts\DesignOrReviewTemplate();
+        $prompt = new \OpenEHR\Assistant\Prompts\DesignOrReviewTemplate();
 
         $this->expectException(PromptGetException::class);
         $this->expectExceptionMessage('Prompt argument "task_type" must be one of: design | review — "review-existing" given.');
@@ -214,7 +214,7 @@ final class PromptArgumentSubstitutionTest extends TestCase
 
     public function test_task_type_is_canonicalised_so_capitalisation_cannot_miss_a_branch(): void
     {
-        $prompt = new \Cadasto\OpenEHR\MCP\Assistant\Prompts\DesignOrReviewTemplate();
+        $prompt = new \OpenEHR\Assistant\Prompts\DesignOrReviewTemplate();
         $messages = $prompt('ReVieW', 'concept', 'context', 'root', '', 'the existing OET');
 
         $combined = implode("\n", array_map(static fn ($m): string => $m->content->text, $messages));

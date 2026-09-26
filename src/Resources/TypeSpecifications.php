@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Resources;
+namespace OpenEHR\Assistant\Resources;
 
-use Cadasto\OpenEHR\MCP\Assistant\CompletionProviders\SpecificationComponents;
+use OpenEHR\Assistant\CompletionProviders\SpecificationComponents;
 use Mcp\Capability\Attribute\CompletionProvider;
 use Mcp\Capability\Attribute\McpResourceTemplate;
 use Mcp\Exception\ResourceReadException;
@@ -24,10 +24,13 @@ final class TypeSpecifications
      *  - openehr://spec/type/AM/ARCHETYPE
      *  - openehr://spec/type/BASE/AUTHORED_RESOURCE
      *
+     *
      * @param string $component
      *   The openEHR component name (e.g. `RM`, `AM`, `BASE`, etc.)
+     *
      * @param string $name
      *   The openEHR Type name (e.g. `DV_QUANTITY`)
+     *
      * @return array<string, mixed>
      *   The openEHR Type as BMM JSON.
      */
@@ -54,6 +57,11 @@ final class TypeSpecifications
         }
 
         $path = self::DIR . "/$component/$name.bmm.json";
+        $resolved = realpath($path);
+        $root = realpath(self::DIR);
+        if ($resolved === false || $root === false || !str_starts_with($resolved, $root . DIRECTORY_SEPARATOR)) {
+            throw new ResourceReadException('Resource not found within bundled resources.');
+        }
         if (!\is_file($path) || !\is_readable($path)) {
             throw new ResourceReadException(\sprintf('Type specification not found: %s/%s', $component, $name));
         }

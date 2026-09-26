@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tools;
+namespace OpenEHR\Assistant\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Apis\CkmClient;
-use Cadasto\OpenEHR\MCP\Assistant\Helpers\Map;
+use OpenEHR\Assistant\Apis\CkmClient;
+use OpenEHR\Assistant\Helpers\Map;
 use GuzzleHttp\RequestOptions;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
@@ -69,17 +69,22 @@ final readonly class CkmService
      * 2) Inspect the returned metadata for plausible matches
      * 3) Take the returned CKM identifier (CID) and call `ckm_archetype_get` tool to retrieve the full archetype definition.
      *
+     *
      * @param string $keyword
      *   Query search string (one or multiple words); wildcards `*` supported; prefer meaningful clinical terms over internal codes, e.g. "blood pressure", "medication", "diabetes", "body weight".
+     *
      *
      * @param int $maxResults
      *   The maximum number of result items to be returned; defaults to 20 and must be between 1 and 50 (values outside that range are rejected, not clamped).
      *
+     *
      * @param bool $requireAllSearchWords
      *   Determines if the search should match all provided keywords (true) or any of them (false); defaults to true.
      *
+     *
      * @param string $rmClass
      *   Optional RM class filter on the archetype-id (e.g. `COMPOSITION`, `OBSERVATION`, `CLUSTER`); case-insensitive; empty (default) = no filter.
+     *
      *
      * @return array{items: list<array<string, string|int>>, total: int}
      *   A list of CKM Archetype metadata entries — each with a CID identifier, and usually
@@ -133,8 +138,9 @@ final readonly class CkmService
         int $maxResults = self::DEFAULT_MAX_RESULTS,
         bool $requireAllSearchWords = true,
         string $rmClass = '',
+        ?string $ckm = null,
     ): array {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('CKM tool invoked.');
         $maxResults = max(1, min($maxResults, self::MAX_RESULTS_LIMIT));
         $fetchSize = min(
             self::FETCH_SIZE_LIMIT,
@@ -142,7 +148,7 @@ final readonly class CkmService
         );
         $rmClass = $this->normalizeRmClassFilter($rmClass);
         try {
-            $response = $this->apiClient->get('v1/archetypes', [
+            $response = ($ckm === null ? $this->apiClient : $this->apiClient->forSource($ckm))->get('v1/archetypes', [
                 RequestOptions::QUERY => [
                     'search-text' => $keyword,
                     'size' => $fetchSize,
@@ -202,11 +208,11 @@ final readonly class CkmService
                 'total' => $this->resolveTotal($response->getHeaderLine('X-Total-Count'), $matchCount, $rmClass !== ''),
             ];
         } catch (\JsonException $e) {
-            $this->logger->error('Failed to decode CKM Archetype response', ['error' => $e->getMessage()]);
-            throw new ToolCallException('Failed to decode CKM Archetype response: ' . $e->getMessage(), previous: $e);
+            $this->logger->error('Failed to decode CKM Archetype response', ['error_type' => $e::class]);
+            throw new ToolCallException('CKM_INVALID_RESPONSE: malformed archetype response.', previous: $e);
         } catch (ClientExceptionInterface $e) {
-            $this->logger->error('Failed to search for CKM Archetypes', ['error' => $e->getMessage()]);
-            throw new ToolCallException('Failed to search for CKM Archetypes: ' . $e->getMessage(), previous: $e);
+            $this->logger->error('Failed to search for CKM Archetypes', ['error_type' => $e::class]);
+            throw new ToolCallException(json_encode(['success' => false, 'error' => ['code' => 'CKM_UNAVAILABLE', 'message' => 'The configured CKM request failed.', 'retryable' => true]], JSON_THROW_ON_ERROR), previous: $e);
         }
     }
 
@@ -226,11 +232,14 @@ final readonly class CkmService
      * - "xml": XML representation (similar to "adl", but helpful when consuming via XML tooling)
      * - "mindmap": mindmap form (useful for quick visual overview)
      *
+     *
      * @param string $identifier
      *   Archetype CID identifier (e.g. "1013.1.7850") or archetype-id (e.g. "openEHR-EHR-OBSERVATION.blood_pressure.v1").
      *
+     *
      * @param string $format
      *   Desired representation (case-insensitive); see the returned content/formats above for what each value means. Defaults to "adl".
+     *
      *
      * @return TextContent
      *   The Archetype definition in the chosen format in a text content code block.
@@ -248,9 +257,10 @@ final readonly class CkmService
         string $identifier,
         #[Schema(enum: ['adl', 'xml', 'mindmap'])]
         string $format = 'adl',
+        ?string $ckm = null,
     ): TextContent
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('CKM tool invoked.');
         $identifier = trim($identifier);
         $cid = null;
         try {
@@ -262,8 +272,8 @@ final readonly class CkmService
             // `-------------------.-------------.--`, requested *that*, and reported the
             // resulting 404 as "Failed to retrieve the CKM Archetype" — blaming the
             // archetype rather than the identifier resolution that actually failed.
-            if (str_contains($identifier, 'openEHR-')) {
-                $cid = $this->resolveCitableIdentifier($identifier);
+            if (preg_match('/^openEHR-[A-Z_]+-[A-Z_]+\.[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*\.v[0-9]+(?:\.[0-9]+)*$/D', $identifier)) {
+                $cid = $this->resolveCitableIdentifier($identifier, $ckm);
             } elseif ($this->looksLikeCid($identifier)) {
                 $cid = $identifier;
             }
@@ -276,7 +286,7 @@ final readonly class CkmService
             }
 
             // retrieve the archetype definition
-            $response = $this->apiClient->get("v1/archetypes/{$cid}/{$archetypeFormat}", [
+            $response = ($ckm === null ? $this->apiClient : $this->apiClient->forSource($ckm))->get("v1/archetypes/{$cid}/{$archetypeFormat}", [
                 RequestOptions::HEADERS => [
                     'Accept' => $contentType,
                 ],
@@ -285,8 +295,8 @@ final readonly class CkmService
             $this->logger->info('CKM Archetype retrieved successfully', ['cid' => $cid, 'format' => $archetypeFormat, 'status' => $response->getStatusCode()]);
             return TextContent::code($data);
         } catch (ClientExceptionInterface $e) {
-            $this->logger->error('Failed to retrieve the CKM Archetype', ['error' => $e->getMessage(), 'identifier' => $identifier, 'cid' => $cid, 'format' => $format]);
-            throw new ToolCallException('Failed to retrieve the CKM Archetype: ' . $e->getMessage(), previous: $e);
+            $this->logger->error('Failed to retrieve the CKM Archetype', ['error_type' => $e::class, 'identifier' => $identifier, 'cid' => $cid, 'format' => $format]);
+            throw new ToolCallException(json_encode(['success' => false, 'error' => ['code' => 'CKM_UNAVAILABLE', 'message' => 'The configured CKM request failed.', 'retryable' => true]], JSON_THROW_ON_ERROR), previous: $e);
         }
     }
 
@@ -299,14 +309,18 @@ final readonly class CkmService
      * 2) Inspect the returned metadata for plausible matches
      * 3) Take the returned CKM identifier (CID) and call `ckm_template_get` tool to retrieve the content.
      *
+     *
      * @param string $keyword
      *   Query search string, one or multiple words, wildcards `*` supported.
+     *
      *
      * @param int $maxResults
      *   The maximum number of result items to be returned; defaults to 20 and must be between 1 and 50 (values outside that range are rejected, not clamped).
      *
+     *
      * @param bool $requireAllSearchWords
      *   Determines if the search should match all provided keywords (true) or any of them (false); defaults to true.
+     *
      *
      * @return array<string,mixed>
      *   A list of CKM Template metadata entries.
@@ -353,15 +367,16 @@ final readonly class CkmService
         #[Schema(minimum: 1, maximum: self::MAX_RESULTS_LIMIT)]
         int $maxResults = self::DEFAULT_MAX_RESULTS,
         bool $requireAllSearchWords = true,
+        ?string $ckm = null,
     ): array {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('CKM tool invoked.');
         $maxResults = max(1, min($maxResults, self::MAX_RESULTS_LIMIT));
         $fetchSize = min(
             self::FETCH_SIZE_LIMIT,
             max(self::FETCH_SIZE_MIN, (int) ceil($maxResults * self::FETCH_SIZE_MULTIPLIER)),
         );
         try {
-            $response = $this->apiClient->get('v1/templates', [
+            $response = ($ckm === null ? $this->apiClient : $this->apiClient->forSource($ckm))->get('v1/templates', [
                 RequestOptions::QUERY => [
                     'search-text' => $keyword,
                     'size' => $fetchSize,
@@ -412,11 +427,11 @@ final readonly class CkmService
                 'total' => $this->resolveTotal($response->getHeaderLine('X-Total-Count'), $matchCount, false),
             ];
         } catch (\JsonException $e) {
-            $this->logger->error('Failed to decode CKM Template response', ['error' => $e->getMessage()]);
-            throw new ToolCallException('Failed to decode CKM Template response: ' . $e->getMessage(), previous: $e);
+            $this->logger->error('Failed to decode CKM Template response', ['error_type' => $e::class]);
+            throw new ToolCallException('CKM_INVALID_RESPONSE: malformed template response.', previous: $e);
         } catch (ClientExceptionInterface $e) {
-            $this->logger->error('Failed to search for CKM Templates', ['error' => $e->getMessage()]);
-            throw new ToolCallException('Failed to search for CKM Templates: ' . $e->getMessage(), previous: $e);
+            $this->logger->error('Failed to search for CKM Templates', ['error_type' => $e::class]);
+            throw new ToolCallException(json_encode(['success' => false, 'error' => ['code' => 'CKM_UNAVAILABLE', 'message' => 'The configured CKM request failed.', 'retryable' => true]], JSON_THROW_ON_ERROR), previous: $e);
         }
     }
 
@@ -434,11 +449,14 @@ final readonly class CkmService
      * - "oet": Template source (XML) - the unflattened version (design-time template).
      * - "opt": Operational Template (XML) - the flattened version of the Template, containing all archetype constraints.
      *
+     *
      * @param string $identifier
      *   Template CID identifier (e.g. "1013.26.244").
      *
+     *
      * @param string $format
      *   Desired representation; see the returned content/formats above for what each value means. Defaults to "oet".
+     *
      *
      * @return TextContent
      *   The Template definition in the chosen format in a text content code block.
@@ -456,18 +474,22 @@ final readonly class CkmService
         string $identifier,
         #[Schema(enum: ['oet', 'opt'])]
         string $format = 'oet',
+        ?string $ckm = null,
     ): TextContent
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('CKM tool invoked.');
         $identifier = trim($identifier);
-        $cid = $identifier; // Simplification, CKM templates usually use CID or template name in URL
+        if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9_.-]{0,199}$/D', $identifier) || str_contains($identifier, '..')) {
+            throw new ToolCallException('INVALID_IDENTIFIER: use a CKM template CID or safe template identifier.');
+        }
+        $cid = $identifier;
 
         try {
             // Mapping format to CKM expected format string and content-type
             $templateFormat = Map::templateFormat($format);
             $contentType = Map::contentType($templateFormat);
 
-            $response = $this->apiClient->get("v1/templates/{$cid}/{$templateFormat}", [
+            $response = ($ckm === null ? $this->apiClient : $this->apiClient->forSource($ckm))->get("v1/templates/{$cid}/{$templateFormat}", [
                 RequestOptions::HEADERS => [
                     'Accept' => $contentType,
                 ],
@@ -476,13 +498,14 @@ final readonly class CkmService
             $this->logger->info('CKM Template retrieved successfully', ['cid' => $cid, 'format' => $templateFormat, 'status' => $response->getStatusCode()]);
             return TextContent::code($data);
         } catch (ClientExceptionInterface $e) {
-            $this->logger->error('Failed to retrieve the CKM Template', ['error' => $e->getMessage(), 'identifier' => $identifier, 'format' => $format]);
-            throw new ToolCallException('Failed to retrieve the CKM Template: ' . $e->getMessage(), previous: $e);
+            $this->logger->error('Failed to retrieve the CKM Template', ['error_type' => $e::class, 'identifier' => $identifier, 'format' => $format]);
+            throw new ToolCallException(json_encode(['success' => false, 'error' => ['code' => 'CKM_UNAVAILABLE', 'message' => 'The configured CKM request failed.', 'retryable' => true]], JSON_THROW_ON_ERROR), previous: $e);
         }
     }
 
     /**
      * Score one archetype search result (archetypeId, name, projectName, status, match quality, all-keywords bonus).
+     *
      *
      * @param array<string, mixed> $item Raw CKM API item (resourceMainId, resourceMainDisplayName, projectName, status, etc.)
      */
@@ -527,6 +550,7 @@ final readonly class CkmService
     /**
      * Score one template search result (name, projectName, status, match quality, all-keywords bonus).
      *
+     *
      * @param array<string, mixed> $item Raw CKM API item (resourceMainDisplayName, projectName, status, etc.)
      */
     private function scoreTemplateItem(array $item, string $keyword): int
@@ -566,6 +590,7 @@ final readonly class CkmService
 
     /**
      * True when the normalized keyword equals any candidate (with SOAP↔SOEP scoring aliases applied).
+     *
      *
      * @param array<int, mixed> $candidates Display name and/or concept-from-id values.
      */
@@ -631,12 +656,12 @@ final readonly class CkmService
      * Returns null (rather than a guess) for every failure mode, so the caller can name the
      * resolution step in the error instead of issuing a request built from a mangled path.
      */
-    private function resolveCitableIdentifier(string $archetypeId): ?string
+    private function resolveCitableIdentifier(string $archetypeId, ?string $ckm = null): ?string
     {
         try {
-            $response = $this->apiClient->get("v1/archetypes/citeable-identifier/$archetypeId");
+            $response = ($ckm === null ? $this->apiClient : $this->apiClient->forSource($ckm))->get("v1/archetypes/citeable-identifier/" . rawurlencode($archetypeId));
         } catch (ClientExceptionInterface $e) {
-            $this->logger->error('Failed to resolve CID identifier', ['error' => $e->getMessage(), 'identifier' => $archetypeId]);
+            $this->logger->error('Failed to resolve CID identifier', ['error_type' => $e::class, 'identifier' => $archetypeId]);
 
             return null;
         }
@@ -657,7 +682,7 @@ final readonly class CkmService
         if (!$this->looksLikeCid($cid)) {
             $this->logger->error('CID resolution returned an unexpected body', [
                 'identifier' => $archetypeId,
-                'body' => $cid,
+                'body_type' => 'unexpected',
             ]);
 
             return null;
@@ -726,6 +751,7 @@ final readonly class CkmService
 
     /**
      * Parse CKM date string (ISO 8601 or numeric ms) and return full years since reference time.
+     *
      *
      * @return int Zero if parse fails or date is in the future.
      */

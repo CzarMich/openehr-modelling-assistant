@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Prompts;
+namespace OpenEHR\Assistant\Tests\Prompts;
 
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\DesignOrReviewTemplate;
+use OpenEHR\Assistant\Prompts\DesignOrReviewTemplate;
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
 use Mcp\Schema\Enum\Role;

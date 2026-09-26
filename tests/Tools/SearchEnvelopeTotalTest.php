@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Tools;
+namespace OpenEHR\Assistant\Tests\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Apis\CkmClient;
-use Cadasto\OpenEHR\MCP\Assistant\Tools\CkmService;
-use Cadasto\OpenEHR\MCP\Assistant\Tools\ExamplesService;
-use Cadasto\OpenEHR\MCP\Assistant\Tools\GuideService;
-use Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService;
+use OpenEHR\Assistant\Apis\CkmClient;
+use OpenEHR\Assistant\Tools\CkmService;
+use OpenEHR\Assistant\Tools\ExamplesService;
+use OpenEHR\Assistant\Tools\GuideService;
+use OpenEHR\Assistant\Tools\TypeSpecificationService;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversNothing;

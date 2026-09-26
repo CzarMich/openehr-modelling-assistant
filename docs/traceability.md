@@ -61,3 +61,14 @@ the Implementation column is either dead code or an undocumented requirement.
 > The near 1:1 `src/` ↔ `tests/` mirror means most traceability links already
 > exist in the tree; this matrix makes the requirement layer explicit on top of
 > them.
+
+## Modelling platform extensions
+
+| Requirement | Implementation | Tests |
+|---|---|---|
+| REQ-F11 | Configurable branding and named CKM sources (landed) | `tests/Enterprise/ConfigurationAndAuthTest.php` |
+| REQ-F12 | Provider-neutral persistent projects, artifacts and revisions (landed) | `tests/Enterprise/RepositoryAndGovernanceTest.php` |
+| REQ-F13 | Draft OET generation, bounded validation and structural diff (partial) | `tests/Enterprise/ModelValidationTest.php` |
+| REQ-F14 | Explicit terminology, value sets, bindings, provenance and diff (partial) | `tests/Enterprise/TerminologyProviderTest.php` |
+| REQ-N11 | Authenticated bounded transport and redacted failures (landed) | `tests/Enterprise/ConfigurationAndAuthTest.php` |
+| REQ-N12 | Client-neutral deployment and truthful capability documentation (landed) | `tests/Content/InstallDocContractTest.php` |

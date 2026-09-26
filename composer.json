@@ -1,5 +1,5 @@
 {
-    "name": "cadasto/openehr-assistant-mcp",
+    "name": "openehr/modelling-assistant",
     "description": "A Model Context Protocol (MCP) Server to assist end-user on various openEHR related tasks and APIs.",
     "type": "project",
     "license": "MIT",
@@ -12,6 +12,7 @@
     "require": {
         "php": "^8.4",
         "ext-curl": "*",
+        "ext-dom": "*",
         "ext-json": "*",
         "ext-simplexml": "*",
         "guzzlehttp/guzzle": "^7.9",
@@ -32,7 +33,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Cadasto\\OpenEHR\\MCP\\Assistant\\": "src/"
+            "OpenEHR\\Assistant\\": "src/"
         },
         "files": [
             "src/constants.php"
@@ -40,7 +41,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Cadasto\\OpenEHR\\MCP\\Assistant\\Tests\\": "tests/"
+            "OpenEHR\\Assistant\\Tests\\": "tests/"
         }
     },
     "scripts": {

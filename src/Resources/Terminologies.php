@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Resources;
+namespace OpenEHR\Assistant\Resources;
 
-use Cadasto\OpenEHR\MCP\Assistant\Helpers\TerminologyXmlLoader;
+use OpenEHR\Assistant\Helpers\TerminologyXmlLoader;
 use Mcp\Capability\Attribute\McpResource;
 use Mcp\Exception\ResourceReadException;
 use SimpleXMLElement;
@@ -27,6 +27,7 @@ final class Terminologies
      * openEHR Terminology consists of:
      * - Groups: collections of concept–rubric pairs; groups are identified by an openEHR groupId.
      * - Codesets: standardised enumerations used in openEHR models.
+     *
      *
      * @return array<string, mixed>
      *   The full openEHR Terminology dataset.

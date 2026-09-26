@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Helpers;
+namespace OpenEHR\Assistant\Tests\Helpers;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;

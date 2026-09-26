@@ -184,5 +184,59 @@ requirements:
     implementation: landed
     packages: [docs/install.md]
     tests: [tests/Content/InstallDocContractTest.php]
-    verification: composer test (the website fetches this file at a released tag)
+    verification: composer test (independent deployment and valid links)
     adr: ["0007"]
+
+  - id: REQ-F11
+    title: Configurable branding and named CKM sources
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Configuration/*.php, src/Tools/CkmSourcesService.php, src/Apis/CkmArchetypeSource.php]
+    tests: [tests/Enterprise/ConfigurationAndAuthTest.php]
+    adr: ["0008"]
+
+  - id: REQ-F12
+    title: Provider-neutral persistent projects, artifacts and revisions
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Domain/Repository/*.php, src/Integrations/Repository/*.php, src/Tools/ProjectService.php]
+    tests: [tests/Enterprise/RepositoryAndGovernanceTest.php]
+    adr: ["0008"]
+
+  - id: REQ-F13
+    title: Draft OET generation, bounded validation and structural diff
+    canonical: docs/requirements.md
+    status: draft
+    implementation: partial
+    packages: [src/Domain/Modelling/*.php, src/Validation/*.php, src/Tools/ModelService.php, src/Adapters/Cdr/*.php]
+    tests: [tests/Enterprise/ModelValidationTest.php]
+    adr: ["0008"]
+
+  - id: REQ-F14
+    title: Explicit terminology, value sets, bindings, provenance and diff
+    canonical: docs/requirements.md
+    status: draft
+    implementation: partial
+    packages: [src/Domain/Terminology/*.php, src/Integrations/Terminology/*.php, src/Tools/TerminologyBindingService.php]
+    tests: [tests/Enterprise/TerminologyProviderTest.php]
+    adr: ["0008"]
+
+  - id: REQ-N11
+    title: Authenticated bounded transport and redacted failures
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Auth/*.php, src/Apis/HttpClientFactory.php, src/Helpers/ToolResult.php]
+    tests: [tests/Enterprise/ConfigurationAndAuthTest.php]
+    adr: ["0008"]
+
+  - id: REQ-N12
+    title: Client-neutral deployment and truthful capability documentation
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [docs/MICROSOFT_AGENT_INTEGRATION.md, docs/MCP_CLIENTS.md, Dockerfile, docker-compose.yml, scripts/mcp-smoke.py]
+    tests: [tests/Content/InstallDocContractTest.php]
+    adr: ["0008"]

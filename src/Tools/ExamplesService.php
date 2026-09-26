@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tools;
+namespace OpenEHR\Assistant\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Helpers\SearchTokenizer;
+use OpenEHR\Assistant\Helpers\SearchTokenizer;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Exception\ToolCallException;
@@ -43,18 +43,23 @@ final readonly class ExamplesService
      * (e.g. "latest per patient", "time-window", "aggregation", "FLAT vs STRUCTURED pair").
      * Each hit returns the example's title, kind, canonical URI, and a short snippet so the model can decide which to pull with `examples_get`.
      *
+     *
      * @param string $query
      *   The query string describing what you need (e.g. "blood pressure", "latest per patient", "DV_QUANTITY projection").
      *   Leave empty to list all examples in the optional kind filter.
      *
+     *
      * @param string|null $kind
      *   Optional artefact-kind filter (AQL query, FLAT/STRUCTURED JSON payload, or native archetype). Omit to search all kinds.
+     *
      *
      * @param int $maxResults
      *   The maximum number of examples to return; defaults to 10 and must be between 1 and 30 (values outside that range are rejected, not clamped). `total` reports how many examples matched before this cap.
      *
+     *
      * @param int $snippetChars
      *   The maximum length of each returned snippet in characters; defaults to 220 and must be between 80 and 1200 (values outside that range are rejected, not clamped).
+     *
      *
      * @return array{items: list<array<string, string|int>>, total: int}
      *   A list of matching examples with short snippets and URIs, plus `total` — the number
@@ -101,7 +106,7 @@ final readonly class ExamplesService
         #[Schema(minimum: 80, maximum: self::MAX_SNIPPET_CHARS)]
         int $snippetChars = self::DEFAULT_SNIPPET_CHARS,
     ): array {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('Tool invoked.');
         $query = trim($query);
         $kind = trim((string)($kind ?? ''));
         $maxResults = max(1, min($maxResults, self::MAX_RESULTS_LIMIT));
@@ -146,14 +151,18 @@ final readonly class ExamplesService
      * demonstrates, related specs/guides — around a fenced code block; for the `archetypes` kind a native
      * CKM-published `.adl` file (`text/plain`), with no metadata header and no fence.
      *
+     *
      * @param string $uri
      *   Canonical example URI (openehr://examples/{kind}/{name}). Optional when kind and name are provided.
+     *
      *
      * @param string|null $kind
      *   Artefact kind (AQL query, FLAT/STRUCTURED JSON payload, or native archetype). Optional when URI is provided.
      *
+     *
      * @param string $name
      *   Example filename without extension. Optional when URI is provided.
+     *
      *
      * @return EmbeddedResource
      *   The selected example content: Markdown for `aql`/`flat`/`structured`, native ADL for `archetypes`.
@@ -171,7 +180,7 @@ final readonly class ExamplesService
         string $name = '',
     ): EmbeddedResource
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('Tool invoked.');
         $uri = trim($uri);
         $kind = trim((string)($kind ?? ''));
         $name = trim($name);
@@ -209,7 +218,8 @@ final readonly class ExamplesService
         );
     }
 
-    /** @return array<int, array{title: string, kind: string, name: string, resourceUri: string, metadata: string}> */
+    /**
+     * @return array<int, array{title: string, kind: string, name: string, resourceUri: string, metadata: string}> */
     private function loadExamplesIndex(): array
     {
         if (!is_dir(self::EXAMPLES_DIR) || !is_readable(self::EXAMPLES_DIR)) {
@@ -354,7 +364,8 @@ final readonly class ExamplesService
         return rtrim(mb_substr($text, 0, $maxChars - 1, 'UTF-8')) . '…';
     }
 
-    /** @return array{string, string} */
+    /**
+     * @return array{string, string} */
     private function parseExampleUri(string $uri): array
     {
         $pattern = '#^openehr://examples/([\w-]+)/([\w.-]+)$#';

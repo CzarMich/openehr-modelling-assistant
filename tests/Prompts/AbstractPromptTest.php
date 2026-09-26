@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Prompts;
+namespace OpenEHR\Assistant\Tests\Prompts;
 
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\AbstractPrompt;
+use OpenEHR\Assistant\Prompts\AbstractPrompt;
 use InvalidArgumentException;
 use Mcp\Exception\PromptGetException;
 use Mcp\Schema\Content\PromptMessage;

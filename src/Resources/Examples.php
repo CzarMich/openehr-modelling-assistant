@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Resources;
+namespace OpenEHR\Assistant\Resources;
 
-use Cadasto\OpenEHR\MCP\Assistant\CompletionProviders\Examples as ExamplesCompletionProvider;
+use OpenEHR\Assistant\CompletionProviders\Examples as ExamplesCompletionProvider;
 use FilesystemIterator;
 use Mcp\Capability\Attribute\CompletionProvider;
 use Mcp\Capability\Attribute\McpResourceTemplate;
@@ -72,7 +72,9 @@ final class Examples
      * Folder structure:
      * resources/examples/{kind}/{name}.{md|adl}
      *
+     *
      * @param Builder $builder The resource builder instance used to register the examples.
+     *
      * @return void
      */
     public static function addResources(Builder $builder, ?LoggerInterface $logger = null): void

@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Resources;
+namespace OpenEHR\Assistant\Resources;
 
-use Cadasto\OpenEHR\MCP\Assistant\CompletionProviders\Guides as GuidesCompletionProvider;
+use OpenEHR\Assistant\CompletionProviders\Guides as GuidesCompletionProvider;
 use FilesystemIterator;
 use Mcp\Capability\Attribute\CompletionProvider;
 use Mcp\Capability\Attribute\McpResourceTemplate;
@@ -51,6 +51,11 @@ final class Guides
         }
 
         $path = self::DIR . "/$category/$name.md";
+        $resolved = realpath($path);
+        $root = realpath(self::DIR);
+        if ($resolved === false || $root === false || !str_starts_with($resolved, $root . DIRECTORY_SEPARATOR)) {
+            throw new ResourceReadException('Resource not found within bundled resources.');
+        }
         if (!\is_file($path) || !\is_readable($path)) {
             throw new ResourceReadException(\sprintf('Guide not found: %s/%s', $category, $name));
         }
@@ -69,7 +74,9 @@ final class Guides
      * Folder structure:
      * resources/guides/{category}/{name}.md
      *
+     *
      * @param Builder $builder The resource builder instance used to register the guides.
+     *
      * @return void This method does not return a value.
      */
     public static function addResources(Builder $builder, ?LoggerInterface $logger = null): void

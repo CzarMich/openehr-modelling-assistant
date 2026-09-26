@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEHR\Assistant\Domain\Terminology;
+
+use InvalidArgumentException;
+
+/** Internal modelling metadata; not a native openEHR binding serialization. */
+final readonly class ValueSet
+{
+    /**
+     * @param list<array<string, mixed>> $concepts */
+    public function __construct(
+        public string $id, public string $system, public string $version,
+        public array $concepts = [], public ?string $canonical = null,
+        public string $source = 'local', public ?string $codeSystemVersion = null,
+    ) {
+        if ($id === '' || $version === '' || filter_var($system, FILTER_VALIDATE_URL) === false
+            || !in_array($source, ['local', 'external'], true) || count($concepts) > 5000) {
+            throw new InvalidArgumentException('Value set requires id, version, code system URI and a supported source.');
+        }
+        if ($source === 'external' && ($canonical === null || filter_var($canonical, FILTER_VALIDATE_URL) === false)) {
+            throw new InvalidArgumentException('External value sets require a canonical URL.');
+        }
+        $codes = [];
+        foreach ($concepts as $concept) {
+            if (!is_string($concept['code'] ?? null) || $concept['code'] === '' || !is_string($concept['display'] ?? null)
+                || isset($codes[$concept['code']])) {
+                throw new InvalidArgumentException('Value set concepts require unique codes and displays.');
+            }
+            $codes[$concept['code']] = true;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data */
+    public static function fromArray(array $data): self
+    {
+        foreach (['id', 'system', 'version'] as $key) {
+            if (!is_string($data[$key] ?? null)) {
+                throw new InvalidArgumentException('Value set field missing: ' . $key);
+            }
+        }
+        $concepts = $data['concepts'] ?? [];
+        if (!is_array($concepts) || !array_is_list($concepts)) {
+            throw new InvalidArgumentException('Concepts must be a list.');
+        }
+        return new self($data['id'], $data['system'], $data['version'], $concepts,
+            $data['canonical'] ?? null, $data['source'] ?? 'local', $data['code_system_version'] ?? null);
+    }
+}

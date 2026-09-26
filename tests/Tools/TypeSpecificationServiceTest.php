@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Tools;
+namespace OpenEHR\Assistant\Tests\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService;
+use OpenEHR\Assistant\Tools\TypeSpecificationService;
 use Mcp\Schema\Content\TextContent;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -21,7 +21,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::getCandidateFiles
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::getCandidateFiles
      */
     public function test_getCandidateFiles_matches_exact_file(): void
     {
@@ -35,7 +35,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::getCandidateFiles
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::getCandidateFiles
      */
     public function test_getCandidateFiles_ignores_non_matching_files(): void
     {
@@ -48,7 +48,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::getCandidateFiles
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::getCandidateFiles
      */
     public function test_getCandidateFiles_handles_empty_directory(): void
     {
@@ -61,7 +61,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::search
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::search
      */
     public function test_list_with_pattern_returns_array_of_items(): void
     {
@@ -81,7 +81,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::search
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::search
      */
     public function test_list_with_keyword_filters_content(): void
     {
@@ -93,7 +93,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::search
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::search
      */
     public function test_list_with_short_pattern_returns_empty_items_shape(): void
     {
@@ -103,7 +103,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::search
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::search
      */
     public function test_list_composition_returns_single(): void
     {
@@ -125,7 +125,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::get
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::get
      */
     public function test_get_by_identifier_returns_json_content(): void
     {
@@ -136,7 +136,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::get
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::get
      */
     public function test_get_by_identifier_accepts_lowercase_component(): void
     {
@@ -146,7 +146,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::get
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::get
      */
     public function test_get_by_nonexistent_identifier_throws_exception(): void
     {
@@ -156,7 +156,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::get
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::get
      */
     public function test_get_synthesises_the_declared_resource_uri(): void
     {
@@ -168,7 +168,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::get
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::get
      */
     public function test_get_and_search_agree_on_the_resource_uri_for_the_same_type(): void
     {
@@ -183,7 +183,7 @@ final class TypeSpecificationServiceTest extends TestCase
     }
 
     /**
-     * @covers \Cadasto\OpenEHR\MCP\Assistant\Tools\TypeSpecificationService::get
+     * @covers \OpenEHR\Assistant\Tools\TypeSpecificationService::get
      */
     public function test_get_always_returns_the_schema_required_keys(): void
     {

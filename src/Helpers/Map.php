@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Helpers;
+namespace OpenEHR\Assistant\Helpers;
 
 readonly final class Map
 {

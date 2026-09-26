@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Helpers;
+namespace OpenEHR\Assistant\Helpers;
 
 /**
  * Shared query tokenizer for the corpus search tools (`guide_search`, `examples_search`).
@@ -23,6 +23,7 @@ final readonly class SearchTokenizer
      * its most generic parts. Punctuation that genuinely separates terms — commas, slashes,
      * parentheses — still splits, so `DV_QUANTITY, DV_CODED_TEXT` yields two tokens. Stray
      * leading/trailing `-`/`.` (sentence punctuation) are trimmed off.
+     *
      *
      * @return list<string>|null
      *   Null when the query could not be tokenized — only reachable for invalid UTF-8, which

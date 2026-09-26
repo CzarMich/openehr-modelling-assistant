@@ -1,5 +1,5 @@
 # Expected conformance failures: scenarios that require test tools or optional
-# MCP features this server does not implement. See README "MCP Conformance".
+# MCP features this server does not implement. See docs/testing.md.
 # Run: npx @modelcontextprotocol/conformance list --server
 # Remove a scenario from this list when the server supports it (stale baseline fails CI).
 server:
@@ -25,4 +25,4 @@ server:
   - prompts-get-with-args
   - prompts-get-embedded-resource
   - prompts-get-with-image
-  - dns-rebinding-protection
+  - dns-rebinding-protection # default CORS rejects even localhost browser Origins; malicious Host is rejected

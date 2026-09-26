@@ -11,8 +11,8 @@ RED := \033[0;31m
 NC := \033[0m # No Color
 
 # Configuration
-DOCKER_COMPOSE ?= docker compose --env-file .env -f .docker/docker-compose.yml
-DOCKER_COMPOSE_DEV ?= docker compose --env-file .env -f .docker/docker-compose.yml -f .docker/docker-compose.dev.yml
+DOCKER_COMPOSE ?= docker compose --env-file .env -f docker-compose.yml
+DOCKER_COMPOSE_DEV ?= docker compose --env-file .env -f docker-compose.yml -f .docker/docker-compose.dev.yml
 
 ##@ General
 
@@ -22,7 +22,7 @@ help: ## Display this help message
 
 ##@ Container Management
 
-up: ## Start dev containers in background
+up: ## Start production images with the configured environment
 	$(DOCKER_COMPOSE) up -d --force-recreate
 
 down: ## Stop all services (dev/prod) and keep data
@@ -55,13 +55,13 @@ install: ## Install PHP dependencies of dev container
 	$(DOCKER_COMPOSE_DEV) run --rm -u 1000:1000 app composer install
 
 up-dev: ## Start dev container in background
-	$(DOCKER_COMPOSE_DEV) up -d --force-recreate
+	$(DOCKER_COMPOSE_DEV) up -d --build --force-recreate
 
 sh: ## Open an interactive shell in dev container
 	-$(DOCKER_COMPOSE_DEV) exec -u 1000:1000 app sh || $(DOCKER_COMPOSE_DEV) run --rm -it -u 1000:1000 app sh
 
 run-stdio: ## Run MCP server (stdio transport) in dev container
-	$(DOCKER_COMPOSE_DEV) run --rm app php public/index.php --transport=stdio
+	$(DOCKER_COMPOSE_DEV) run --rm -T app php public/index.php --transport=stdio
 
 conformance: ## Run MCP conformance tests against server (requires make up-dev; URL: http://ingress:8343/mcp). Results in conformance/
 	$(DOCKER_COMPOSE_DEV) run --rm node npx -y @modelcontextprotocol/conformance server --url http://ingress:8343/mcp -o conformance --expected-failures tests/conformance-baseline.yml

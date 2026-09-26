@@ -1,71 +1,29 @@
 {
-    # https://caddyserver.com/docs/caddyfile/options#log
-    log {
-        level INFO
-        output stdout
-        format console
-    }
-
-    # https://caddyserver.com/docs/caddyfile/options#admin
     admin off
+    auto_https off
     persist_config off
-
-    # https://caddyserver.com/docs/caddyfile/patterns#caddy-proxying-to-another-caddy
-    servers {
-        trusted_proxies static private_ranges
-    }
 }
-
-(server_conf) {
-    # 0. Root MUST be defined early so other directives know where files are
-    root * /app/public
-
-    # 1. Block crawlers and robots
-    respond /robots.txt "User-agent: *\nDisallow: /"
-
-    # 2. Return an early 204 No Content for favicon images
-    # We use a matcher to group these together
-    @ignored_files {
-        path /favicon.ico
+:8343 {
+    request_body {
+        max_size {$MAX_REQUEST_BYTES:2097152}
     }
-    error @ignored_files 204
-
-    # 3. Explicitly wire PHP-FPM ping path
-    reverse_proxy /health/status app:9000 {
-        transport fastcgi {
-            split .php
+    @mcp path /mcp /health /ready
+    handle @mcp {
+        reverse_proxy app:9000 {
+            transport fastcgi {
+                env SCRIPT_FILENAME /app/public/index.php
+                env SCRIPT_NAME /index.php
+                env HTTP_HOST {http.request.hostport}
+                read_timeout 120s
+            }
         }
     }
-
-    # Enable PHP processing via FastCGI
-    php_fastcgi app:9000
-
-    # Security headers
+    handle {
+        respond 404
+    }
     header {
         X-Content-Type-Options nosniff
-        X-Frame-Options DENY
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy strict-origin-when-cross-origin
+        Referrer-Policy no-referrer
         -Server
     }
-}
-
-# HTTPS server with internal certificates
-{$HOSTNAME} {
-    import server_conf
-
-    tls {
-        protocols tls1.3
-    }
-
-    # Serve static files
-    file_server
-}
-
-# HTTP development server (no TLS)
-:8343 {
-    import server_conf
-
-    # Serve static files
-    file_server
 }

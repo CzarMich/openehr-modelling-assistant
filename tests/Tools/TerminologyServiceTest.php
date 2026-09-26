@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Tools;
+namespace OpenEHR\Assistant\Tests\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Tools\TerminologyService;
+use OpenEHR\Assistant\Tools\TerminologyService;
 use Mcp\Exception\ToolCallException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
