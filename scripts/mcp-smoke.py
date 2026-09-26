@@ -91,6 +91,7 @@ def main():
     parser.add_argument("--catalogue", type=Path, help="Write discovered public tool schemas")
     parser.add_argument("--live-ckm", action="store_true")
     parser.add_argument("--live-terminology", action="store_true")
+    parser.add_argument("--without-terminology", action="store_true", help="Assert optional external terminology is unconfigured")
     parser.add_argument("--writes", action="store_true", help="Create an isolated smoke project; requires enabled writes")
     args = parser.parse_args()
     client, checks = Client(args.url), []
@@ -171,6 +172,15 @@ def main():
             draft = client.tool('template_build_oet', {'name':'Integration draft','composition':'openEHR-EHR-COMPOSITION.encounter.v1','entries':['openEHR-EHR-OBSERVATION.body_weight.v2']})
             assert draft['status'] == 'DRAFT'
             record('live CKM draft OET generation')
+        if args.without_terminology:
+            for name, arguments in [('terminology_capabilities', {}),
+                                    ('terminology_lookup', {'system':'http://snomed.info/sct','code':'404684003'}),
+                                    ('terminology_validate_code', {'system':'http://snomed.info/sct','code':'404684003'})]:
+                result = client.tool(name, arguments)
+                assert result['status'] == 'NOT_EXECUTED', name
+            manifest = client.tool('terminology_manifest', {'artifact':'templates/unbound.oet','bindings':[]})
+            assert manifest['terminology_dependencies'] == []
+            record('modelling without terminology server or bindings')
         if args.live_terminology:
             capabilities = client.tool('terminology_capabilities')
             assert capabilities['status'] == 'VALIDATED'

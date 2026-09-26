@@ -28,6 +28,10 @@ final class Settings
         'MAX_REQUEST_BYTES' => '2097152', 'MAX_UPSTREAM_BYTES' => '8388608',
         'LOG_LEVEL' => 'info', 'MODEL_REPOSITORY_PROVIDER' => 'filesystem',
         'MODEL_REPOSITORY_PATH' => '/tmp/openehr-models', 'MODEL_REPOSITORY_WRITE_ENABLED' => 'false',
+        'MODEL_GIT_REMOTE_URL' => '', 'MODEL_GIT_BRANCH' => 'main', 'MODEL_GIT_SYNC_SECONDS' => '5',
+        'MODEL_GIT_TIMEOUT' => '30', 'MODEL_GIT_AUTHOR_NAME' => 'openEHR Modelling Assistant',
+        'MODEL_GIT_AUTHOR_EMAIL' => 'modelling-assistant@localhost',
+        'MODEL_GIT_SSH_KEY_FILE' => '', 'MODEL_GIT_KNOWN_HOSTS_FILE' => '',
     ];
 
     /** @var array<string, string> */
@@ -42,15 +46,18 @@ final class Settings
             'APP_ENV' => ['development', 'testing', 'production'],
             'TERMINOLOGY_CODESYSTEM_VALIDATE_PARAMETER' => ['url', 'system'],
             'LOG_LEVEL' => ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'],
-            'MODEL_REPOSITORY_PROVIDER' => ['filesystem', 'github', 'gitlab', 'sharepoint']] as $key => $allowed) {
+            'MODEL_REPOSITORY_PROVIDER' => ['filesystem', 'git', 'github', 'gitlab', 'sharepoint']] as $key => $allowed) {
             if (!in_array($this->get($key), $allowed, true)) {
                 throw new InvalidArgumentException("Invalid configuration: $key.");
             }
         }
-        foreach (['HTTP_TIMEOUT', 'CKM_TIMEOUT', 'MAX_REQUEST_BYTES', 'MAX_UPSTREAM_BYTES', 'MCP_PORT'] as $key) {
+        foreach (['HTTP_TIMEOUT', 'CKM_TIMEOUT', 'MAX_REQUEST_BYTES', 'MAX_UPSTREAM_BYTES', 'MCP_PORT', 'MODEL_GIT_TIMEOUT'] as $key) {
             if (!ctype_digit($this->get($key)) || (int) $this->get($key) < 1) {
                 throw new InvalidArgumentException("$key must be a positive integer.");
             }
+        }
+        if (!ctype_digit($this->get('MODEL_GIT_SYNC_SECONDS')) || (int) $this->get('MODEL_GIT_SYNC_SECONDS') > 300 || (int) $this->get('MODEL_GIT_TIMEOUT') > 120) {
+            throw new InvalidArgumentException('Git sync must be 0..300 seconds and timeout 1..120 seconds.');
         }
         if ((int) $this->get('MCP_PORT') > 65535) {
             throw new InvalidArgumentException('MCP_PORT must be <= 65535.');

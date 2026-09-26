@@ -8,7 +8,7 @@ FROM ${PHP_IMAGE} AS base
 RUN set -eux \
     && apk update && apk upgrade --no-cache \
     && apk add --no-cache \
-      ca-certificates fcgi \
+      ca-certificates fcgi git openssh-client \
     && update-ca-certificates \
     && mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 # Add production PHP INI overlays (keep extension configs clean in .docker/php)
@@ -101,6 +101,7 @@ CMD ["--web"]
 FROM caddy:2-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b AS ingress
 # We serve an unprivileged port. Remove the image's file capability so cap_drop=ALL works.
 RUN setcap -r /usr/bin/caddy
+COPY public/landing.html /srv/landing.html
 USER 1000:1000
 
 # The default build is the production PHP-FPM image.

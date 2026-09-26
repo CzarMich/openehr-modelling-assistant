@@ -39,3 +39,23 @@ Run `python3 scripts/mcp-smoke.py --url http://127.0.0.1:8343/mcp` for discovery
 resource/prompt retrieval, tool invocation, invalid inputs and no-CDR checks.
 Set `AUTH_API_KEY` in the environment for authenticated testing. Add `--live-ckm`
 only when outbound CKM calls are permitted. See [testing](testing.md).
+
+## Codex
+
+Codex is an MCP client: it supplies reasoning and calls this service's tools. The service does not embed Codex or require an OpenAI API key. See the [official Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+
+For an HTTP connection add this to your local `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.openehr_modelling]
+url = "https://modelling.example.org/mcp"
+env_http_headers = { "X-API-Key" = "OPENEHR_MODELLING_API_KEY" }
+startup_timeout_sec = 30
+tool_timeout_sec = 120
+```
+
+Supply `OPENEHR_MODELLING_API_KEY` to the Codex process from your secret manager. Do not paste it into a repository configuration file. Recent Codex versions also support `http_headers_helper`, an absolute local command that returns a JSON header map. A helper can read a private credential file, avoiding a secret in TOML or dependence on the launching shell's environment. Do not run the helper interactively or log its output. Verify support with the installed Codex version.
+
+The configured development connection is named `openehr_modelling_dev` and uses `https://dev-openehr-modelling.sandbox.hygeoniq.com/mcp`. On the development machine a private credential helper supplies its separate dev API key. The installed Codex app-server successfully initialized and discovered the tools; evidence is in `evidence/codex-dev-connection.json`. New Codex sessions load this configuration. An already-running conversation may need to reconnect before the tools appear.
+
+Check configuration with `codex mcp get openehr_modelling_dev`; verify discovery in Codex's MCP status view. The service root is an introduction page, not a chat application. For hosted clients, local hosts-file mappings do not provide network reachability: their execution environment must resolve and reach the endpoint and trust its certificate authority.

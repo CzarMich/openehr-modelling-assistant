@@ -81,5 +81,5 @@ Dependency audit: **FAIL**, three advisories affecting two packages:
 Guzzle CVE-2026-69246/CVE-2026-69245 (see exact audit log for identifiers) and
 MCP SDK CVE-2026-53965. The audit log is the authoritative record.
 [Raw output](evidence/baseline-tests.txt) and [surface inventory](evidence/baseline-surface.json).
-No external Microsoft tenant test was performed. AmyTerm `/fhir/metadata`
+No external Microsoft tenant test was performed. terminology server `/fhir/metadata`
 returns HTTP 401 without credentials; browser routes redirect to login.
