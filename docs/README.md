@@ -1,59 +1,11 @@
-# openEHR Assistant MCP Server documentation
+# Documentation
 
-This page indexes the openEHR Assistant MCP Server's documentation for contributors
-and maintainers: the Specification-Driven Development (SDD) spec set and the
-operational guides. To connect an MCP client to the server, go straight to
-[install.md](install.md).
+Start with [purpose and capabilities](../README.md), [capability status](../CAPABILITIES.md), [installation](install.md), [deployment environments](DEPLOYMENT.md) and [configuration variables](CONFIGURATION.md).
 
-The project follows a lightweight SDD paradigm: specifications are first-class,
-version-controlled artefacts, and a **traceability chain** links every requirement
-to its design, code, test, and the decisions that shaped it. The chain is the
-contract; change it top-down.
+Client integration: [Microsoft](MICROSOFT_AGENT_INTEGRATION.md), [generic MCP](MCP_CLIENTS.md), [tool catalogue](MCP_TOOLS.md).
 
-```text
-requirements.md  →  architecture.md  →  src/  →  tests/        (forward)
-   (REQ-#)            (design)        (code)  (verification)
-        └───────────────┴──────── decisions/ (ADRs) ───────────┘
-                         traceability.md ties them together
-```
+Architecture: [core design](ARCHITECTURE.md), [repository](MODEL_REPOSITORY.md), [terminology and Keycloak](TERMINOLOGY.md), [governance](GOVERNANCE.md), [security](SECURITY.md), [CDR adapters](CDR_ADAPTERS.md), [future visual editor](FUTURE_VISUAL_MODELLER.md), [worked workflow](workflows/neonatal-admission.md).
 
-## The SDD spec set
+Maintenance: [development](development.md), [testing](testing.md), [conventions](conventions.md), [requirements](requirements.md), [traceability](traceability.md), [decisions](decisions/README.md).
 
-| Document | Role | Answers |
-|----------|------|---------|
-| [requirements.md](requirements.md) | The **what**: `REQ-F#` functional + `REQ-N#` non-functional requirements | "What must the server do?" |
-| [architecture.md](architecture.md) | The **how**: components mapped to the requirements they satisfy | "How is it built?" |
-| [decisions/](decisions/) | The **why**: Architecture Decision Records (MADR-lite) | "Why was it built this way?" |
-| [traceability.md](traceability.md) | The **links** (human-readable): REQ ↔ code ↔ test ↔ ADR matrix | "Where is REQ-X implemented and tested?" |
-| [traceability.yaml](traceability.yaml) | The **links** (machine-checked): validated against the tree by `make spec-check` | "Has the chain drifted?" |
-| [.sdd.yaml](.sdd.yaml) | The **descriptor**: this repo's SDD conventions (id style, paths, ground-truth source) | "How is SDD configured here?" |
-
-## Operational docs
-
-| Document | Role |
-|----------|------|
-| [install.md](install.md) | Hosted and local setup, MCP client configurations (user-facing) |
-| [development.md](development.md) | Docker dev environment, transports, configuration, the discovery-cache gotcha |
-| [conventions.md](conventions.md) | Coding standard (PSR-12) and MCP authoring conventions |
-| [testing.md](testing.md) | PHPUnit, PHPStan, coverage, MCP conformance |
-
-## How to change the system (SDD flow)
-
-1. **Requirement**: add or edit a `REQ-#` in [requirements.md](requirements.md).
-2. **Design**: update [architecture.md](architecture.md); if the choice is
-   architecturally significant, write an [ADR](decisions/).
-3. **Implement**: code under `src/`.
-4. **Verify**: add or extend the mirrored `tests/…/*Test`.
-5. **Trace**: update the [traceability matrix](traceability.md) **and** the
-   machine map [traceability.yaml](traceability.yaml); run `make spec-check` (part
-   of `make ci`) to confirm the chain still resolves.
-
-## Related
-
-- [AGENTS.md](../AGENTS.md): canonical conventions for AI agents and contributors
-  (this `docs/` tree is its spec source of truth).
-- [README.md](../README.md): product feature overview.
-- [openehr-assistant-dev plugin](https://github.com/cadasto/openehr-assistant-dev-plugin):
-  maintainer tooling for authoring tools/prompts/guides/examples in this repo.
-- [openehr-assistant plugin](https://github.com/cadasto/openehr-assistant-plugin):
-  the user-facing plugin that wraps this server for clinical end users.
+Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_LABEL_MIGRATION.md), [implementation report](IMPLEMENTATION_REPORT.md).

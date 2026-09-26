@@ -78,7 +78,7 @@ composer audit
 PHPUnit: **536 passed, 2640 assertions, 0 failures, 0 skipped**.
 Traceability: **PASS**. PHPStan level 8: **PASS**.
 Dependency audit: **FAIL**, three advisories affecting two packages:
-Guzzle CVE-2026-69244/CVE-2026-69245 (see exact audit log for identifiers) and
+Guzzle CVE-2026-69246/CVE-2026-69245 (see exact audit log for identifiers) and
 MCP SDK CVE-2026-53965. The audit log is the authoritative record.
 [Raw output](evidence/baseline-tests.txt) and [surface inventory](evidence/baseline-surface.json).
 No external Microsoft tenant test was performed. AmyTerm `/fhir/metadata`

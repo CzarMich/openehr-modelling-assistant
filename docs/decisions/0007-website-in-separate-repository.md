@@ -1,5 +1,7 @@
 # ADR-0007 — The public website lives in its own repository
 
+> Historical upstream decision; superseded for this fork by [ADR-0008](0008-provider-neutral-modelling-platform.md).
+
 - **Status:** Accepted
 - **Requirements:** REQ-N10 (install documentation is consumable without duplication)
 - **Related:** [install.md](../install.md), [cadasto/openehr-assistant](https://github.com/cadasto/openehr-assistant)

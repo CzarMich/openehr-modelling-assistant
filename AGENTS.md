@@ -1,11 +1,11 @@
 # AGENTS.md
 
-Instructions for AI agents (Claude Code, Cursor, and others) working in the **openEHR Assistant MCP Server** repository.
+Instructions for AI agents (Claude Code, Cursor, and others) working in the **openEHR Modelling Assistant** repository.
 
 ## Project Overview
 
 - A PHP 8.4 MCP server exposing openEHR tools, prompts, and resources to MCP clients, built on `mcp/sdk` ([modelcontextprotocol/php-sdk](https://github.com/modelcontextprotocol/php-sdk)) with attribute-driven discovery (`#[McpTool]`, `#[McpPrompt]`, `#[McpResourceTemplate]`/`#[McpResource]`, `#[CompletionProvider]`). Feature overview: `README.md`.
-- **Two plugins, two audiences; do not confuse them.** The [openehr-assistant-dev plugin](https://github.com/cadasto/openehr-assistant-dev-plugin) (Claude Code + Cursor) is this repo's maintainer tooling (authoring tools, prompts, guides, examples; releases). The [openehr-assistant plugin](https://github.com/cadasto/openehr-assistant-plugin) wraps this server for clinical end users.
+- This product is client-neutral; no client plugin or model SDK is required.
 
 ## Documentation map
 
@@ -20,7 +20,7 @@ This repo follows a lightweight **Specification-Driven Development** paradigm. T
 | [`docs/conventions.md`](docs/conventions.md) | **Canonical** coding and MCP authoring conventions: PSR-12, namespaces, tools, prompts (incl. the prompt policy split), resources, completion providers |
 | [`docs/development.md`](docs/development.md) | Docker dev environment, services, transports, env vars, discovery cache, Makefile targets |
 | [`docs/testing.md`](docs/testing.md) | Tests, PHPStan, coverage, conformance, drift gate |
-| [`docs/install.md`](docs/install.md) | Hosted and local setup, MCP client configurations (user-facing) |
+| [`docs/install.md`](docs/install.md) | Independent and local setup, MCP client configurations (user-facing) |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | PR checklist, branch naming, release housekeeping |
 
 ## Domain Context
@@ -65,7 +65,7 @@ make conformance  # MCP conformance suite (stack must be up)
 - Single test class, inside the container: `composer test -- --filter SomeTest` (a bare `vendor/bin/phpunit` finds no config; it lives at `tests/phpunit.xml`).
 - Full `docker compose … exec` invocations: [`docs/testing.md`](docs/testing.md).
 - **Transports:** `streamable-http` (default; dev port `:8343`) and `stdio` (`php public/index.php --transport=stdio`, or `make run-stdio`).
-- **Configuration:** env vars and their code defaults (which can differ from `.env.example`) are in [`docs/development.md`](docs/development.md#configuration).
+- **Configuration:** env vars and their code defaults are in [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 - When you add or move a `REQ-*`, a capability class, or its test, update [`docs/traceability.yaml`](docs/traceability.yaml) in the same change, or `spec-check` fails.
 
 ### CHANGELOG style
@@ -84,7 +84,7 @@ Keep `## [Unreleased]` entries **short and high-level**: one-line bullets naming
 
 ### Branching
 
-Feature branches off `main` plus pull requests (naming in [`CONTRIBUTING.md`](CONTRIBUTING.md#branching-and-versioning)). CI (`pr-validation.yml`) runs only on `pull_request` events: every push to an open PR, nothing for a branch without one.
+Feature branches off `main` plus pull requests (naming in [`CONTRIBUTING.md`](CONTRIBUTING.md#branching-and-versioning)). CI (`pr-validation.yml`) validates pull requests and main/feature/fix pushes. Main delivery runs only after its validation succeeds. After a push run `scripts/watch-ci.sh <full-sha>` and resolve every failed workflow before reporting completion.
 
 ## Gotchas
 

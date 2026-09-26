@@ -1,4 +1,4 @@
-# Contributing to openehr-assistant-mcp
+# Contributing to openEHR Modelling Assistant
 
 Thank you for your interest in contributing! This document covers the contribution
 **process**. Setup, environment, and conventions live in the canonical docs linked
@@ -50,7 +50,7 @@ make ci
 
 Test, coverage, and conformance commands and conventions → **[docs/testing.md](docs/testing.md)**.
 
-- Tests live under `tests/` (namespace `Cadasto\OpenEHR\MCP\Assistant\Tests`), named `*Test.php`, mirroring `src/`.
+- Tests live under `tests/` (namespace `OpenEHR\Assistant\Tests`), named `*Test.php`, mirroring `src/`.
 - **Mock external HTTP to CKM**; never hit live APIs in tests.
 
 ## Conventions

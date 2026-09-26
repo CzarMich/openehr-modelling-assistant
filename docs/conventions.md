@@ -15,8 +15,8 @@ MCP tools, prompts, resources, and completion providers. Architecture (component
 
 ## Namespaces
 
-- Production code: `Cadasto\OpenEHR\MCP\Assistant\` → `src/`.
-- Tests: `Cadasto\OpenEHR\MCP\Assistant\Tests\` → `tests/`, files `*Test.php`, mirroring `src/`.
+- Production code: `OpenEHR\Assistant\` → `src/`.
+- Tests: `OpenEHR\Assistant\Tests\` → `tests/`, files `*Test.php`, mirroring `src/`.
   Mock external HTTP to CKM; never hit live APIs. See [testing.md](testing.md).
 
 ## MCP capabilities (authoring)
