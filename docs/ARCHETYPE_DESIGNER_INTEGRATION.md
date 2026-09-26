@@ -6,15 +6,17 @@
 
 Use a dedicated model-content GitHub repository, separate from the assistant application's source repository. Designer supports GitHub repositories, including private ones; its developer confirms this in the [repository support discussion](https://discourse.openehr.org/t/setting-up-an-archetype-designer-repository-linked-to-a-private-github-repo/2056/6). Its [GitHub authentication explanation](https://discourse.openehr.org/t/archetype-designer-is-asking-for-access-to-private-github-repos-and-more/5513/3) describes account authorization and repository permissions.
 
-The intended workflow is:
+The shared-repository workflow is:
 
 1. Author and visually review models in Designer using the dedicated repository.
 2. Read the exact committed model revision through the assistant's repository adapter.
-3. Use assistant tools to find CKM content, review requirements and differences, and check terminology through AmyTerm.
-4. Propose changes on a separate branch with the expected base revision. Review and merge them before refreshing Designer.
+3. Use assistant tools to find CKM content, review requirements and differences, and optionally check terminology through terminology server or local value sets.
+4. Configure the assistant to use a review branch created in Git. Save draft changes with the expected artifact revision. Review and merge through GitHub before refreshing Designer; automatic pull-request creation is not implemented.
 5. Export the needed operational artifacts from Designer and retain the source revision, exported content hash and validation reports together.
 
-The assistant's GitHub repository adapter is **not implemented**. Current `MODEL_REPOSITORY_PROVIDER=filesystem` storage is a versioned JSON snapshot store; it cannot be exposed to Designer by pointing Git at its internal files. Automatic import, pull requests, webhook synchronization, conflict resolution and Designer round-trip tests remain integration work. The user's Designer account must also authorize repository access. This document does not imply that account linking has been performed.
+The assistant implements `MODEL_REPOSITORY_PROVIDER=git` with GitHub/GitLab/other Git remotes. It reads and writes ordinary model files, uses commit revisions, synchronizes before writes and rejects conflicts. Use project `default` for a repository whose supported categories are at the root. Existing native model-file edits from another Git client are covered by the integration tests; a hosted Designer UI round trip is still **not verified**. Confirm the account's actual folder layout and branch support before using it. See [Git configuration](MODEL_REPOSITORY.md).
+
+Filesystem storage remains available as a JSON snapshot provider and is not directly Designer-compatible. Git hosting review APIs, automatic merging and webhooks remain unimplemented. The user's Designer account must authorize repository access; deploying the adapter does not perform that account linking.
 
 ## File exchange with the current tools
 
@@ -26,7 +28,7 @@ The assistant's draft OET generator is limited to a COMPOSITION and direct ENTRY
 
 ## Terminology and access
 
-The assistant already calls AmyTerm using a server-side service key. This key stays in its deployment secret store. Do not place it in a GitHub model repository or an externally hosted Designer configuration without verifying the Designer connector's supported authentication and credential handling. A direct Designer-to-AmyTerm connection has not been tested; terminology review through the assistant is available independently.
+The assistant already calls terminology server using a server-side service key. This key stays in its deployment secret store. Do not place it in a GitHub model repository or an externally hosted Designer configuration without verifying the Designer connector's supported authentication and credential handling. A direct Designer-to-terminology server connection has not been tested; terminology review through the assistant is available independently.
 
 No public, supported hosted-Designer MCP or automation API was verified in this investigation. Account login pages and internal browser requests are not an integration contract. If a licensed/self-hosted Designer deployment supplies a documented API, implement a separate adapter against that contract and test authentication, concurrency, format preservation and deterministic compiler results.
 

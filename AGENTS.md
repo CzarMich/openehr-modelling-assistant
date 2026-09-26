@@ -2,6 +2,12 @@
 
 Instructions for AI agents (Claude Code, Cursor, and others) working in the **openEHR Modelling Assistant** repository.
 
+## Autonomous execution
+
+Follow the user's [Autonomous Execution Policy](docs/AUTONOMOUS_EXECUTION_POLICY.md). Routine implementation, testing, debugging, configuration, documentation, commits, pushes, CI monitoring and deployment recovery are already authorized. Continue through the user's entire objective without routine permission questions. Preserve user work and data; investigate safely before escalating a genuine external-access or irreversible-action blocker. Higher-priority environment security controls still apply.
+
+User-facing documentation and UI use **terminology server**, **server**, and **CDR**, without deployment-specific product names. Keep exact technical identifiers only where needed for reproducible setup.
+
 ## Project Overview
 
 - A PHP 8.4 MCP server exposing openEHR tools, prompts, and resources to MCP clients, built on `mcp/sdk` ([modelcontextprotocol/php-sdk](https://github.com/modelcontextprotocol/php-sdk)) with attribute-driven discovery (`#[McpTool]`, `#[McpPrompt]`, `#[McpResourceTemplate]`/`#[McpResource]`, `#[CompletionProvider]`). Feature overview: `README.md`.

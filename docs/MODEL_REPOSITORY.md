@@ -1,28 +1,68 @@
 # Persistent modelling projects
 
-A conversation is not a model repository. `model_project_create`, `model_project_get`, `model_artifact_save`, `model_artifact_get` and `model_artifact_history` preserve work across conversations and application restarts. Enable writes explicitly with `MODEL_REPOSITORY_WRITE_ENABLED=true`.
+A conversation is not a model repository. The same MCP project/artifact tools work with either implemented provider: `filesystem` or `git`. Set `MODEL_REPOSITORY_PROVIDER` in deployment configuration. Writes require `MODEL_REPOSITORY_WRITE_ENABLED=true`. Neither provider requires a terminology server, bindings, CDR or model-provider API key.
 
-The provider-neutral `ModelRepository` contract supports project list/get/create/archive, artifact list/get/save/delete and history. The MCP surface exposes list/get/create and artifact read/save/history; archive/delete are currently application interface operations only. Project metadata update and independent metadata endpoints are not implemented; metadata travels with each artifact revision.
+The provider-neutral `ModelRepository` contract supports project list/get/create/archive, artifact list/get/save/delete and history. MCP exposes list/get/create and artifact read/save/history. Archive/delete and the Git branch/diff methods are application interfaces, not additional MCP tools. Hosted pull-request creation and approval are not implemented.
 
-## Logical layout
+## Shared contract
 
-Use paths under `requirements/`, `archetypes/`, `templates/`, `terminology/`, `aql/`, `tests/`, `validation/`, `decisions/` and `documentation/`. No project needs every category. Markdown, JSON, YAML, ADL, OET, OPT and AQL are stored as text; storing an artifact does not validate its format.
+Use paths under `requirements/`, `archetypes/`, `templates/`, `terminology/`, `aql/`, `tests/`, `validation/`, `decisions/` and `documentation/`. No project needs every category. Paths are case-sensitive and currently accept ASCII letters, digits, underscore, dot, slash and hyphen, up to 240 characters. Traversal, symlinks and arbitrary root files are rejected by model writes. Markdown, JSON, YAML, ADL, OET, OPT and AQL are stored as UTF-8 text; storage does not validate format or clinical semantics.
 
-The filesystem adapter stores `<project-id>.json` plus a lock file in `MODEL_REPOSITORY_PATH`. Logical paths are entries in that snapshot, not individual operating-system files. Every saved revision includes a random provider-neutral revision, content SHA-256, provider, timestamp, DRAFT status and caller-supplied metadata. Metadata is untrusted documentation: it does not prove authorship or approval. Reserved lifecycle/validation fields cannot be set through artifact metadata.
+Create artifacts with `expectedRevision=null`. Update with the current revision from `model_artifact_get`; a stale value returns `REVISION_CONFLICT`. Saved content carries SHA-256, provider, timestamp and DRAFT status. Metadata is untrusted documentation and cannot confer approval. Deleted artifacts retain history with a tombstone. Archived projects remain readable and reject artifact writes.
 
-Creating uses `expectedRevision=null`; updating requires the current revision from `model_artifact_get`. A stale revision returns `REVISION_CONFLICT`. Deleted artifacts retain history with a tombstone. Archived projects reject writes. Atomic rename and per-project `flock` prevent torn writes within the supported single-instance filesystem. A backup copies complete snapshots while writes are stopped or under the same lock discipline. Restore to an empty persistent volume and verify hashes/history before reopening writes.
+## Filesystem provider
 
-Limits: artifact 2 MiB, metadata 64 KiB, complete project including history 32 MiB. The HTTP envelope has its own lower effective content budget. There is no history pruning. Root and paths reject symlinks and traversal; grant the runtime UID exclusive write ownership. Hostile users with direct filesystem write access are outside this boundary. Container paths are Unix paths; Windows deployments use Docker volumes. A mounted network filesystem must be qualified for atomic rename and locking before use.
+```dotenv
+MODEL_REPOSITORY_PROVIDER=filesystem
+MODEL_REPOSITORY_PATH=/data/models
+MODEL_REPOSITORY_WRITE_ENABLED=true
+```
+
+Each project is an atomic `<project-id>.json` snapshot with a lock file. Logical paths are entries inside that snapshot, not separate model files. History uses opaque provider revisions. Per-project locks and atomic rename support one active application instance; qualify network filesystems separately. Limits: 2 MiB per artifact, 64 KiB metadata and 32 MiB per project including history. No history pruning is implemented.
+
+## Git provider
+
+```dotenv
+MODEL_REPOSITORY_PROVIDER=git
+MODEL_REPOSITORY_PATH=/data/models
+MODEL_REPOSITORY_WRITE_ENABLED=true
+MODEL_GIT_REMOTE_URL=ssh://git@github.com/your-organisation/clinical-models.git
+MODEL_GIT_BRANCH=main
+MODEL_GIT_AUTHOR_NAME="openEHR Modelling Assistant"
+MODEL_GIT_AUTHOR_EMAIL=modelling-assistant@example.org
+MODEL_GIT_SSH_KEY_FILE=/run/secrets/model_git_key
+MODEL_GIT_KNOWN_HOSTS_FILE=/run/secrets/model_git_known_hosts
+MODEL_GIT_SYNC_SECONDS=5
+MODEL_GIT_TIMEOUT=30
+```
+
+Use a dedicated **model-content repository**, separate from the application's source repository. The adapter works with GitHub, GitLab, enterprise Git hosts, absolute local Git paths and local Git without a remote. Use `ssh://git@host/group/repository.git`; SCP-style `git@host:path` shorthand is not accepted. HTTPS remotes support anonymous access; authenticated private hosting uses SSH. Inline credentials, URL queries/fragments, redirects and interactive authentication are refused. `MODEL_GIT_REMOTE_URL=` provides fully offline Git history.
+
+Mount a repository-scoped SSH deploy key and verified `known_hosts` read-only into the app. The runtime UID must be able to read them. Use a read-only deploy key and disable writes for a read-only integration; grant repository write permission when draft writes are required. Obtain host fingerprints through a trusted channel. No personal key, private key, access token or terminology credential belongs in a model repository. See `deploy/compose.git-secrets.example.yml` for mounts.
+
+Git contains ordinary model files. The `default` project maps directly to root categories such as `archetypes/` and `templates/`. Other projects map to `projects/<id>/...`. Optional project/artifact metadata lives under `.modelling/`. Existing root model files are discoverable as `default` without writing metadata. Files outside supported model categories remain in the tree but are not exposed as artifacts. Authoring JSON is preserved byte-for-byte; it is not converted to OPT. A Designer repository using another directory convention requires a reviewed mapping/import first.
+
+The local object store is `MODEL_REPOSITORY_PATH/git/objects.git`. It is a bare repository, so remote worktrees, hooks, submodules, attributes filters and executable model files are never run. Commits supply revision identifiers. Reads refresh at most every `MODEL_GIT_SYNC_SECONDS` seconds; writes always refresh first. No automatic merges or force-pushes of model updates occur. A stale artifact revision fails. A competing push fails without advancing the accepted local branch; reread and review the latest content before retrying. Remote history rewrites/deleted branches fail explicitly. To change the remote, select a fresh storage path and review the migration.
+
+Individual Git commands have a timeout and bounded output. Accepted trees allow only regular files, up to 2 MiB each, 32 MiB total and 10,000 files. Artifact history is capped at 1,000 entries and fails explicitly above that limit. These limits do not bound the entire remote Git history downloaded during fetch: use a trusted, appropriately sized model repository and storage quotas. Large CKM mirrors need a separate design. A configured remote outage can prevent repository operations when refresh is due; bundled guides and local validation remain usable. Leave the remote empty for fully offline repository operation.
+
+`GitRepository::createBranch` and `diff` are implemented adapter methods. Branch creation uses a create-only lease to avoid overwriting an existing remote branch. Git provider API review creation, webhooks, merge automation and release tags are not implemented. Set the configured branch to a branch created through Git/your hosting service for the MCP modelling workflow; it cannot switch branches through a tool call.
 
 ## Provider capabilities
 
-| Provider | Storage/history | Branch/review/release | Availability |
+| Provider selection | Storage and history | Branch/diff | Hosted reviews |
 |---|---|---|---|
-| Filesystem | Implemented; platform revisions and exclusive locks | Not implemented | Offline; one active provider |
-| GitHub | Not implemented | `GitRepository` extension contract prepared | Selecting it fails clearly |
-| GitLab | Not implemented | Same provider-neutral Git extension | Selecting it fails clearly |
-| SharePoint | Not implemented | Future Graph adapter isolated from domain | Selecting it fails clearly |
+| `filesystem` | Atomic snapshots and platform revisions | Unavailable | Unavailable |
+| `git` | Plain files, Git revisions, optional remote synchronization | Adapter methods | Unavailable |
+| `github` / `gitlab` | Reserved provider-specific modes; use `git` with the appropriate remote today | Through `git` | Not implemented |
+| `sharepoint` | Not implemented | Not applicable | Not implemented |
 
-`model_projects` returns actual capabilities. No GitHub/GitLab/SharePoint credential variables are consumed today. Future adapters must supply configurable enterprise origins, provider revisions, optimistic concurrency, least-privilege identity and truthful capability discovery. An unsupported provider never silently falls back to filesystem.
+`model_projects` returns actual adapter capabilities. These flags describe the adapter; the documented MCP tool catalogue defines what clients can invoke. Unsupported provider-specific modes never silently fall back to filesystem.
 
-A recommended metadata record records type, human version, explicit source CKM/version/hash, declared dependencies, requirement IDs, agent/client (when known), and decision record references. Do not fabricate a user identity, Git SHA, spec version or validation result. Save source retrieval provenance returned by `template_build_oet` alongside the draft.
+## Backup and migration
+
+Back up filesystem snapshots consistently while writes are stopped or under their locks. For Git, back up the bare object store and configuration; a configured remote provides the pushed commit history but does not replace a retention/backup policy. Restore into a separate persistent volume with the runtime UID ownership and verify current files, hashes and history before switching traffic. Give each instance its own cache and use remote revision checks between instances.
+
+Changing the provider does not migrate existing data. Export artifacts through `model_artifact_get`, then import their exact content through the destination provider. Preserve original revision/provenance in metadata; filesystem revision identifiers are not Git SHAs. Do not commit filesystem snapshot internals as native Designer files. Retain the old volume until the reviewed migration is verified.
+
+Record artifact type, human version, source CKM/version/hash, declared dependencies, requirement IDs and decision references. Never invent an author, version, approval or validation result. See the [shared Git workflow](workflows/shared-git-models.md) and [Designer integration](ARCHETYPE_DESIGNER_INTEGRATION.md).

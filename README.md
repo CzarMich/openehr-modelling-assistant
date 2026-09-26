@@ -3,7 +3,7 @@
 A self-hosted, configurable openEHR knowledge and modelling service for AI agents.
 It helps clinical information modellers and engineers find source archetypes,
 draft templates, review ADL and AQL, manage modelling artefacts, and verify
-terminology. **A CDR is not required for modelling.**
+terminology. **Neither a CDR nor a terminology server is required for modelling. Terminology bindings are optional.**
 
 Microsoft Copilot Studio is the primary documented enterprise consumer. The core
 speaks standard MCP and contains no Microsoft, OpenAI or Anthropic model client.
@@ -23,13 +23,13 @@ CKM, or operate as a terminology server.
 - Parse XML securely; check an OET/OPT structural profile and ADL headers; compare XML
   structure, constraints and leaf values. These checks do not certify openEHR conformance.
 - Persist projects, requirements, artefacts, decisions, metadata and immutable revisions
-  using a filesystem provider with conflict detection.
+  using filesystem snapshots or Git, including GitHub/GitLab remotes, with revision conflict detection.
 - Represent local/external value sets and bindings, invoke FHIR terminology operations,
   compare terminology changes, and produce declared terminology dependency manifests.
 - Report explicit requirements traceability and a QA preflight that identifies unexecuted checks.
 
 There is **no OPT compiler, complete ADL/AQL validator, CDR execution adapter,
-visual modeller, GitHub/GitLab/SharePoint storage adapter, or operational approval UI**.
+visual modeller, SharePoint storage adapter, hosted Git review API, or operational approval UI**.
 The interfaces and governance policy prepare these extensions. OIDC/Entra token
 verification is an extension point; `AUTH_MODE=oidc` fails closed until implemented.
 See the [capability matrix](CAPABILITIES.md) and [verification report](docs/IMPLEMENTATION_REPORT.md).

@@ -202,7 +202,7 @@ requirements:
     status: draft
     implementation: landed
     packages: [src/Domain/Repository/*.php, src/Integrations/Repository/*.php, src/Tools/ProjectService.php]
-    tests: [tests/Enterprise/RepositoryAndGovernanceTest.php]
+    tests: [tests/Enterprise/RepositoryAndGovernanceTest.php, tests/Enterprise/GitRepositoryTest.php]
     adr: ["0008"]
 
   - id: REQ-F13

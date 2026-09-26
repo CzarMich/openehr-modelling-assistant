@@ -67,7 +67,7 @@ the Implementation column is either dead code or an undocumented requirement.
 | Requirement | Implementation | Tests |
 |---|---|---|
 | REQ-F11 | Configurable branding and named CKM sources (landed) | `tests/Enterprise/ConfigurationAndAuthTest.php` |
-| REQ-F12 | Provider-neutral persistent projects, artifacts and revisions (landed) | `tests/Enterprise/RepositoryAndGovernanceTest.php` |
+| REQ-F12 | Filesystem/Git persistent projects, artifacts and revisions (landed) | `tests/Enterprise/RepositoryAndGovernanceTest.php`, `tests/Enterprise/GitRepositoryTest.php` |
 | REQ-F13 | Draft OET generation, bounded validation and structural diff (partial) | `tests/Enterprise/ModelValidationTest.php` |
 | REQ-F14 | Explicit terminology, value sets, bindings, provenance and diff (partial) | `tests/Enterprise/TerminologyProviderTest.php` |
 | REQ-N11 | Authenticated bounded transport and redacted failures (landed) | `tests/Enterprise/ConfigurationAndAuthTest.php` |

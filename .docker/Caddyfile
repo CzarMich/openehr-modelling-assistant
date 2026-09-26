@@ -7,6 +7,11 @@
     request_body {
         max_size {$MAX_REQUEST_BYTES:2097152}
     }
+    handle / {
+        root * /srv
+        rewrite * /landing.html
+        file_server
+    }
     @mcp path /mcp /health /ready
     handle @mcp {
         reverse_proxy app:9000 {
