@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Prompts;
+namespace OpenEHR\Assistant\Tests\Prompts;
 
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\GuideExplorer;
+use OpenEHR\Assistant\Prompts\GuideExplorer;
 use Mcp\Schema\Enum\Role;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;

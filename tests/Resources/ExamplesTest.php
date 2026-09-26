@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Resources;
+namespace OpenEHR\Assistant\Tests\Resources;
 
-use Cadasto\OpenEHR\MCP\Assistant\Resources\Examples;
+use OpenEHR\Assistant\Resources\Examples;
 use Mcp\Capability\Attribute\McpResourceTemplate;
 use Mcp\Exception\ResourceReadException;
 use Mcp\Server\Builder;

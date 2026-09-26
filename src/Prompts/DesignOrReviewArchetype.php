@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -13,12 +13,19 @@ readonly final class DesignOrReviewArchetype extends AbstractPrompt
     /**
      * Design or Review an openEHR Archetype, based on the provided inputs and guides.
      *
+     *
      * @param mixed $task_type design | review | specialise
+     *
      * @param mixed $concept Archetype concept
+     *
      * @param mixed $rm_type Target RM type
+     *
      * @param mixed $clinical_context Clinical use context
+     *
      * @param mixed $existing_archetype Existing Archetype (ADL or URI) — optional for design, required when task_type is review
+     *
      * @param mixed $parent_archetype Parent Archetype — optional for design, required when task_type is specialise
+     *
      * @return PromptMessage[]
      */
     public function __invoke(

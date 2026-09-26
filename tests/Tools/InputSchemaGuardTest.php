@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Tools;
+namespace OpenEHR\Assistant\Tests\Tools;
 
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Discovery\DocBlockParser;
@@ -74,7 +74,7 @@ final class InputSchemaGuardTest extends TestCase
         // new service is published to clients whether or not it is listed here.
         $classes = [];
         foreach (glob(__DIR__ . '/../../src/Tools/*.php') ?: [] as $path) {
-            $class = 'Cadasto\\OpenEHR\\MCP\\Assistant\\Tools\\' . basename($path, '.php');
+            $class = 'OpenEHR\\Assistant\\Tools\\' . basename($path, '.php');
             if (class_exists($class)) {
                 $classes[] = $class;
             }

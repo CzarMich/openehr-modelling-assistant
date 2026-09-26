@@ -48,3 +48,9 @@ Thumbs.db
 worktrees/
 # Claude Code local project memory (machine-specific)
 CLAUDE.local.md
+
+/var/
+/models/
+
+__pycache__/
+*.pyc

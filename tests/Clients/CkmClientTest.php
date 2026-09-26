@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Clients;
+namespace OpenEHR\Assistant\Tests\Clients;
 
-use Cadasto\OpenEHR\MCP\Assistant\Apis\CkmClient;
+use OpenEHR\Assistant\Apis\CkmClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Response;

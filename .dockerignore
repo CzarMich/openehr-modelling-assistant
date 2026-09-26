@@ -1,28 +1,12 @@
-# Git
 .git
-.git*
-
-# Documentation
-*.md
-LICENSE
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Docker (assets live in .docker/; ignore only if any legacy files at root)
-docker-compose*.yml
-Dockerfile*
-.dockerignore
-
-# Development
+.github
+.claude
+vendor
+var
+tests
+docs
+conformance
 .env
-.env.local
-.env.*.local
+.env.*
 *.log
+*.tmp

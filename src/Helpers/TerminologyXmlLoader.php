@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Helpers;
+namespace OpenEHR\Assistant\Helpers;
 
 use RuntimeException;
 use SimpleXMLElement;
@@ -27,9 +27,9 @@ final class TerminologyXmlLoader
         }
 
         try {
-            $xml = new SimpleXMLElement($content);
+            $xml = simplexml_import_dom(\OpenEHR\Assistant\Validation\ModelValidator::xml($content)) ?: throw new RuntimeException('Invalid terminology XML.');
         } catch (\Throwable $e) {
-            throw new RuntimeException('Error parsing terminology XML: ' . $e->getMessage(), previous: $e);
+            throw new RuntimeException('Error parsing terminology XML.', previous: $e);
         }
 
         $groups = $xml->xpath('/terminology/group');

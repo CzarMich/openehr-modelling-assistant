@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tools;
+namespace OpenEHR\Assistant\Tools;
 
-use Cadasto\OpenEHR\MCP\Assistant\Helpers\TerminologyXmlLoader;
+use OpenEHR\Assistant\Helpers\TerminologyXmlLoader;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Exception\ToolCallException;
@@ -33,8 +33,11 @@ readonly final class TerminologyService
      * - If `input` is non-numeric, it's treated as a rubric (case-insensitive) and the corresponding ID is returned.
      * - An optional `groupId` can be provided to restrict the search to a specific openEHR Terminology group.
      *
+     *
      * @param string $input The concept ID (e.g., "433") or concept rubric (e.g., "event") to resolve.
+     *
      * @param string $groupId Optional openEHR terminology group ID (e.g., "composition_category") to restrict the search.
+     *
      * @return array<string, string> The resolved pair: ['id' => '...', 'rubric' => '...', 'groupId' => '...', 'groupName' => '...']. Never returns null values — an unresolved input throws instead.
      * @throws ToolCallException If the input or groupId cannot be resolved, or if the input is missing/invalid.
      * @throws \RuntimeException If the bundled terminology XML cannot be read or parsed.
@@ -58,7 +61,7 @@ readonly final class TerminologyService
     )]
     public function resolve(string $input, string $groupId = ''): array
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('Tool invoked.');
 
         $input = trim($input);
         $groupId = trim($groupId);

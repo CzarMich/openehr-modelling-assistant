@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\CompletionProviders;
+namespace OpenEHR\Assistant\CompletionProviders;
 
 use Mcp\Capability\Completion\ProviderInterface;
 
@@ -12,7 +12,9 @@ class Guides implements ProviderInterface
     /**
      * Retrieves a list of files from the specified directories.
      *
+     *
      * @param array<string> $directories An array of directory paths to scan for files.
+     *
      * @return array<string> An array of file names found in the specified directories.
      */
     private function getFiles(array $directories): array

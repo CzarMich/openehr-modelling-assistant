@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Helpers;
+namespace OpenEHR\Assistant\Tests\Helpers;
 
-use Cadasto\OpenEHR\MCP\Assistant\Helpers\Map;
+use OpenEHR\Assistant\Helpers\Map;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

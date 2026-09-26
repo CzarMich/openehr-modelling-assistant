@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -13,8 +13,11 @@ readonly final class ExplainTemplate extends AbstractPrompt
     /**
      * Explain and interpret the semantic meaning of an openEHR Template, grounded in the bundled guides.
      *
+     *
      * @param mixed $template_text Template (OET) to explain
+     *
      * @param mixed $audience Intended audience: clinician, developer, data-analyst, mixed (optional)
+     *
      * @return PromptMessage[]
      */
     public function __invoke(

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use InvalidArgumentException;
 use Mcp\Exception\PromptGetException;
@@ -28,13 +28,19 @@ abstract readonly class AbstractPrompt
     }
 
     /**
+     *
      * @param string $name
+     *
      * @param array<string, mixed> $values Raw argument values as received from the client.
+     *
      * @param list<string> $requiredKeys Arguments that must be supplied and non-blank.
+     *
      * @param array<string, list<string>> $vocabularies
      *   Argument name → the closed set of values the prompt body branches on.
+     *
      * @param array<string, array<string, list<string>>> $requiredWhen
      *   Argument name → controlling argument → the values that make it mandatory.
+     *
      * @return PromptMessage[]
      *
      * @throws PromptGetException
@@ -92,8 +98,11 @@ abstract readonly class AbstractPrompt
      * The `required` flag in `prompts/list` is unaffected: `Discoverer` derives it from
      * the absence of a default value, not from the declared type.
      *
+     *
      * @param array<string, mixed> $values
+     *
      * @param list<string> $requiredKeys
+     *
      * @return array<string, string>
      *
      * @throws PromptGetException
@@ -147,8 +156,11 @@ abstract readonly class AbstractPrompt
      * Blank values are left to `$requiredKeys` / `$requiredWhen`; an optional argument the
      * client omitted is not a vocabulary violation.
      *
+     *
      * @param array<string, string> $values
+     *
      * @param array<string, list<string>> $vocabularies
+     *
      * @return array<string, string>
      */
     private function applyVocabularies(array $values, array $vocabularies): array
@@ -189,7 +201,9 @@ abstract readonly class AbstractPrompt
      * supplied Existing Archetype unchanged" directly above an empty slot, and the model
      * confidently reviews nothing. Declaring the pairing turns that into a named error.
      *
+     *
      * @param array<string, string> $values
+     *
      * @param array<string, array<string, list<string>>> $requiredWhen
      */
     private function applyConditionalRequirements(array $values, array $requiredWhen): void
@@ -216,6 +230,7 @@ abstract readonly class AbstractPrompt
     }
 
     /**
+     *
      * @param array<string, string> $values
      */
     private function substitutePlaceholders(PromptMessage $message, array $values, string $name): PromptMessage
@@ -277,7 +292,9 @@ abstract readonly class AbstractPrompt
     }
 
     /**
+     *
      * @param string $name
+     *
      * @return PromptMessage[]
      */
     private function loadPromptFile(string $name): array

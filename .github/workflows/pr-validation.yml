@@ -2,6 +2,9 @@ name: PR validation
 
 on:
   pull_request:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,7 +21,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: curl, json, simplexml
+          extensions: curl, dom, json, simplexml
           coverage: none
 
       - name: Install dependencies
@@ -40,9 +43,28 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./.docker/Dockerfile
+          file: ./Dockerfile
           target: production
           push: false
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Exercise real container protocol and persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          docker compose up -d --build --wait
+          python3 scripts/mcp-smoke.py --evidence docs/evidence/ci-http-smoke.json
+
+      - name: Dependency audit
+        run: composer audit
+
+      - name: Preserve protocol evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modelling-assistant-protocol-evidence
+          path: docs/evidence/ci-http-smoke.json
+          if-no-files-found: warn

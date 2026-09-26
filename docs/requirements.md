@@ -1,4 +1,4 @@
-# Requirements — openEHR Assistant MCP Server
+# Requirements — openEHR Modelling Assistant
 
 > Part of the [Specification-Driven Development docs](README.md). Each requirement
 > has a stable ID (`REQ-F#` functional, `REQ-N#` non-functional). IDs are
@@ -9,7 +9,7 @@
 
 ## Purpose
 
-The openEHR Assistant MCP Server exposes openEHR domain knowledge — archetypes,
+The openEHR Modelling Assistant exposes openEHR domain knowledge — archetypes,
 templates, guides, examples, terminology, and Reference/Archetype Model type
 specifications — to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io).
 It is a *knowledge and authoring-assistance* server: it helps agents discover,
@@ -40,17 +40,23 @@ repository and stores no patient data.
 | **REQ-N3** | Code follows PSR-12 and passes PHPStan static analysis before merge. | Maintainability and reviewability. |
 | **REQ-N4** | MCP capability discovery is cached at startup to keep server boot fast. | Responsiveness under repeated client connections. → [ADR-0001](decisions/0001-attribute-driven-discovery.md) |
 | **REQ-N5** | The runtime is Docker-only and reproducible; no host PHP/Composer is assumed. | Consistent environment across maintainers (WSL2 on Windows). → [ADR-0004](decisions/0004-docker-only-runtime.md) |
-| **REQ-N6** | The server passes the official MCP conformance suite over HTTP. | Interoperability with arbitrary MCP clients. |
+| **REQ-N6** | Run the official MCP conformance suite against its explicit expected-failure baseline and separately verify the actual product tools over HTTP. | Interoperability with arbitrary MCP clients. |
 | **REQ-N7** | Guide and prompt content is concise and scannable, optimised for AI context economy. | Content is consumed by agents under token budgets. → [ADR-0003](decisions/0003-prompt-policy-split.md) |
 | **REQ-N8** | The requirement↔code↔test↔decision traceability map is machine-validated in CI; a missing artefact, dangling path, or index/map disagreement fails the build. | Keeps the SDD chain from silently rotting. → [ADR-0006](decisions/0006-machine-checked-traceability.md) |
 | **REQ-N9** | Every published MCP tool schema is validated in CI: closed input schemas (`additionalProperties: false`, nullable optional enums, numbers bounded so out-of-range values are rejected rather than clamped), search results returned in a `{items, total}` envelope that is itself closed and `required`, and output payloads conforming to their declared `outputSchema`. Authoring recipe: [conventions.md](conventions.md#mcp-capabilities-authoring). | The SDK validates tool *input* against `inputSchema` but never validates tool *output*, so the output contract has no runtime enforcement — CI is the only thing standing between a schema edit and a broken wire contract. |
-| **REQ-N10** | `docs/install.md` is the single source for installing this server: it stays at that path, keeps a section offering the hosted endpoint and naming its URL, and every relative link in it resolves inside the repository. External documentation consumes the file rather than holding a copy. | The public website publishes it by fetching this file at a released tag, so a rename, a dropped hosted-endpoint section, or a dangling link ships a broken page. → [ADR-0007](decisions/0007-website-in-separate-repository.md) |
+| **REQ-N10** | `docs/install.md` documents independent deployment of this fork and keeps all relative links resolvable. | The product does not require the upstream hosted service; ADR-0008 supersedes its installation contract. |
 
-## Out of scope
+## Current extension boundaries
 
-- Storing or querying patient/EHR data (this is a knowledge server, not a CDR).
-- Clinical end-user workflows (archetype authoring *by clinicians*, AQL writing
-  *for a query*) — those are the remit of the user-facing
-  [openehr-assistant plugin](https://github.com/cadasto/openehr-assistant-plugin),
-  which wraps this server.
-- Bundling an MCP client or model.
+Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human approval, remote repository providers, tenant RBAC and a visual editor are not implemented. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
+
+## Modelling platform requirements
+
+| ID | Requirement | Implementation |
+|---|---|---|
+| **REQ-F11** | Configurable branding and named CKM sources. | landed; exact boundaries in CAPABILITIES.md |
+| **REQ-F12** | Provider-neutral persistent projects, artifacts and revisions. | landed; exact boundaries in CAPABILITIES.md |
+| **REQ-F13** | Draft OET generation, bounded validation and structural diff. | partial; exact boundaries in CAPABILITIES.md |
+| **REQ-F14** | Explicit terminology, value sets, bindings, provenance and diff. | partial; exact boundaries in CAPABILITIES.md |
+| **REQ-N11** | Authenticated bounded transport and redacted failures. | landed; exact boundaries in CAPABILITIES.md |
+| **REQ-N12** | Client-neutral deployment and truthful capability documentation. | landed; exact boundaries in CAPABILITIES.md |

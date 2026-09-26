@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\CompletionProviders;
+namespace OpenEHR\Assistant\Tests\CompletionProviders;
 
-use Cadasto\OpenEHR\MCP\Assistant\CompletionProviders\SpecificationComponents;
+use OpenEHR\Assistant\CompletionProviders\SpecificationComponents;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

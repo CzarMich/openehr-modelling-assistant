@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Sdd;
+namespace OpenEHR\Assistant\Sdd;
 
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
@@ -47,6 +47,7 @@ final class SpecCheck
     }
 
     /**
+     *
      * @return list<string> drift findings; empty when the map is clean
      */
     public function check(): array
@@ -162,7 +163,9 @@ final class SpecCheck
     }
 
     /**
+     *
      * @param list<string> $errors
+     *
      * @return array<mixed>|null
      */
     private function parseYaml(string $relativePath, array &$errors): ?array
@@ -189,7 +192,9 @@ final class SpecCheck
     }
 
     /**
+     *
      * @param list<string> $areas
+     *
      * @return list<string>
      */
     private function requirementIdsIn(string $relativePath, array $areas): array
@@ -226,6 +231,7 @@ final class SpecCheck
     }
 
     /**
+     *
      * @return list<string>
      */
     private function globRoot(string $relativeGlob): array
@@ -236,6 +242,7 @@ final class SpecCheck
     }
 
     /**
+     *
      * @return array<mixed>
      */
     private function asArray(mixed $value): array
@@ -249,6 +256,7 @@ final class SpecCheck
     }
 
     /**
+     *
      * @return list<string>
      */
     private function stringList(mixed $value): array

@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Helpers;
+namespace OpenEHR\Assistant\Helpers;
 
 readonly final class CliOptions
 {
     /**
      * Parses optional CLI option: --transport=stdio|streamable-http (or "--transport stdio").
+     *
      *
      * @return string '' when not provided
      */

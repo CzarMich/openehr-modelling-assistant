@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -13,10 +13,15 @@ readonly final class DesignOrReviewSimplifiedFormat extends AbstractPrompt
     /**
      * Design or review a Flat/Structured (simplified) format instance using the Simplified Formats guides.
      *
+     *
      * @param mixed $task_type design | review
+     *
      * @param mixed $template_id Target template (OPT id or name)
+     *
      * @param mixed $format_variant flat | structured
+     *
      * @param mixed $existing_json Existing Flat/Structured JSON — optional for design, required when task_type is review
+     *
      * @return PromptMessage[]
      */
     public function __invoke(

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Sdd;
+namespace OpenEHR\Assistant\Tests\Sdd;
 
-use Cadasto\OpenEHR\MCP\Assistant\Sdd\SpecCheck;
+use OpenEHR\Assistant\Sdd\SpecCheck;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

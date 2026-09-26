@@ -2,13 +2,23 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/vendor/autoload.php';
 
-use Cadasto\OpenEHR\MCP\Assistant\Apis\CkmClient;
-use Cadasto\OpenEHR\MCP\Assistant\Helpers\CliOptions;
-use Cadasto\OpenEHR\MCP\Assistant\Resources\Examples;
-use Cadasto\OpenEHR\MCP\Assistant\Resources\Guides;
-use Cadasto\OpenEHR\MCP\Assistant\Resources\Terminologies;
+use OpenEHR\Assistant\Apis\CkmClient;
+use OpenEHR\Assistant\Apis\CkmArchetypeSource;
+use OpenEHR\Assistant\Auth\HttpGuard;
+use OpenEHR\Assistant\Configuration\Settings;
+use OpenEHR\Assistant\Domain\Modelling\ArchetypeSource;
+use OpenEHR\Assistant\Domain\Repository\ModelRepository;
+use OpenEHR\Assistant\Domain\Terminology\TerminologyProvider;
+use OpenEHR\Assistant\Integrations\Repository\RepositoryFactory;
+use OpenEHR\Assistant\Integrations\Terminology\FhirTerminologyProvider;
+use OpenEHR\Assistant\Tools\CkmService;
+use Monolog\Formatter\JsonFormatter;
+use Monolog\LogRecord;
+use OpenEHR\Assistant\Helpers\CliOptions;
+use OpenEHR\Assistant\Resources\Examples;
+use OpenEHR\Assistant\Resources\Guides;
+use OpenEHR\Assistant\Resources\Terminologies;
 use Mcp\Capability\Registry\Container;
 use Mcp\Schema\Enum\ProtocolVersion;
 use Mcp\Schema\Icon;
@@ -30,16 +40,66 @@ use Symfony\Component\Cache\Adapter\PhpFilesAdapter;
 use Symfony\Component\Cache\Psr16Cache;
 
 
+$requestId = bin2hex(random_bytes(16));
+$started = microtime(true);
 try {
+    require_once dirname(__DIR__) . '/vendor/autoload.php';
+    $settings = Settings::fromEnvironment();
     // CLI option parsing (supports: --transport=stdio | --transport stdio)
-    $transportOption = CliOptions::transportOption();
+    $transportOption = CliOptions::transportOption() ?: $settings->get('MCP_TRANSPORT');
+    if ($transportOption !== 'stdio' && APP_ENV === 'production' && $settings->get('AUTH_MODE') === 'none') {
+        throw new InvalidArgumentException('Production HTTP requires authentication.');
+    }
+    if ($settings->get('AUTH_MODE') === 'oidc') {
+        throw new InvalidArgumentException('OIDC_VERIFIER_NOT_CONFIGURED: OIDC is a prepared extension point only.');
+    }
+    $request = null;
+    $principal = 'local-stdio';
+    $psr17Factory = new Psr17Factory();
+    if ($transportOption !== 'stdio') {
+        // Nyholm seeds Host from the URI, then appends the same SAPI header.
+        // Use the raw SAPI Host once; comma-separated/malformed hosts still fail HttpGuard.
+        $request = (new ServerRequestCreator($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory))->fromGlobals()
+            ->withHeader('Host', (string) ($_SERVER['HTTP_HOST'] ?? ''));
+        $path = $request->getUri()->getPath();
+        if (!in_array($path, ['/mcp', '/health', '/ready'], true)) {
+            http_response_code(404);
+            exit;
+        }
+        if ($path === '/health' && $request->getMethod() === 'GET') {
+            header('Content-Type: application/json');
+            echo '{"status":"alive"}';
+            exit;
+        }
+        if ($path !== '/ready') {
+            $guard = new HttpGuard($settings);
+            if (($rejection = $guard->check($request)) !== null) {
+                http_response_code($rejection->getStatusCode());
+                foreach ($rejection->getHeaders() as $name => $values) {
+                    foreach ($values as $value) {
+                        header($name . ': ' . $value, false);
+                    }
+                }
+                echo $rejection->getBody();
+                exit;
+            }
+            $principal = $guard->principal($request) ?? throw new RuntimeException('AUTHENTICATION_REQUIRED');
+        }
+    }
 
     // Initialize the DI container
     $container = new Container();
 
     // Initialize logger
     $logger = new Logger(APP_NAME);
-    $logger->pushHandler(new StreamHandler('php://stderr', LogLevel::fromName(LOG_LEVEL)));
+    $handler = new StreamHandler('php://stderr', LogLevel::fromName(LOG_LEVEL));
+    $handler->setFormatter(new JsonFormatter());
+    $logger->pushHandler($handler);
+    $logger->pushProcessor(static function (LogRecord $record) use ($requestId): LogRecord {
+        $safe = array_intersect_key($record->context, array_flip(['version', 'status', 'code', 'duration_ms', 'method', 'tool', 'dependency', 'validation_status']));
+        $safe['request_id'] = $requestId;
+        return $record->with(context: $safe);
+    });
     $logger->info('Starting ...', [
         'version' => APP_VERSION,
         'env' => APP_ENV,
@@ -48,7 +108,14 @@ try {
     $container->set(LoggerInterface::class, $logger);
 
     // Initialize API clients, resources, etc.
-    $container->set(CkmClient::class, new CkmClient($logger));
+    $container->set(Settings::class, $settings);
+    $ckmClient = new CkmClient($logger, settings: $settings);
+    $container->set(CkmClient::class, $ckmClient);
+    $container->set(ArchetypeSource::class, new CkmArchetypeSource(new CkmService($ckmClient, $logger), $ckmClient));
+    $container->set(ModelRepository::class, RepositoryFactory::create($settings));
+    $terminology = new FhirTerminologyProvider($settings);
+    $container->set(FhirTerminologyProvider::class, $terminology);
+    $container->set(TerminologyProvider::class, $terminology);
     $container->set(Guides::class, new Guides());
     $container->set(Terminologies::class, new Terminologies());
 
@@ -62,7 +129,7 @@ try {
     // rather than silently serving a mismatched, previously-cached capability set.
     // The namespace becomes a subdirectory under $cacheDir and old ones are never pruned
     // (no TTL), so releases accumulate directories there — see docs/development.md.
-    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION, 0, $cacheDir));
+    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-2', 0, $cacheDir));
 
     // Load server instructions. Optional at the protocol level, but this server
     // ships a canonical resources/server-instructions.md — a missing/unreadable
@@ -76,7 +143,7 @@ try {
 
     // Build the server
     $builder = Server::builder()
-        ->setServerInfo(APP_TITLE, APP_VERSION, APP_DESCRIPTION, [new Icon(APP_ICON)])
+        ->setServerInfo(APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_ICON === '' ? null : [new Icon(APP_ICON)], $settings->get('PRODUCT_URL') ?: null)
         ->setDiscovery(APP_DIR, ['src/Prompts', 'src/Tools', 'src/Resources'], cache: $cache)
         // mcp/sdk 0.7.0 makes element loading lazy by default. Force eager
         // loading so a broken capability fails at build() (on every request
@@ -84,10 +151,10 @@ try {
         // and so the advertised capability set always matches what the registry
         // can actually load (lazy mode can advertise tools it then fails to list).
         ->setLazyLoading(false)
-        ->setSession(new FileSessionStore(APP_DATA_DIR . '/sessions', ttl: 10 * 60))
+        ->setSession(new FileSessionStore(APP_DATA_DIR . '/sessions/' . hash('sha256', $principal), ttl: 10 * 60))
         ->setProtocolVersion(ProtocolVersion::V2025_03_26)
         ->setContainer($container)
-        ->setInstructions($instructions)
+        ->setInstructions(APP_TITLE . "\n" . $instructions)
         ->setLogger($logger);
     // add resources
     Guides::addResources($builder, $logger);
@@ -105,21 +172,14 @@ try {
         exit($status);
     }
 
-    // Create PSR-17 factories and HTTP request
-    $psr17Factory = new Psr17Factory();
-    $creator = new ServerRequestCreator(
-        $psr17Factory,
-        $psr17Factory,
-        $psr17Factory,
-        $psr17Factory
-    );
-    $request = $creator->fromGlobals();
-
-    // Some proxy chains send the Host header twice; PSR-7 joins duplicates with ", ".
-    // Collapse to the first value so the DNS-rebinding check sees a clean host.
-    $hostLine = $request->getHeaderLine('Host');
-    if (str_contains($hostLine, ',')) {
-        $request = $request->withHeader('Host', trim(explode(',', $hostLine)[0]));
+    if ($request === null) {
+        throw new RuntimeException('HTTP request unavailable.');
+    }
+    if ($request->getUri()->getPath() === '/ready') {
+        (new Terminologies())->readAll();
+        header('Content-Type: application/json');
+        echo '{"status":"ready","external_dependencies":"not_probed"}';
+        exit;
     }
 
     // Create the Streamable HTTP transport. SDK >= 0.6 enables CORS, DNS-rebinding,
@@ -133,16 +193,17 @@ try {
         $psr17Factory,
         $logger,
         [
-            new CorsMiddleware(),
-            new DnsRebindingProtectionMiddleware($allowedHosts),
+            new CorsMiddleware(allowedOrigins: $settings->csv('CORS_ALLOWED_ORIGINS'), allowedHeaders: ['Accept', 'Content-Type', 'Authorization', $settings->get('AUTH_API_KEY_HEADER'), 'Mcp-Session-Id', 'MCP-Protocol-Version']),
+            new DnsRebindingProtectionMiddleware(array_values(array_unique(array_merge($allowedHosts, array_map(static fn (string $origin): string => (string) parse_url($origin, PHP_URL_HOST), $settings->csv('CORS_ALLOWED_ORIGINS')))))),
             new ProtocolVersionMiddleware(),
-        ]
+        ],
+        maxBodyBytes: (int) $settings->get('MAX_REQUEST_BYTES')
     );
 
     // Run the server and get the response
     /** @var Response $response */
     $response = $server->run($transport);
-    $response = $response->withHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id');
+    $response = $response->withHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id')->withHeader('X-Request-ID', $requestId);
     // Emit the response
     http_response_code($response->getStatusCode());
     foreach ($response->getHeaders() as $name => $values) {
@@ -151,7 +212,16 @@ try {
         }
     }
     $content = $response->getBody()->getContents();
-    $logger->debug('Server Responded', ['code' => $response->getStatusCode(), 'payload' => $content]);
+    $envelope = json_decode((string) $request->getBody(), true);
+    $audit = ['status' => $response->getStatusCode(), 'duration_ms' => round(1000 * (microtime(true) - $started), 2)];
+    if (is_array($envelope)) {
+        foreach (['method' => $envelope['method'] ?? null, 'tool' => $envelope['params']['name'] ?? null] as $key => $value) {
+            if (is_string($value) && preg_match('~^[A-Za-z0-9_/.-]{1,100}$~D', $value)) {
+                $audit[$key] = $value;
+            }
+        }
+    }
+    $logger->info('MCP request completed', $audit);
     echo $content;
 
     // finalize
@@ -159,18 +229,12 @@ try {
     exit(0);
 
 } catch (\Throwable $e) {
-    // (string) $e carries the message, file:line, stack trace AND the chained
-    // getPrevious() cause. That chain matters now that eager discovery loading
-    // (setLazyLoading(false)) surfaces wrapped loader failures here, whose root
-    // cause (malformed attribute, reflection error) lives in the previous.
-    $message = sprintf("[MCP SERVER CRITICAL ERROR]\n%s\n", (string)$e);
-    $stderr = fopen('php://stderr', 'w');
-    if ($stderr !== false) {
-        fwrite($stderr, $message);
-        fclose($stderr);
-    } else {
-        // stderr unavailable — fall back so the crash is never fully silenced.
-        error_log($message);
+    $reason = $e instanceof InvalidArgumentException ? $e->getMessage() : 'Service initialization failed: ' . $e::class;
+    error_log(json_encode(['level' => 'error', 'event' => 'service_failure', 'request_id' => $requestId, 'reason' => $reason], JSON_THROW_ON_ERROR));
+    if (PHP_SAPI !== 'cli') {
+        http_response_code(503);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => ['code' => 'SERVICE_UNAVAILABLE'], 'request_id' => $requestId]);
     }
     exit(1);
 }

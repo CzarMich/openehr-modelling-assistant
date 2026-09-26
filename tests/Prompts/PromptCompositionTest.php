@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Prompts;
+namespace OpenEHR\Assistant\Tests\Prompts;
 
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\AbstractPrompt;
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\CkmExplorer;
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\DesignOrReviewAql;
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\ExplainAql;
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\GuideExplorer;
-use Cadasto\OpenEHR\MCP\Assistant\Prompts\TerminologyExplorer;
+use OpenEHR\Assistant\Prompts\AbstractPrompt;
+use OpenEHR\Assistant\Prompts\CkmExplorer;
+use OpenEHR\Assistant\Prompts\DesignOrReviewAql;
+use OpenEHR\Assistant\Prompts\ExplainAql;
+use OpenEHR\Assistant\Prompts\GuideExplorer;
+use OpenEHR\Assistant\Prompts\TerminologyExplorer;
 use Mcp\Schema\Enum\Role;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;

@@ -1,63 +1,33 @@
 services:
-
-  # Node + curl for MCP conformance (npx) and scripts. Use: docker compose run --rm node npx ...
-  node:
-    image: cadasto/openehr-assistant-mcp-node:latest
+  app:
+    image: openehr-modelling-assistant-dev:local
     build:
-      context: ..
-      dockerfile: .docker/Dockerfile
-      target: node
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    user: "1000:1000"
+    read_only: false
+    environment:
+      APP_ENV: development
+      COMPOSER_HOME: /tmp/composer
+      MODEL_REPOSITORY_PATH: /tmp/development-models
+      MCP_ALLOWED_HOSTS: "localhost,127.0.0.1,[::1],ingress,app"
+    volumes:
+      - ./:/app
+  node:
+    image: node:22-alpine
+    profiles: [tools]
     working_dir: /app
     volumes:
-      - ../:/app
-
-  app:
-    image: cadasto/openehr-assistant-mcp-dev:latest
-    build:
-      context: ..
-      dockerfile: .docker/Dockerfile
-      target: development
-    tty: true
-    # Allow the dev reverse-proxy host so the streamable-http transport's DNS-rebinding
-    # protection (SDK >= 0.6) accepts requests proxied via the `ingress` service.
-    environment:
-      MCP_ALLOWED_HOSTS: "localhost,127.0.0.1,[::1],ingress,app,openehr-assistant-mcp.${DOMAIN:-local}"
-    volumes:
-      - ../:/app
-      - composer-cache:/data/.cache/composer
-
-  ingress:
-    ports:
-      - "8343:8343"
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-
-  # MCP Inspector UI (v2) — on-demand (not started by `make up-dev`; see profile).
-  #
-  # Built from the `inspector` stage rather than pulled: the upstream v2 image
-  # needs an OS keyring it cannot reach in a container. Stage and digest pin live
-  # in .docker/Dockerfile. HOST, CLIENT_PORT and DANGEROUSLY_BIND_ALL_INTERFACES
-  # are already set in the upstream image, so they are not repeated here; the v1
-  # proxy port 6277 no longer exists in v2.
-  #
-  # v2 takes its server list from a file. `--config` is a read-only session file
-  # (never rewritten, seeded or migrated), so the targets below stay under version
-  # control — drop the flag if you would rather add servers ad-hoc in the UI. The
-  # Inspector's backend dials the server from inside this container, so the targets
-  # use compose-network names; both are in the app's MCP_ALLOWED_HOSTS allow-list.
+      - ./:/app
   inspector:
-    image: cadasto/openehr-assistant-mcp-inspector:latest
+    image: openehr-modelling-inspector:local
     build:
-      context: ..
-      dockerfile: .docker/Dockerfile
+      context: .
       target: inspector
-    profiles: ["inspector"]
-    command: ["--web", "--config", "/config/inspector-servers.json"]
-    volumes:
-      - ./inspector-servers.json:/config/inspector-servers.json:ro
+    profiles: [tools]
+    environment:
+      HOST: 0.0.0.0
     ports:
-      - "6274:6274"
-
-volumes:
-  composer-cache:
+      - "127.0.0.1:6274:6274"
+      - "127.0.0.1:6277:6277"

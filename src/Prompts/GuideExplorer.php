@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -12,6 +12,7 @@ readonly final class GuideExplorer extends AbstractPrompt
 {
     /**
      * Guided workflow to discover, search, and retrieve openEHR implementation guides using guide_search, guide_get, and guide_adl_idiom_lookup tools.
+     *
      *
      * @return PromptMessage[]
      */

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -13,8 +13,11 @@ readonly final class ExplainAql extends AbstractPrompt
     /**
      * Explain the intent, structure, and semantics of an AQL query using AQL guides.
      *
+     *
      * @param mixed $aql_query AQL query to explain
+     *
      * @param mixed $context Target system, template names, audience (optional)
+     *
      * @return PromptMessage[]
      */
     public function __invoke(

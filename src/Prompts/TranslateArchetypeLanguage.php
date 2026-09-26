@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -16,10 +16,15 @@ readonly final class TranslateArchetypeLanguage extends AbstractPrompt
      * Use when the user says: "translate this archetype to X", "add X language", "localize archetype", "add Hungarian".
      * Terminology only; calls guide_get/guide_search for language-standards and terminology before translating.
      *
+     *
      * @param mixed $adl_text Archetype (ADL)
+     *
      * @param mixed $source_language_code Source language code
+     *
      * @param mixed $target_language_code Target language code
+     *
      * @param mixed $translation_intent add-new-language | improve-existing-translation | correct-terminology-phrasing
+     *
      * @return PromptMessage[]
      */
     public function __invoke(

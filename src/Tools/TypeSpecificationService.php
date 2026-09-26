@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tools;
+namespace OpenEHR\Assistant\Tools;
 
 use Generator;
 use Mcp\Capability\Attribute\McpTool;
@@ -37,11 +37,13 @@ readonly final class TypeSpecificationService
      * - Only files with the `.bmm.json` naming pattern are considered.
      * - Files must be readable and non-empty to be included in the results.
      *
+     *
      * @param string $namePattern
      *   The name pattern to match file names against. The pattern supports:
      *   - Wildcard `*` for zero or more characters.
      *   - Exact matching for specified strings.
      *   The file extension `.bmm.json` is automatically appended during the match.
+     *
      *
      * @return Generator
      *   A generator yielding `SplFileInfo` objects for matching files.
@@ -74,11 +76,14 @@ readonly final class TypeSpecificationService
      * - locate the exact type specification URL or server resource URI,
      * - or fetch the full definition via the `type_specification_get` tool.
      *
+     *
      * @param string $namePattern
      *   A type-name pattern. Matching behaviour: minimal 3 chars, supports a simple `*` wildcard (glob-like). Examples:`ARCHETYPE_SLOT` (exact), `ARCHETYPE_SL*` (wildcard prefix), `DV_*` (family search).
      *
+     *
      * @param string $keyword
      *   Optional raw substring filter applied to the JSON content (not normalized; case-insensitive); use this when you want to narrow results to Types containing a concept or attribute name.
+     *
      *
      * @return array{items: list<array<string, string>>, total: int}
      *   A list of metadata records (see fields above), or an empty items list if nothing matches. See the `total` note in the outputSchema.
@@ -116,7 +121,7 @@ readonly final class TypeSpecificationService
     )]
     public function search(string $namePattern, string $keyword = ''): array
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('Tool invoked.');
         $namePattern = trim($namePattern);
         $keyword = trim($keyword);
         if (!$namePattern || strlen($namePattern) < 3) {
@@ -210,11 +215,14 @@ readonly final class TypeSpecificationService
      * - understand inheritance (super-types/sub-types),
      * - or generate client code / mappings based on the canonical model definition.
      *
+     *
      * @param string $name
      *   The openEHR Type name (e.g. `DV_QUANTITY`, `COMPOSITION`, etc.)
      *
+     *
      * @param string|null $component
      *   Optional openEHR Component name, for better matching or filtering; if omitted, the first matching openEHR Type specification is returned.
+     *
      *
      * @return array<string, mixed>
      *   The openEHR Type as BMM JSON, plus a server-synthesised `resourceUri` that is not
@@ -255,7 +263,7 @@ readonly final class TypeSpecificationService
         ?string $component = null,
     ): array
     {
-        $this->logger->debug('called ' . __METHOD__, func_get_args());
+        $this->logger->debug('Tool invoked.');
         $name = trim((string)str_replace(['.', '*', '/', '\\'], '', $name));
         $component = strtoupper(trim((string)($component ?? '')));
         if (!$name) {

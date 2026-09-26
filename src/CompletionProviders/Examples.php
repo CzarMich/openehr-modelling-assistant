@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\CompletionProviders;
+namespace OpenEHR\Assistant\CompletionProviders;
 
 use Mcp\Capability\Completion\ProviderInterface;
 
@@ -10,7 +10,9 @@ class Examples implements ProviderInterface
 {
 
     /**
+     *
      * @param array<string> $directories
+     *
      * @return array<string>
      */
     private function getFiles(array $directories): array

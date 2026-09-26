@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -12,6 +12,7 @@ readonly final class TerminologyExplorer extends AbstractPrompt
 {
     /**
      * Guided workflow to discover, search, resolve and retrieve openEHR Terminology codes, rubrics, groups, and codesets.
+     *
      *
      * @return PromptMessage[]
      */

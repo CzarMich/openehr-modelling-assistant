@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Prompts;
+namespace OpenEHR\Assistant\Prompts;
 
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Schema\Content\PromptMessage;
@@ -12,6 +12,7 @@ readonly final class TypeSpecificationExplorer extends AbstractPrompt
 {
     /**
      * Guided workflow to discover and retrieve openEHR Type specifications (BMM JSON).
+     *
      *
      * @return PromptMessage[]
      */

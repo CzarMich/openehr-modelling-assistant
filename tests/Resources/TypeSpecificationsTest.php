@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Cadasto\OpenEHR\MCP\Assistant\Tests\Resources;
+namespace OpenEHR\Assistant\Tests\Resources;
 
-use Cadasto\OpenEHR\MCP\Assistant\Resources\TypeSpecifications;
+use OpenEHR\Assistant\Resources\TypeSpecifications;
 use Mcp\Exception\ResourceReadException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
