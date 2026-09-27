@@ -50,7 +50,7 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `MAX_REQUEST_BYTES` | `2097152` | HTTP body limit; effective tool content budget is smaller due to JSON envelope. |
 | `MAX_UPSTREAM_BYTES` | `8388608` | Maximum downloaded response bytes; also bounded by format-specific parsers. |
 | `LOG_LEVEL` | `info` | debug/info/notice/warning/error/critical/alert/emergency; logs remain redacted. |
-| `MODEL_REPOSITORY_PROVIDER` | `filesystem` | filesystem and git are implemented; github/gitlab/sharepoint are reserved provider-specific modes. Use git for GitHub/GitLab storage. |
+| `MODEL_REPOSITORY_PROVIDER` | `filesystem` | filesystem, git, github and gitlab are implemented; SharePoint remains queued. Hosted modes reuse Git storage and add API capabilities. |
 | `MODEL_REPOSITORY_PATH` | `/tmp/openehr-models` | Absolute private writable path. Compose overrides it to /data/models; development override uses /tmp/development-models. |
 | `MODEL_REPOSITORY_WRITE_ENABLED` | `false` | true enables draft project/artifact write tools; false denies them. |
 
@@ -58,6 +58,9 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `MODEL_GIT_LAYOUT` | `categories` | categories stores category folders; flat maps native ADL/template filenames at the configured root. |
 | `MODEL_GIT_REMOTE_URL` | empty | Optional Git remote: ssh://, anonymous HTTPS, absolute local Git path; empty means offline Git. |
 | `MODEL_GIT_BRANCH` | `main` | Branch for reads and draft commits. |
+| `MODEL_GIT_REVIEW_TARGET` | `main` | Target branch for draft hosted reviews; independent of the active working branch. |
+| `MODEL_HOSTED_API_URL` | empty | GitHub public API or GitLab remote-host API default; explicit HTTPS endpoint for enterprise hosts. Must match the Git remote host. |
+| `MODEL_HOSTED_TOKEN` | empty | Secret API token for the configured GitHub/GitLab repository; separate from Git SSH credentials. See [hosted repositories](HOSTED_REPOSITORIES.md). |
 | `MODEL_GIT_SYNC_SECONDS` | `5` | Read refresh interval, 0–300 seconds. Writes always refresh. |
 | `MODEL_GIT_TIMEOUT` | `30` | Per-command Git timeout, 1–120 seconds. |
 | `MODEL_GIT_AUTHOR_NAME` | `openEHR Modelling Assistant` | Git service committer name; not human approval identity. |
@@ -65,7 +68,7 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `MODEL_GIT_SSH_KEY_FILE` | empty | Private SSH key path inside container; configure with known-hosts path. |
 | `MODEL_GIT_KNOWN_HOSTS_FILE` | empty | Pinned SSH host identities; strict verification remains enabled. |
 
-Other supported process settings: `HTTPS_PROXY` and comma-separated `NO_PROXY` control outbound HTTPS; `XDG_DATA_HOME` changes the cache/session root (default `/tmp`, application subdirectory added). Legacy `ALLOWED_HOSTS` is accepted only when `MCP_ALLOWED_HOSTS` is absent. Composer development uses `COMPOSER_HOME`. No model-provider or CDR secret is required by the MCP core. The optional browser chat has its own identity and model-provider configuration. Private Git remotes use the optional SSH credential files above; provider-specific GitHub/GitLab API and Graph tokens are not consumed.
+Other supported process settings: `HTTPS_PROXY` and comma-separated `NO_PROXY` control outbound HTTPS; `XDG_DATA_HOME` changes the cache/session root (default `/tmp`, application subdirectory added). Legacy `ALLOWED_HOSTS` is accepted only when `MCP_ALLOWED_HOSTS` is absent. Composer development uses `COMPOSER_HOME`. No model-provider or CDR secret is required by the MCP core. The optional browser chat has its own identity and model-provider configuration. Private Git remotes use the optional SSH credential files above; hosted GitHub/GitLab APIs use MODEL_HOSTED_TOKEN; Graph credentials remain separate future configuration.
 
 ## Multiple CKMs
 

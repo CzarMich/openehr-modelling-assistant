@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace OpenEHR\Assistant\Integrations\Repository;
 
 use OpenEHR\Assistant\Configuration\Settings;
-use OpenEHR\Assistant\Domain\Repository\GitRepository;
+use OpenEHR\Assistant\Domain\Repository\HostedGitRepository;
+use OpenEHR\Assistant\Domain\Repository\HostedRepositoryProvider;
 
 /** Plain model files in Git; atomic commits and non-force pushes are the persistence boundary. */
-final class GitModelRepository implements GitRepository
+final class GitModelRepository implements HostedGitRepository
 {
     private string $directory;
     private string $branch;
+    private string $reviewTarget;
     private string $contentPrefix;
     private bool $flatLayout;
     private string $remote;
@@ -21,7 +23,7 @@ final class GitModelRepository implements GitRepository
     private array $tree = [];
     private ?string $head = null;
 
-    public function __construct(Settings $settings)
+    public function __construct(Settings $settings, private readonly ?HostedRepositoryProvider $provider = null)
     {
         $root = $settings->get('MODEL_REPOSITORY_PATH');
         $this->safeAbsolutePath($root);
@@ -38,6 +40,8 @@ final class GitModelRepository implements GitRepository
         $this->contentPrefix = $contentPath === '' ? '' : $contentPath . '/';
         $this->branch = $settings->get('MODEL_GIT_BRANCH');
         $this->branchName($this->branch);
+        $this->reviewTarget = $settings->get('MODEL_GIT_REVIEW_TARGET');
+        $this->branchName($this->reviewTarget);
         $this->remote = $settings->get('MODEL_GIT_REMOTE_URL');
         $this->validateRemote($this->remote);
         $this->syncSeconds = (int) $settings->get('MODEL_GIT_SYNC_SECONDS');
@@ -67,10 +71,12 @@ final class GitModelRepository implements GitRepository
         $this->process = new GitProcess($this->directory, (int) $settings->get('MODEL_GIT_TIMEOUT'), $environment);
     }
 
+    public function hosting(): ?HostedRepositoryProvider { return $this->provider; }
+
     public function capabilities(): array
     {
         return ['storage' => true, 'versioning' => true, 'history' => true, 'branching' => true,
-            'diff' => true, 'reviews' => false, 'approvals' => false, 'locking' => true,
+            'diff' => true, 'reviews' => $this->provider !== null, 'approvals' => false, 'locking' => true,
             'webhooks' => false, 'ci' => false, 'releaseTags' => false, 'offline' => $this->remote === '',
             'remoteSync' => $this->remote !== ''];
     }
@@ -226,7 +232,7 @@ final class GitModelRepository implements GitRepository
 
     public function createReview(string $branch, string $title, string $body): string
     {
-        throw new \RuntimeException('REPOSITORY_REVIEW_NOT_SUPPORTED');
+        return (string) ($this->provider ?? throw new \RuntimeException('REPOSITORY_REVIEW_NOT_SUPPORTED'))->requestReview($branch, $this->reviewTarget, $title, $body)['url'];
     }
 
     /** @return array<string, mixed> */

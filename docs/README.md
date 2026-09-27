@@ -14,3 +14,5 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 
 - [Native OIDC and tenant migration](OIDC.md)
 - [A–Z completion audit](COMPLETION_AUDIT.md) and [execution queue](COMPLETION_QUEUE.json)
+
+[Hosted Git repositories](HOSTED_REPOSITORIES.md) documents GitHub/GitLab API capabilities, deployment credentials and draft review acceptance.

@@ -23,3 +23,5 @@ Phase 1 also completes hosted repository capabilities and SharePoint, terminolog
 ## Delivery rules
 
 For each increment: implement the domain/adapters, execute meaningful positive/negative/contract/security checks, update documentation and diagrams, commit, push, watch every workflow for the exact SHA, correct failures, verify deployment, then continue. Keep deployment secrets, patient data, private provider responses and personal credentials outside evidence. Record live external tests as unexecuted where the relevant account is unavailable; mocked contract tests are never described as live acceptance.
+
+Hosted Git completion adds configured-repository metadata, branches/protection and draft review APIs over the existing Git storage, with a shared application service and closed MCP schemas. Real GitHub acceptance passed and cleaned up its synthetic branch/review. GitLab contract checks pass; live acceptance is explicitly external. SharePoint is the next active Phase 1 item.

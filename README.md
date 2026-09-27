@@ -26,7 +26,7 @@ CKM, or operate as a terminology server.
 - Parse XML securely; check an OET/OPT structural profile and ADL headers; compare XML
   structure, constraints and leaf values. These checks do not certify openEHR conformance.
 - Persist projects, requirements, artefacts, decisions, metadata and immutable revisions
-  using filesystem snapshots or Git, including GitHub/GitLab remotes, with revision conflict detection.
+  using filesystem snapshots or Git, including GitHub/GitLab metadata and draft reviews, with revision conflict detection.
 - Represent local/external value sets and bindings, invoke FHIR terminology operations,
   compare terminology changes, and produce declared terminology dependency manifests.
 - Report explicit requirements traceability and a QA preflight that identifies unexecuted checks.
@@ -99,6 +99,7 @@ flowchart TD
     R --> G[Git adapter: native model files and commit revisions]
     G --> O[Persistent local Git object store]
     G <--> H[Optional GitHub, GitLab or other Git remote]
+    G --> HP[GitHub or GitLab API: metadata, branches and draft reviews]
     A[Archetype Designer: account connection unverified] -.-> H
     D --> T[Optional terminology checks and bindings]
     T --> L[Local value sets]
@@ -123,10 +124,11 @@ flowchart TD
     B --> S
     S --> C{Revision or push conflict?}
     C -->|Yes: reread and reconcile| R
-    C -->|No| H[Independent human review and qualified validation]
+    C -->|No| PR[Optional hosted draft review request]
+    PR --> H[Independent human review and qualified validation]
 ```
 
-Saving a draft does not approve or release it. Hosted Git review and merge take place
+Saving a draft does not approve or release it. The assistant can request a hosted draft review. Human review and merge take place
 in the hosting service; the assistant has no approval endpoint. AQL creation/review
 uses the agent plus grounded prompts and paths; execution is not implemented.
 

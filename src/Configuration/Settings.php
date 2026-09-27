@@ -35,6 +35,7 @@ final class Settings
         'MODEL_GIT_LAYOUT' => 'categories', 'MODEL_GIT_CONTENT_PATH' => '', 'MODEL_GIT_REMOTE_URL' => '', 'MODEL_GIT_BRANCH' => 'main', 'MODEL_GIT_SYNC_SECONDS' => '5',
         'MODEL_GIT_TIMEOUT' => '30', 'MODEL_GIT_AUTHOR_NAME' => 'openEHR Modelling Assistant',
         'MODEL_GIT_AUTHOR_EMAIL' => 'modelling-assistant@localhost',
+        'MODEL_HOSTED_API_URL' => '', 'MODEL_HOSTED_TOKEN' => '', 'MODEL_GIT_REVIEW_TARGET' => 'main',
         'MODEL_GIT_SSH_KEY_FILE' => '', 'MODEL_GIT_KNOWN_HOSTS_FILE' => '',
     ];
 
@@ -85,7 +86,7 @@ final class Settings
         if (!preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $this->get('AUTH_API_KEY_HEADER')) || !preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $this->get('TERMINOLOGY_API_KEY_HEADER'))) {
             throw new InvalidArgumentException('Invalid AUTH_API_KEY_HEADER.');
         }
-        foreach (['CKM_API_BASE_URL', 'TERMINOLOGY_FHIR_BASE_URL', 'OIDC_ISSUER', 'OIDC_JWKS_URI',
+        foreach (['MODEL_HOSTED_API_URL', 'CKM_API_BASE_URL', 'TERMINOLOGY_FHIR_BASE_URL', 'OIDC_ISSUER', 'OIDC_JWKS_URI',
             'PRODUCT_URL', 'PRODUCT_SUPPORT_URL', 'PRODUCT_DOCUMENTATION_URL', 'PRODUCT_LOGO_URL'] as $key) {
             if ($this->get($key) !== '') {
                 self::validateUrl($this->get($key));
@@ -162,7 +163,17 @@ final class Settings
                 throw new InvalidArgumentException('Invalid tenant Git mapping.');
             }
         }
-        if (count(array_unique($remotes)) !== count($remotes)) {
+        $identities = array_map(static function (string $remote): string {
+            $url = parse_url($remote);
+            if (is_array($url) && isset($url['host'], $url['path'])) {
+                // HTTPS and SSH forms of one hosted repository are the same tenant boundary.
+                $host = strtolower($url['host']);
+                $path = preg_replace('/\\.git$/D', '', rtrim($url['path'], '/')) ?? $url['path'];
+                return $host . ':' . ($host === 'github.com' ? strtolower($path) : $path);
+            }
+            return realpath($remote) ?: rtrim($remote, '/');
+        }, $remotes);
+        if (count(array_unique($identities)) !== count($remotes)) {
             throw new InvalidArgumentException('Tenants require distinct Git remotes.');
         }
         return $remotes;

@@ -28,6 +28,7 @@ use Psr\Log\NullLogger;
 final class OutputSchemaConformanceTest extends TestCase
 {
     use EnterpriseOutputCases;
+    use HostedOutputCases;
     private const string TOOLS_NAMESPACE = 'OpenEHR\\Assistant\\Tools\\';
 
     public function test_guide_search_result_matches_output_schema(): void

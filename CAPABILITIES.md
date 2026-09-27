@@ -23,14 +23,16 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Native inbound OIDC | WORKING | Pinned issuer/API audience, discovery/JWKS, RS256 verification, bounded rotation and signed scopes/roles; live identity-provider acceptance, Entra-style fixture coverage |
 | Tenant storage and draft-write authorization | WORKING | Issuer/tenant namespaces, principal-bound sessions, scoped writes and distinct mapped Git remotes; API-key mode remains one service principal |
 | Enterprise project/team RBAC and human approval UI | NOT IMPLEMENTED | Native bearer identity does not prove interactive human approval; project ACLs and governance application remain separate work |
-| Git storage with GitHub/GitLab/other remotes | WORKING | Plain model files, commit history, remote sync, CAS updates; branch/diff adapter methods |
+| Git storage with GitHub/GitLab/other remotes | WORKING | Plain model files, commit history, remote sync, CAS updates; MCP branch creation and revision diff |
 | Archetype Designer repository layouts | WORKING | Configurable content root; category folders or flat native files; Unicode/spaces preserved; real private Git round trip |
 | Hosted Archetype Designer UI connection | NOT TESTED | Login required; repository integration verified independently, account linking and visual import/export not yet verified |
-| Codex development connection | WORKING | Installed Codex app-server initialized the HTTPS service and discovered all 31 tools with a private credential helper |
+| Codex development connection | WORKING | Installed Codex app-server initialized the HTTPS service and discovered the modelling tool catalogue with a private credential helper |
 | Browser modelling chat | WORKING | OIDC sign-in, private persistent conversations, streamed replies, actual tool activity and confirmed draft writes through an isolated Codex client; optional service |
 | Browser identity and session isolation | WORKING | Authorization code flow with PKCE, signed identity claims, secure cookies, CSRF and per-user conversation ownership; shared model repository principal |
 | Service introduction page | WORKING | Root URL links to browser chat, MCP connection and optional integrations; not a visual modeller |
-| Hosted Git reviews and SharePoint storage | NOT IMPLEMENTED | Generic Git storage is available; provider-specific review/Graph APIs remain separate work |
+| GitHub/GitLab hosting capabilities | WORKING | Shared Git storage plus configured-repository metadata, branches/protection and draft reviews; live GitHub acceptance, GitLab contract tests |
+| GitLab live hosted acceptance | NOT TESTED | Adapter and contract tests implemented; requires a configured GitLab account/token |
+| SharePoint storage | NOT IMPLEMENTED | Graph repository adapter remains queued |
 | OPT compilation, native template editing/terminology application | NOT IMPLEMENTED | Requires qualified compiler/modelling engine |
 | AQL parser/execution, composition validation, CDR deployment | NOT IMPLEMENTED | Prompts/examples and optional adapter boundary only |
 | Copilot Studio tenant connection | NOT TESTED | Current official deployment guide; no tenant available |

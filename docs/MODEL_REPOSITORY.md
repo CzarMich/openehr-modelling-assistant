@@ -46,15 +46,15 @@ The local object store is `MODEL_REPOSITORY_PATH/git/objects.git`. It is a bare 
 
 Individual Git commands have a timeout and bounded output. Accepted trees allow only regular files, up to 2 MiB each, 32 MiB total and 10,000 files. Artifact history is capped at 1,000 entries and fails explicitly above that limit. These limits do not bound the entire remote Git history downloaded during fetch: use a trusted, appropriately sized model repository and storage quotas. Large CKM mirrors need a separate design. A configured remote outage can prevent repository operations when refresh is due; bundled guides and local validation remain usable. Leave the remote empty for fully offline repository operation.
 
-`GitRepository::createBranch` and `diff` are implemented adapter methods. Branch creation uses a create-only lease to avoid overwriting an existing remote branch. Git provider API review creation, webhooks, merge automation and release tags are not implemented. Set the configured branch to a branch created through Git/your hosting service for the MCP modelling workflow; it cannot switch branches through a tool call.
+`model_branch_create` and `model_repository_diff` expose the existing Git branch/diff operations. Branch creation uses a create-only lease to avoid overwriting an existing remote branch. Select `github` or `gitlab` to add metadata, branch protection status and draft review API operations. See [hosted repositories](HOSTED_REPOSITORIES.md). Webhooks, merge automation and release tags remain separate work. Set the configured branch to a branch created through Git/your hosting service for the MCP modelling workflow; it cannot switch branches through a tool call.
 
 ## Provider capabilities
 
 | Provider selection | Storage and history | Branch/diff | Hosted reviews |
 |---|---|---|---|
 | `filesystem` | Atomic snapshots and platform revisions | Unavailable | Unavailable |
-| `git` | Plain files, Git revisions, optional remote synchronization | Adapter methods | Unavailable |
-| `github` / `gitlab` | Reserved provider-specific modes; use `git` with the appropriate remote today | Through `git` | Not implemented |
+| `git` | Plain files, Git revisions, optional remote synchronization | MCP tools | Unavailable |
+| `github` / `gitlab` | Same native Git storage and revisions | MCP tools plus hosted branch listing | Draft creation, reuse and metadata |
 | `sharepoint` | Not implemented | Not applicable | Not implemented |
 
 `model_projects` returns actual adapter capabilities. These flags describe the adapter; the documented MCP tool catalogue defines what clients can invoke. Unsupported provider-specific modes never silently fall back to filesystem.

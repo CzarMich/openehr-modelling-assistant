@@ -10,6 +10,12 @@ const toolLabels = {
     ckm_archetype_get: "Archetype retrieval",
     guide_get: "Modelling guide",
     guide_search: "Guide search",
+    model_repository_info: "Repository details",
+    model_repository_branches: "Repository branches",
+    model_repository_diff: "Git revision comparison",
+    model_branch_create: "Create branch",
+    model_review_request: "Request draft review",
+    model_review_get: "Review details",
     model_projects: "Model projects",
     model_project_get: "Project details",
     model_artifact_get: "Model artifact",
@@ -201,14 +207,19 @@ function approval(event, target) {
     const card = document.createElement("section");
     card.className = "approval";
     const h = document.createElement("h3");
-    h.textContent = "Review this model change";
+    h.textContent = toolLabels[event.tool] || "Review this model change";
     const p = document.createElement("p");
     p.textContent =
-        "Confirm the exact draft change below before it is saved to the shared model repository. This does not approve a model for clinical use.";
+        "Confirm the exact repository action below before it is executed. This does not approve a model for clinical use.";
     const pre = document.createElement("pre");
     pre.textContent = JSON.stringify(event.arguments, null, 2);
     const yes = document.createElement("button");
-    yes.textContent = "Confirm save";
+    yes.textContent =
+        event.tool === "model_review_request"
+            ? "Confirm review request"
+            : event.tool === "model_branch_create"
+              ? "Confirm branch creation"
+              : "Confirm save";
     const no = document.createElement("button");
     no.className = "decline";
     no.textContent = "Cancel change";
@@ -222,7 +233,7 @@ function approval(event, target) {
             });
             card.replaceChildren();
             const text = document.createElement("p");
-            text.textContent = approved ? "Change confirmed. Saving the draft…" : "Change cancelled.";
+            text.textContent = approved ? "Change confirmed. Applying the repository action…" : "Change cancelled.";
             card.append(text);
         } catch (e) {
             notice(e.message);

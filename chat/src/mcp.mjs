@@ -1,4 +1,9 @@
-export const WRITE_TOOLS = new Set(["model_project_create", "model_artifact_save"]);
+export const WRITE_TOOLS = new Set([
+    "model_project_create",
+    "model_artifact_save",
+    "model_branch_create",
+    "model_review_request",
+]);
 export const READ_TOOLS = new Set([
     "ckm_sources",
     "ckm_archetype_search",
@@ -13,6 +18,10 @@ export const READ_TOOLS = new Set([
     "type_specification_search",
     "type_specification_get",
     "terminology_resolve",
+    "model_repository_info",
+    "model_repository_branches",
+    "model_repository_diff",
+    "model_review_get",
     "model_projects",
     "model_project_get",
     "model_artifact_get",

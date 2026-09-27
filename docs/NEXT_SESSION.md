@@ -20,12 +20,14 @@ The user subsequently requested an actual browser chat, so that feature was impl
 
 Native bearer verification, discovery/JWKS, signed draft-write permissions and tenant storage/session isolation now pass unit, real Git and live identity-provider acceptance. See [OIDC](OIDC.md) and the implementation report. CI also exercises the production HTTP path against a disposable HTTPS issuer. Browser login remains a separate client boundary; ordinary development/server clients keep API keys until deliberately migrated. A bearer token does not establish interactive human approval.
 
-The older isolated identity worktree is retained as historical work; its unfinished fixture and missing discovery are superseded by the accepted implementation. Continue Phase 1 with hosted Git review capabilities and SharePoint, then terminology, structural checks, persisted governance, traceability and QA. Do not resume the old checkpoint as if these repairs were still missing.
+The older isolated identity worktree is retained as historical work; its unfinished fixture and missing discovery are superseded by the accepted implementation. Hosted Git review capabilities are now implemented and tested. Continue Phase 1 with SharePoint, then terminology, structural checks, persisted governance, traceability and QA. Do not resume the old checkpoint as if these repairs were still missing.
 
 ## Remaining scope
 
-Complete the partial/unimplemented rows in the matrix: validated modelling engine/OPT compilation, ADL/AQL and composition checks, optional CDR integration using synthetic fixtures, hosted Git reviews, SharePoint storage, application API/visual modeller, persisted trusted-human governance, native terminology binding preservation and stronger QA/traceability evidence. Enterprise tenant and hosted Designer acceptance need real account access; record that limit without inventing results.
+Complete the partial/unimplemented rows in the matrix: validated modelling engine/OPT compilation, ADL/AQL and composition checks, optional CDR integration using synthetic fixtures, SharePoint storage, application API/visual modeller, persisted trusted-human governance, native terminology binding preservation and stronger QA/traceability evidence. Enterprise tenant and hosted Designer acceptance need real account access; record that limit without inventing results.
 
 Research identified the Apache-licensed openEHR Archie library for ADL 2/AOM/RM and operational templates, openEHR Java libraries for ADL 1.4, and the openEHR SDK for AQL and composition/template handling. Inspect and pin actual supported APIs/versions before integration. The available CDR's ADL utility is not a substitute for a complete grammar/compiler. Do not edit its unrelated dirty working directory.
 
 For each stage: implement, test, document, commit, push, run `scripts/watch-ci.sh <full-sha>` immediately, fix failures, verify deployment, and continue. Runtime credentials stay outside Git. Preserve both existing model volumes and the old local Git cache.
+
+Hosted repository code reuses generic Git storage and adds six MCP tools. GitHub live acceptance and cleanup are recorded in `evidence/hosted-github-acceptance.json`; GitLab contract tests pass, while live tenant acceptance needs credentials. The current execution queue points to SharePoint.
