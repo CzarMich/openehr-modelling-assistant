@@ -74,3 +74,5 @@ Record artifact type, human version, source CKM/version/hash, declared dependenc
 ## SharePoint snapshots
 
 Select `sharepoint` for the Graph repository adapter. It shares the filesystem revision/history semantics and adds remote ETag conflict detection, hash verification and dedicated tenant storage mappings. See [SharePoint provisioning, permissions and acceptance](SHAREPOINT_REPOSITORY.md). Metadata is limited to 64 KiB and 16 nested levels across providers so saved revisions remain readable. Native SharePoint document versions and clinical approvals are distinct from application revision history.
+
+The [terminology catalogue](TERMINOLOGY_CATALOGUE.md) stores versioned code systems, value sets and mapping drafts under `terminology/catalogue/`. It uses the same conditional writes and history on every provider. Exact canonical/edition identity is hashed into the path; malformed external edits are reported as QA findings rather than ignored.

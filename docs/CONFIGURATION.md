@@ -107,3 +107,5 @@ The optional Node client reads `.env.chat` or the external `MODELLING_CHAT_ENV_F
 See [SharePoint setup, permissions, migration and acceptance](SHAREPOINT_REPOSITORY.md). These settings are unnecessary for other providers. Inbound identity and outbound Graph credentials remain separate.
 
 Terminology operation settings apply to lookup, validation, expansion, ConceptMap translation and canonical resource discovery. No server is required. Language, count/offset and independent resource editions are tool arguments, not environment variables. Live acceptance uses the `SMOKE_*` variables documented in [Terminology](TERMINOLOGY.md#repeatable-verification); they do not change production configuration.
+
+Local terminology catalogues need only the configured ModelRepository; they add no service credentials. Catalogue saves use `MODEL_REPOSITORY_WRITE_ENABLED` and native OIDC draft-write permissions. Explicit external records use existing terminology settings. The PHP `mbstring` extension is required for Unicode case rules and is included in the supplied images. See [catalogue schema and limits](TERMINOLOGY_CATALOGUE.md).

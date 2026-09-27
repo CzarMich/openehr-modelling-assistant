@@ -122,6 +122,7 @@ try {
     $terminology = new FhirTerminologyProvider($settings);
     $container->set(FhirTerminologyProvider::class, $terminology);
     $container->set(TerminologyProvider::class, $terminology);
+    $container->set(\OpenEHR\Assistant\Domain\Terminology\MappingProvider::class, $terminology);
     $container->set(Guides::class, new Guides());
     $container->set(Terminologies::class, new Terminologies());
 
@@ -135,7 +136,7 @@ try {
     // rather than silently serving a mismatched, previously-cached capability set.
     // The namespace becomes a subdirectory under $cacheDir and old ones are never pruned
     // (no TTL), so releases accumulate directories there — see docs/development.md.
-    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-terminology-2', 0, $cacheDir));
+    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-catalogue-1', 0, $cacheDir));
 
     // Load server instructions. Optional at the protocol level, but this server
     // ships a canonical resources/server-instructions.md — a missing/unreadable

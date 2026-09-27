@@ -39,11 +39,24 @@ const provider = {
                 content: "A reviewed draft",
                 expectedRevision: "revision-one",
             });
+        else if (text === "terminology")
+            await callTool("terminology_catalogue_save", {
+                project: "default",
+                record: {
+                    kind: "value_set",
+                    canonical: "https://example.org/sets/feeding",
+                    version: "1",
+                    name: "Feeding",
+                    provenance: { source: "Synthetic browser fixture" },
+                    concepts: [],
+                },
+                expectedRevision: "terminology-revision",
+            });
         else if (text === "review")
             await callTool("model_review_request", { branch: "draft/model", title: "Review model" });
         else await callTool("ckm_sources", {});
         const answer =
-            text === "save"
+            text === "save" || text === "terminology"
                 ? "The draft was saved after your confirmation."
                 : text === "review"
                   ? "The draft review was requested after your confirmation."
@@ -60,6 +73,7 @@ const mcpFactory = () => ({
     tools: async () => [
         { name: "ckm_sources", inputSchema: { type: "object" } },
         { name: "model_artifact_save", inputSchema: { type: "object" } },
+        { name: "terminology_catalogue_save", inputSchema: { type: "object" } },
         { name: "model_review_request", inputSchema: { type: "object" } },
     ],
     call: async () => ({ content: [{ type: "text", text: "Fixture data" }] }),

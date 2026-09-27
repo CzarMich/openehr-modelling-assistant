@@ -32,6 +32,16 @@ examples = {
  'terminology_resource_get':{'resourceType':'ValueSet','canonical':'https://example.org/ValueSet/feeding','version':'1'},
  'terminology_manifest':{'artifact':'templates/admission.oet','bindings':[]},
 }
+catalogue_record={'kind':'code_system','canonical':'https://example.org/local/feeding','version':'1','name':'Feeding','provenance':{'source':'Organisation-authored local draft'},'concepts':[{'code':'mixed','display':'Mixed feeding'}]}
+examples.update({
+ 'terminology_catalogue_save':{'project':'neonatal-care','record':catalogue_record},
+ 'terminology_catalogue_get':{'project':'neonatal-care','kind':'code_system','canonical':catalogue_record['canonical'],'version':'1'},
+ 'terminology_catalogue_search':{'project':'neonatal-care','query':'feeding'},
+ 'terminology_catalogue_lookup':{'project':'neonatal-care','system':catalogue_record['canonical'],'code':'mixed'},
+ 'terminology_catalogue_validate':{'project':'neonatal-care','system':catalogue_record['canonical'],'code':'mixed','version':'1'},
+ 'terminology_catalogue_expand':{'project':'neonatal-care','valueSet':'https://example.org/sets/feeding','version':'1'},
+ 'terminology_catalogue_translate':{'project':'neonatal-care','conceptMap':'https://example.org/maps/feeding','system':catalogue_record['canonical'],'code':'mixed'},
+})
 local={'id':'feeding','system':'https://example.org/local/feeding','version':'1','source':'local','concepts':[{'code':'mixed','display':'Mixed feeding'}]}
 examples['terminology_diff']={'before':local,'after':dict(local,version='2')}
 examples['terminology_binding_validate']={'binding':{'id':'b','artifact':'templates/admission.oet','node':'/example','strength':'REQUIRED','value_set':'feeding','value_set_version':'1','codes':['mixed']},'valueSet':local,'model':'<template><Rule path="/example"/></template>'}

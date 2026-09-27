@@ -18,3 +18,5 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 [Hosted Git repositories](HOSTED_REPOSITORIES.md) documents GitHub/GitLab API capabilities, deployment credentials and draft review acceptance.
 
 [SharePoint repository](SHAREPOINT_REPOSITORY.md) documents Graph storage, authentication, conditional writes, provisioning and acceptance.
+
+- [Project terminology catalogue](TERMINOLOGY_CATALOGUE.md): local CodeSystem/ValueSet/ConceptMap records, optional external references, revisions, deterministic operations and migration.

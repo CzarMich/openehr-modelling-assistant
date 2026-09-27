@@ -31,6 +31,8 @@ referenced from [requirements.md](../requirements.md),
 
 | [0012](0012-terminology-operation-evidence.md) | Preserve terminology operation evidence | Accepted | REQ-F14, REQ-N11 |
 
+| [0013](0013-project-terminology-catalogue.md) | Project terminology catalogue over the model repository | Accepted | REQ-F12, REQ-F14, REQ-N11 |
+
 ## Writing a new ADR
 
 1. Copy the structure of an existing record. Number sequentially (`NNNN-kebab-title.md`).

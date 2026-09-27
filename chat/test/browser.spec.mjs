@@ -77,3 +77,13 @@ test("hosted draft reviews require an explicit review confirmation", async ({ pa
         "draft review was requested after your confirmation",
     );
 });
+
+test("terminology saves present the exact version and revision for confirmation", async ({ page }) => {
+    await login(page);
+    await send(page, "terminology");
+    await expect(page.getByRole("heading", { name: "Save draft terminology" })).toBeVisible();
+    await expect(page.locator(".approval pre")).toContainText("terminology-revision");
+    await expect(page.locator(".approval pre")).toContainText("https://example.org/sets/feeding");
+    await page.getByRole("button", { name: "Confirm save", exact: true }).click();
+    await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
+});

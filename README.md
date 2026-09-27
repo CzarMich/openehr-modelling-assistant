@@ -104,7 +104,7 @@ flowchart TD
     G --> HP[GitHub or GitLab API: metadata, branches and draft reviews]
     A[Archetype Designer: account connection unverified] -.-> H
     D --> T[Optional terminology checks and bindings]
-    T --> L[Local value sets]
+    T --> L[Local catalogue: code systems, value sets and mapping drafts]
     T --> E[Optional FHIR: CodeSystem, ValueSet and ConceptMap operations]
     D -. future extension .-> C[CDR adapter]
 ```
@@ -122,7 +122,7 @@ flowchart TD
     D --> V[Run available structural checks and inspect diff]
     V --> T{Terminology binding needed?}
     T -->|No| S[Save DRAFT with expectedRevision]
-    T -->|Yes| B[Use local value sets or an optional FHIR server]
+    T -->|Yes| B[Use versioned local catalogue or optional FHIR references]
     B --> TB[Inspect editions and codes; review mapping candidates]
     TB --> S
     S --> C{Revision or push conflict?}

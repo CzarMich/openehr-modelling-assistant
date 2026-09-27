@@ -23,6 +23,13 @@ const toolLabels = {
     model_project_create: "Create project",
     model_validate: "Structural checks",
     model_qa: "Quality preflight",
+    terminology_catalogue_save: "Save draft terminology",
+    terminology_catalogue_search: "Project terminology search",
+    terminology_catalogue_get: "Terminology record",
+    terminology_catalogue_lookup: "Project code lookup",
+    terminology_catalogue_validate: "Terminology validation",
+    terminology_catalogue_expand: "Value set members",
+    terminology_catalogue_translate: "Mapping candidates",
 };
 function notice(message) {
     $("notice").textContent = message || "";

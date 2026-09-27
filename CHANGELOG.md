@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add a versioned project terminology catalogue with offline operations and conditional draft saves.
+
 - Add optional terminology discovery and review-only translation with preserved language, paging and version evidence.
 
 - Add SharePoint snapshot repositories and shared revision semantics with bounded artifact metadata.

@@ -219,9 +219,9 @@ requirements:
     canonical: docs/requirements.md
     status: draft
     implementation: partial
-    packages: [src/Domain/Terminology/*.php, src/Integrations/Terminology/*.php, src/Tools/TerminologyBindingService.php]
-    tests: [tests/Enterprise/TerminologyProviderTest.php, tests/Enterprise/FhirTerminologyContractTest.php]
-    adr: ["0008", "0012"]
+    packages: [src/Domain/Terminology/*.php, src/Domain/Terminology/Catalogue/*.php, src/Application/TerminologyCatalogue.php, src/Integrations/Terminology/*.php, src/Tools/TerminologyBindingService.php, src/Tools/TerminologyCatalogueTools.php]
+    tests: [tests/Enterprise/TerminologyProviderTest.php, tests/Enterprise/FhirTerminologyContractTest.php, tests/Enterprise/TerminologyCatalogueTest.php]
+    adr: ["0008", "0012", "0013"]
 
   - id: REQ-N11
     title: Authenticated bounded transport and redacted failures
@@ -247,5 +247,5 @@ requirements:
     status: draft
     implementation: landed
     packages: [chat/src/*.mjs, public/chat, chat/Dockerfile]
-    tests: [chat/test/security.test.mjs, chat/test/codex.test.mjs, chat/test/browser.spec.mjs]
+    tests: [chat/test/security.test.mjs, chat/test/codex.test.mjs, chat/test/mcp.test.mjs, chat/test/browser.spec.mjs]
     verification: npm --prefix chat test and npm --prefix chat run test:browser
