@@ -8,7 +8,7 @@ Every input is a closed JSON object: unknown top-level fields are rejected with 
 
 Legacy retrieval tools retain their original text/resource or structured search results. New model/project/terminology tools return `success`, `result`, and `error`. `success:true` means the operation returned a report; inspect its `status`, `valid`, `warnings` and executed checks before claiming validation. Failures use `{ "success": false, "result": null, "error": { "code": "REVISION_CONFLICT", "message": "The artefact changed. Read the current revision before retrying.", "retryable": false } }`. Upstream dependency errors do not expose credentials or raw error bodies.
 
-`model_artifact_save` always creates a DRAFT revision. Only project creation/artifact saving write persistent state and both require deployment write enablement and, in OIDC mode, an authorized draft-write scope or role. No tool approves/releases a model. Read-only tools may contact configured external servers. See [capabilities](../CAPABILITIES.md) for partial or unavailable checks.
+`model_artifact_save` always creates a DRAFT revision. Project creation, artifact saving, branch creation and hosted review requests write persistent state and require deployment write enablement and, in OIDC mode, an authorized draft-write scope or role. No tool approves/releases a model. Read-only tools may contact configured external servers. See [capabilities](../CAPABILITIES.md) for partial or unavailable checks.
 
 ## `ckm_archetype_get`
 
@@ -1201,6 +1201,96 @@ Output schema:
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
 
+## `model_branch_create`
+
+Create a Git branch from a reachable revision. Does not switch the active deployment branch. Requires write access.
+
+External dependency: configured Git remote or hosting API for hosted repository operations.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "branch": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "baseRevision": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "branch",
+    "baseRevision"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_branch_create",
+  "arguments": {
+    "branch": "draft/admission",
+    "baseRevision": "<reachable-base-sha>"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
 ## `model_diff`
 
 Compare XML placements, constraints and leaf values. Not full openEHR semantic equivalence.
@@ -1644,6 +1734,254 @@ Output schema:
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
 
+## `model_repository_branches`
+
+List one page of hosted branches and reported protection status. Null protection means unknown.
+
+External dependency: configured Git remote or hosting API for hosted repository operations.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "page": {
+      "type": "integer",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 10000
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_repository_branches",
+  "arguments": {
+    "page": 1
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_repository_diff`
+
+Compare two reachable immutable Git revisions without executing external diff commands.
+
+External dependency: configured Git remote or hosting API for hosted repository operations.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "baseRevision": {
+      "type": "string"
+    },
+    "headRevision": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "baseRevision",
+    "headRevision"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_repository_diff",
+  "arguments": {
+    "baseRevision": "<reachable-base-sha>",
+    "headRevision": "<reachable-head-sha>"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_repository_info`
+
+Discover the configured repository's capabilities, active branch and optional hosted metadata.
+
+External dependency: configured Git remote or hosting API for hosted repository operations.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_repository_info",
+  "arguments": {}
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
 ## `model_requirements_coverage`
 
 Compute coverage from explicit requirement links and existing project artefacts; not clinical or test coverage.
@@ -1696,6 +2034,189 @@ Example `tools/call` parameters:
       }
     ],
     "links": []
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_review_get`
+
+Read hosted review metadata. Hosting review state is separate from authenticated clinical approval.
+
+External dependency: configured Git remote or hosting API for hosted repository operations.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "number": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "number"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_review_get",
+  "arguments": {
+    "number": 1
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_review_request`
+
+Open a draft hosted review against the configured target or return an existing open review. Never approves a clinical model or merges. Requires write access.
+
+External dependency: configured Git remote or hosting API for hosted repository operations.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "branch": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "body": {
+      "type": "string",
+      "default": "",
+      "maxLength": 20000
+    }
+  },
+  "required": [
+    "branch",
+    "title"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_review_request",
+  "arguments": {
+    "branch": "draft/admission",
+    "title": "Review admission draft",
+    "body": "Validation evidence and unresolved findings."
   }
 }
 ```

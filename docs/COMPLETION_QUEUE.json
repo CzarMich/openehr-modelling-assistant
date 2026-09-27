@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 1,
-  "active_capability": "hosted-git",
+  "active_capability": "sharepoint",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -47,10 +47,10 @@
     },
     {
       "id": "hosted-git",
-      "status": "NOT IMPLEMENTED",
-      "scope": "Provider-specific discovery, reviews and protected-branch metadata",
-      "implementation": "src/Domain/Repository/GitRepository.php",
-      "evidence": null
+      "status": "IMPLEMENTED",
+      "scope": "Configured-repository metadata, branches/protection and draft reviews over shared Git; GitLab live acceptance requires credentials",
+      "implementation": "src/Integrations/Repository/Hosted",
+      "evidence": "docs/evidence/hosted-github-acceptance.json"
     },
     {
       "id": "sharepoint",
@@ -142,6 +142,13 @@
       "scope": "PHP core is provider-neutral; make default deployment/build independent of the optional browser provider image",
       "implementation": "docker-compose.yml",
       "evidence": null
+    },
+    {
+      "id": "gitlab-live-acceptance",
+      "status": "BLOCKED EXTERNALLY",
+      "scope": "Live GitLab installation acceptance requires a configured account/token; adapter and contract tests complete",
+      "implementation": "scripts/hosted-repository-smoke.php",
+      "evidence": "tests/Enterprise/HostedRepositoryTest.php"
     }
   ],
   "phases": [

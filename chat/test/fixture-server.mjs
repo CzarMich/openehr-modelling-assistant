@@ -39,11 +39,15 @@ const provider = {
                 content: "A reviewed draft",
                 expectedRevision: "revision-one",
             });
+        else if (text === "review")
+            await callTool("model_review_request", { branch: "draft/model", title: "Review model" });
         else await callTool("ckm_sources", {});
         const answer =
             text === "save"
                 ? "The draft was saved after your confirmation."
-                : "The configured source is **default**. Terminology binding is optional.\n```xml\n<draft/>\n```";
+                : text === "review"
+                  ? "The draft review was requested after your confirmation."
+                  : "The configured source is **default**. Terminology binding is optional.\n```xml\n<draft/>\n```";
         for (const chunk of answer.match(/.{1,12}/gs)) {
             if (signal.aborted) throw new Error("Stopped");
             onEvent({ type: "delta", text: chunk });
@@ -56,6 +60,7 @@ const mcpFactory = () => ({
     tools: async () => [
         { name: "ckm_sources", inputSchema: { type: "object" } },
         { name: "model_artifact_save", inputSchema: { type: "object" } },
+        { name: "model_review_request", inputSchema: { type: "object" } },
     ],
     call: async () => ({ content: [{ type: "text", text: "Fixture data" }] }),
 });

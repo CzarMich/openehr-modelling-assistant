@@ -118,7 +118,7 @@ def main():
         client.rpc("notifications/initialized", notify=True)
         record("initialize", init["serverInfo"])
         tools = client.listing("tools/list", "tools")
-        expected = {'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
+        expected = {'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
         assert expected <= {t['name'] for t in tools}, 'Required tool missing from discovery'
         assert len({t['name'] for t in tools}) == len(tools)
         assert all(t['inputSchema'].get('additionalProperties') is False for t in tools)
@@ -160,6 +160,8 @@ def main():
         qa = client.tool("model_qa", {"content":"SELECT e/ehr_id/value FROM EHR e", "format":"aql"})
         assert qa['release_eligible'] is False
         record("unavailable checks cannot certify release")
+        repository = client.tool("model_repository_info")
+        assert repository['capabilities']['storage']
         assert client.tool("model_projects")['capabilities']['storage']
         record("repository capability discovery")
         if args.writes:
@@ -174,6 +176,15 @@ def main():
             client.tool('model_artifact_save', {'project':project,'path':'requirements/smoke.md','content':'stale','expectedRevision':first['revision']},error=True)
             assert len(client.tool('model_artifact_history', {'project':project,'path':'requirements/smoke.md'})['versions']) == 2
             record('persistent project, revisions, stale-write rejection', project)
+            if repository['capabilities'].get('branching'):
+                branch = client.tool('model_branch_create', {'branch': 'acceptance/' + project, 'baseRevision': second['revision']})
+                assert branch['active_branch_changed'] is False
+                diff = client.tool('model_repository_diff', {'baseRevision': first['revision'], 'headRevision': second['revision']})
+                assert 'Revised explicit test requirement' in diff['patch']
+                record('Git branch creation and revision diff')
+            if repository.get('hosting') is None:
+                client.tool('model_review_request', {'branch':'acceptance/test','title':'Synthetic review'}, error=True)
+                record('unconfigured hosted review rejected')
         if args.live_ckm:
             for name, arguments in [('ckm_archetype_search', {'keyword':'body weight','maxResults':2}),
                                     ('ckm_archetype_get', {'identifier':'openEHR-EHR-OBSERVATION.body_weight.v2','format':'adl'}),

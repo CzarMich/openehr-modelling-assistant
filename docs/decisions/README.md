@@ -27,6 +27,8 @@ referenced from [requirements.md](../requirements.md),
 | [0008](0008-provider-neutral-modelling-platform.md) | Provider-neutral modelling platform | Accepted | REQ-F11–F14, REQ-N11–N12 |
 | [0009](0009-native-identity-and-tenant-boundaries.md) | Native identity and tenant boundaries | Accepted | REQ-N11, REQ-F12 |
 
+| [0010](0010-hosted-git-capabilities.md) | Hosted Git capabilities beside generic storage | Accepted | REQ-F12, REQ-N11 |
+
 ## Writing a new ADR
 
 1. Copy the structure of an existing record. Number sequentially (`NNNN-kebab-title.md`).

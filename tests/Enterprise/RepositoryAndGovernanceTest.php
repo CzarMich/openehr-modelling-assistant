@@ -69,7 +69,7 @@ final class RepositoryAndGovernanceTest extends TestCase
             self::assertSame('REPOSITORY_SYMLINK_FORBIDDEN', $e->getMessage());
         }
         $this->expectException(\InvalidArgumentException::class);
-        RepositoryFactory::create(new Settings(['MODEL_REPOSITORY_PROVIDER' => 'github']));
+        RepositoryFactory::create(new Settings(['MODEL_REPOSITORY_PROVIDER' => 'sharepoint']));
     }
 
     public function test_disabled_writes_and_agent_claimed_approval_are_rejected(): void

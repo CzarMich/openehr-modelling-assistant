@@ -35,7 +35,7 @@ test("sign in, tool-backed chat, code rendering, history and sign out", async ({
 test("model writes wait for an explicit browser confirmation", async ({ page }) => {
     await login(page);
     await send(page, "save");
-    await expect(page.getByRole("heading", { name: "Review this model change" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Save draft" })).toBeVisible();
     await expect(page.locator(".approval pre")).toContainText("revision-one");
     await page.getByRole("button", { name: "Confirm save", exact: true }).click();
     await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
@@ -65,4 +65,15 @@ test("mobile layout and untrusted markup remain safe", async ({ page }) => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole("button", { name: "Toggle conversations", exact: true }).click();
     await expect(page.locator("#new-chat")).toBeVisible();
+});
+
+test("hosted draft reviews require an explicit review confirmation", async ({ page }) => {
+    await login(page);
+    await send(page, "review");
+    await expect(page.getByRole("button", { name: "Confirm review request", exact: true })).toBeVisible();
+    await expect(page.locator(".approval")).toContainText("draft/model");
+    await page.getByRole("button", { name: "Confirm review request", exact: true }).click();
+    await expect(page.locator(".message.assistant")).toContainText(
+        "draft review was requested after your confirmation",
+    );
 });

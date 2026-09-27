@@ -19,7 +19,7 @@ final class RepositoryFactory
             if (!preg_match('/^(?:[a-f0-9]{64}|unauthenticated)$/D', $tenant)) { throw new \InvalidArgumentException('INVALID_TENANT'); }
             $settings = $settings->with(['MODEL_REPOSITORY_PATH' => rtrim($settings->get('MODEL_REPOSITORY_PATH'), '/') . '/tenants/' . $tenant]);
         }
-        if ($settings->get('MODEL_REPOSITORY_PROVIDER') === 'git') {
+        if (in_array($settings->get('MODEL_REPOSITORY_PROVIDER'), ['git', 'github', 'gitlab'], true)) {
             if ($settings->get('AUTH_MODE') === 'oidc') {
                 $remotes = $settings->tenantGitRemotes();
                 if ($settings->get('MODEL_GIT_REMOTE_URL') !== '' && $remotes === []) {
@@ -28,12 +28,15 @@ final class RepositoryFactory
                 if ($principal !== null && $remotes !== [] && !isset($remotes[$principal->tenant])) {
                     throw new \InvalidArgumentException('TENANT_REPOSITORY_NOT_CONFIGURED');
                 }
+                if ($principal !== null && $settings->get('MODEL_REPOSITORY_PROVIDER') !== 'git' && !isset($remotes[$principal->tenant])) {
+                    throw new \InvalidArgumentException('TENANT_REPOSITORY_NOT_CONFIGURED');
+                }
                 $settings = $settings->with(['MODEL_GIT_REMOTE_URL' => $principal === null ? '' : ($remotes[$principal->tenant] ?? '')]);
             }
-            return new GitModelRepository($settings);
+            return new GitModelRepository($settings, Hosted\HostedProviderFactory::create($settings));
         }
         if ($settings->get('MODEL_REPOSITORY_PROVIDER') !== 'filesystem') {
-            throw new \InvalidArgumentException('REPOSITORY_PROVIDER_NOT_IMPLEMENTED: Use filesystem or git. Provider-specific GitHub/GitLab review APIs and SharePoint are not implemented.');
+            throw new \InvalidArgumentException('REPOSITORY_PROVIDER_NOT_IMPLEMENTED: Use filesystem, git, github or gitlab. SharePoint is not yet implemented.');
         }
         return new FileSystemRepository($settings->get('MODEL_REPOSITORY_PATH'));
     }
