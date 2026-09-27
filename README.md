@@ -116,6 +116,8 @@ flowchart TD
     S --> B[Bundled specifications and guides]
     S --> D[Modelling services and structural checks]
     D --> NE[Native engine: ADL 1.4/2 and AQL parsers]
+    NE --> LR[Legacy profile: reused nodes, RM attributes and explicit slot constraints]
+    LR --> OPT
     NE --> OPT[OPT 2 ADL or supported OPT 1.4 XML; exact-revision build evidence]
     OPT --> R
     D --> VQ[Separate validation stages and exact-revision project QA]

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OpenEHR\Assistant\Domain\Modelling;
 
-/** Extension point only. No compiler implementation is shipped or advertised as an MCP operation. */
+/** Legacy pre-engine extension contract. New integrations use OpenEhrEngine and its evidence-rich results. */
 interface TemplateCompiler
 {
     /**

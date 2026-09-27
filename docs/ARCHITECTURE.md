@@ -86,3 +86,5 @@ Browser chat and model governance share one verified human session. Review brows
 PostgreSQL is the recommended governance backend. Optional Valkey accelerates repeated model/template reads while source revisions remain authoritative. See [storage and cache deployment](POSTGRES_AND_CACHE.md) for configuration, SQLite migration and recovery.
 
 The main browser URL now opens one [tabbed modelling workspace](BROWSER_WORKSPACE.md). Chat, repository browsing and governance share navigation and sign-in; switching tabs preserves the conversation and selected revision.
+
+The legacy engine pairs Archie-calculated original model paths with original ADL constraint syntax. It expands supported internal references without modifying source archetypes and narrows omitted/open RM attributes using bundled RM metadata. Each transformation is recorded in build actions; cycles, type mismatches and explicit slot restrictions remain enforced. Existing-model compilation is exercised by `scripts/engine-example-smoke.py`.

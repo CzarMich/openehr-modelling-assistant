@@ -19,6 +19,7 @@ final class LegacyTemplateCompiler {
     private final List<Map.Entry<Element, String>> annotations = new ArrayList<>();
     private LegacyOptWriter writer;
     private int placements;
+    private final Set<Element> openAttributes = Collections.newSetFromMap(new IdentityHashMap<>());
 
     record Result(String content, String identifier, List<Map<String, String>> actions) {}
 
@@ -53,6 +54,7 @@ final class LegacyTemplateCompiler {
         Element root = assemble(definition, "definition", 0);
         writer.template.appendChild(root);
         if (!used.equals(sources.keySet())) throw new EngineException("ENGINE_UNUSED_DEPENDENCY");
+        actions.addAll(writer.referenceActions);
         finishSlots(root);
         validateMultiplicityTree(root);
         writer.ontology(writer.template, "ontology", rootSource);
@@ -89,8 +91,24 @@ final class LegacyTemplateCompiler {
             };
             if (!placementElement.equals(item.getLocalName())) throw new EngineException("ENGINE_OET_PLACEMENT_KIND_INVALID");
             if (!item.hasAttribute("path")) throw new EngineException("ENGINE_OET_PATH_REQUIRED");
-            Element target = resolve(root, item.getAttribute("path"));
+            Element target = placementTarget(root, item.getAttribute("path"));
             Element placement = assemble(item, "children", depth + 1);
+            if ("attributes".equals(target.getLocalName()) && (openAttributes.contains(target) || children(target, "children").isEmpty())) {
+                openAttributes.add(target);
+                Element owner = (Element) target.getParentNode();
+                String attributeName = text(target, "rm_attribute_name");
+                if (!writer.rm.typeConformant(text(owner, "rm_type_name"), attributeName, text(placement, "rm_type_name")))
+                    throw new EngineException("ENGINE_RM_CHILD_TYPE_INVALID");
+                if (upper(one(target, "existence", true)) == 0) throw new EngineException("ENGINE_ATTRIBUTE_EXCLUDED");
+                int min = item.hasAttribute("min") ? number(item.getAttribute("min"), false) : lower(one(placement, "occurrences", true));
+                int max = item.hasAttribute("max") ? number(item.getAttribute("max"), true) : upper(one(placement, "occurrences", true));
+                if (!writer.rm.isMultiple(text(owner, "rm_type_name"), attributeName) && max > 1)
+                    throw new EngineException("ENGINE_MULTIPLICITY_INVALID");
+                replaceInterval(placement, "occurrences", min, max);
+                target.insertBefore(placement, one(target, "cardinality", false));
+                actions.add(Map.of("code", "RM_UNCONSTRAINED_ATTRIBUTE_NARROWED", "location", path(target), "value", source(item).identifier()));
+                continue;
+            }
             var candidates = "attributes".equals(target.getLocalName()) ? children(target, "children") : List.of(target);
             var matches = new ArrayList<Element>();
             for (Element candidate : candidates) {
@@ -114,6 +132,40 @@ final class LegacyTemplateCompiler {
         }
         for (Element rule : children(specification, "Rule")) applyRule(root, rule);
         return root;
+    }
+
+    private Element placementTarget(Element root, String path) {
+        try { return resolve(root, path); }
+        catch (EngineException error) {
+            if (!error.code.equals("ENGINE_OET_PATH_MISSING")) throw error;
+            int split = path.lastIndexOf('/');
+            String name = path.substring(split + 1);
+            if (!name.matches("[a-z][a-z0-9_]*")) throw error;
+            Element owner = resolve(root, split == 0 ? "/" : path.substring(0, split));
+            if ("attributes".equals(owner.getLocalName())) throw error;
+            String rmType = text(owner, "rm_type_name");
+            if (!writer.rm.attributeExists(rmType, name)) throw new EngineException("ENGINE_RM_ATTRIBUTE_INVALID");
+            if (attribute(owner, name) != null) throw error;
+            Element target = add(owner, "attributes");
+            Node before = one(owner, "archetype_id", false);
+            if (before != null) owner.insertBefore(target, before);
+            boolean multiple = writer.rm.isMultiple(rmType, name);
+            type(target, multiple ? "C_MULTIPLE_ATTRIBUTE" : "C_SINGLE_ATTRIBUTE");
+            value(target, "rm_attribute_name", name);
+            LegacyOptWriter.interval(add(target, "existence"), new MultiplicityInterval(writer.rm.isNullable(rmType, name) ? 0 : 1, 1));
+            if (multiple) {
+                Element cardinality = add(target, "cardinality");
+                var property = writer.rm.getBmmModel().propertyAtPath(rmType, name);
+                if (!(property instanceof org.openehr.bmm.core.BmmContainerProperty container))
+                    throw new EngineException("ENGINE_RM_CONTAINER_UNSUPPORTED");
+                String kind = container.getType().getContainerType().getName().toLowerCase(Locale.ROOT);
+                if (!Set.of("list", "set", "array").contains(kind)) throw new EngineException("ENGINE_RM_CONTAINER_UNSUPPORTED");
+                value(cardinality, "is_ordered", !kind.equals("set")); value(cardinality, "is_unique", kind.equals("set"));
+                LegacyOptWriter.interval(add(cardinality, "interval"), writer.rm.referenceModelPropMultiplicity(rmType, name));
+            }
+            openAttributes.add(target);
+            return target;
+        }
     }
 
     private LegacyArchetype source(Element element) {
