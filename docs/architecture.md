@@ -19,3 +19,5 @@ REQ-F18 adds separate document validation stages and exact-revision project QA t
 REQ-F19 binds optional service credentials to configured CKM sources and exposes bounded federation through a knowledge port and shared application service. [ADR-0018](decisions/0018-source-bound-ckm-authentication-and-federated-discovery.md) records source identity, deadline and credential boundaries.
 
 REQ-F20: `src/Mcp` bounds the supported protocol profile and SDK integration; clients retain negotiation and correlate responses. Production HTTP/stdio acceptance is independent of clinical services. See [MCP protocol](MCP_PROTOCOL.md).
+
+REQ-N13 adds PostgreSQL governance and optional revision-bound Valkey retrieval caching. [ADR-0021](decisions/0021-postgres-governance-and-immutable-model-cache.md) keeps source, identity and audit authority independent of disposable caches.

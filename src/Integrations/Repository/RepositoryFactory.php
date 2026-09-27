@@ -16,7 +16,9 @@ final class RepositoryFactory
             // Readiness may construct the registry without credentials. Only authenticated
             // requests execute tools; their tenant selects an isolated repository namespace.
             $tenant = $principal === null ? 'unauthenticated' : $principal->tenant;
-            if (!preg_match('/^(?:[a-f0-9]{64}|unauthenticated)$/D', $tenant)) { throw new \InvalidArgumentException('INVALID_TENANT'); }
+            if (!preg_match('/^(?:[a-f0-9]{64}|unauthenticated)$/D', $tenant)) {
+                throw new \InvalidArgumentException('INVALID_TENANT');
+            }
             $settings = $settings->with(['MODEL_REPOSITORY_PATH' => rtrim($settings->get('MODEL_REPOSITORY_PATH'), '/') . '/tenants/' . $tenant]);
         }
         if (in_array($settings->get('MODEL_REPOSITORY_PROVIDER'), ['git', 'github', 'gitlab'], true)) {
@@ -45,6 +47,9 @@ final class RepositoryFactory
             }
             return new SharePointRepository($settings);
         }
-        return new FileSystemRepository($settings->get('MODEL_REPOSITORY_PATH'));
+        return new FileSystemRepository(
+            $settings->get('MODEL_REPOSITORY_PATH'),
+            new \OpenEHR\Assistant\Integrations\Cache\ModelReadCache($settings, 'filesystem:' . $settings->get('MODEL_REPOSITORY_PATH'))
+        );
     }
 }

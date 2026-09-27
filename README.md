@@ -108,7 +108,7 @@ flowchart TD
     HR -->|Short-lived request-bound assertion| RA[Versioned human review REST API]
     RA --> GV[Shared governance service and validation gate]
     S -->|Prepare and request review only| GV
-    GV --> AU[Separate append-only audit ledger]
+    GV --> AU[PostgreSQL append-only audit ledger; SQLite compatibility]
     GV --> R
     M[Copilot Studio, Codex or another MCP client] -->|Verified HTTP / stdio MCP profile| S[openEHR Modelling Assistant]
     S --> ID[Transport identity: local, API key or verified OIDC]
@@ -124,6 +124,7 @@ flowchart TD
     TG --> R
     TG -->|Exact validation and human review references| AU
     R --> F[Filesystem snapshots and revisions]
+    R --> MC[Optional Valkey cache: tenant and immutable revision keys]
     R --> SP[SharePoint snapshots and conditional project index]
     R --> G[Git adapter: native model files and commit revisions]
     G --> O[Persistent local Git object store]
@@ -205,3 +206,5 @@ or imply authorship of upstream components, EY certification or clinical validat
 Archetype Designer users: see the [integration guide](docs/ARCHETYPE_DESIGNER_INTEGRATION.md) for shared model repositories, file exchange and the current synchronization limits.
 
 The [MCP protocol profile](docs/MCP_PROTOCOL.md) is verified over production HTTP and stdio, with explicit capabilities and version negotiation.
+
+PostgreSQL is the recommended governance backend. Optional Valkey accelerates repeated model/template reads while source revisions remain authoritative. See [storage and cache deployment](docs/POSTGRES_AND_CACHE.md) for configuration, SQLite migration and recovery.

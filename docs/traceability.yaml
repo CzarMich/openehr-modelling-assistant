@@ -294,3 +294,12 @@ requirements:
     packages: [src/Mcp/*.php, public/index.php, chat/src/mcp.mjs]
     tests: [tests/Enterprise/McpProtocolTest.php, scripts/protocol-smoke.py, scripts/test-protocol-container.sh, chat/test/mcp.test.mjs]
     adr: ["0019"]
+
+  - id: REQ-N13
+    title: PostgreSQL governance and immutable model retrieval caching
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Integrations/Governance/*.php, src/Integrations/Cache/*.php, src/Configuration/StorageConfiguration.php, src/Integrations/Repository/*.php]
+    tests: [tests/Enterprise/StorageConfigurationTest.php, tests/Enterprise/GovernanceAuditStoreTest.php, tests/fixtures/storage/probe.php]
+    adr: ["0021"]

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add PostgreSQL governance storage, lossless ledger migration and optional model retrieval caching.
+
 - Share browser identity across chat and model governance with explicit platform-owner permissions.
 
 

@@ -88,3 +88,5 @@ REQ-F18 maps staged document checks and exact-revision project QA to their share
 REQ-F19 maps CKM credentials/federation to its configuration, HTTP/domain/integration services, unit/schema checks and isolated HTTPS acceptance. See [CKM sources](CKM_SOURCES.md).
 
 | REQ-F20 | MCP profile, negotiated clients and transport compatibility | HTTP/stdio product and pinned official probes | ADR-0019 |
+
+| REQ-N13 | PostgreSQL audit storage and immutable-revision model cache | `src/Integrations/Governance`, `src/Integrations/Cache` | Storage configuration/unit contracts and `scripts/test-storage-container.sh` | ADR-0021 |

@@ -49,7 +49,7 @@ PUBLISHED records the exact revision's lifecycle decision. It does not deploy a 
 
 ## Audit storage and concurrency
 
-`AuditStore` separates governance authority from editable model storage. The SQLite adapter stores append-only events with actor, identity method, timestamp, previous/new state, source revision/hash, comment, validation digest, sequence and previous-event hash. SQL triggers prohibit normal update/delete operations. Reads verify the hash chain; competing writers cannot append the same sequence. Short-lived assertion nonces are consumed transactionally and remain effective across process restarts.
+`AuditStore` separates governance authority from editable model storage. The PostgreSQL and SQLite adapters store append-only events with actor, identity method, timestamp, previous/new state, source revision/hash, comment, validation digest, sequence and previous-event hash. SQL triggers prohibit normal update/delete operations. Reads verify the hash chain; competing writers cannot append the same sequence. Short-lived assertion nonces are consumed transactionally and remain effective across process restarts.
 
 The ledger uses a separate `governance` volume at `/data/governance`. It is never mounted into a model worker or exposed as a `ModelRepository` path. Filesystem, Git and SharePoint model repositories use the same governance service. Model edits and ledger events are not a distributed transaction: a recorded decision always names the immutable observed revision, and reads recheck whether that revision is still current.
 
@@ -76,3 +76,5 @@ Tests cover transactional conflicts, append-only triggers, corruption, history, 
 A [project requirements graph](REQUIREMENTS_TRACEABILITY.md) may reference authoritative validation and human review events by subject, sequence and hash. The resolver checks tenant, project, evidence type and matching model revision; graph JSON cannot create an audit event. Declared coverage and successful reference resolution do not qualify clinical satisfaction. A future qualified build must pin the graph revision with its model and dependency inputs; the current preflight continues to block approval/publication.
 
 The staged document validator and project QA distinguish authentic validation evidence from qualified validation. `model_project_qa` is read-only and cannot create audit events or approve a model. A failed or incomplete authentic event remains evidence of that result. See [Validation and QA](VALIDATION_AND_QA.md).
+
+Production deployments use the [PostgreSQL ledger](POSTGRES_AND_CACHE.md), separate database roles and atomic migration. Governance events and decisions are never served from the model cache.

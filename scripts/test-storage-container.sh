@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export GOVERNANCE_TEST_REPO MODELLING_STORAGE_SECRET_DIR
+GOVERNANCE_TEST_REPO=$(cd "$(dirname "$0")/.." && pwd)
+MODELLING_STORAGE_SECRET_DIR=$(mktemp -d -t modelling-storage.XXXXXXXX)
+# The private parent directory protects host files; container services read selected mounts.
+for name in governance-password governance-owner-password cache-password cache-signing-key; do
+  openssl rand -hex 32 > "$MODELLING_STORAGE_SECRET_DIR/$name"
+  chmod 644 "$MODELLING_STORAGE_SECRET_DIR/$name"
+done
+compose=(docker compose --project-directory "$GOVERNANCE_TEST_REPO" -p "modelling-storage-test-$$" -f "$GOVERNANCE_TEST_REPO/tests/fixtures/governance/compose.yml" -f "$GOVERNANCE_TEST_REPO/deploy/compose.storage.yml" -f "$GOVERNANCE_TEST_REPO/tests/fixtures/storage/compose.yml")
+cleanup() {
+  "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
+  rm -rf -- "$MODELLING_STORAGE_SECRET_DIR"
+}
+trap cleanup EXIT
+"${compose[@]}" up -d --build --wait
+"${compose[@]}" exec -T app php /storage-probe.php > "$GOVERNANCE_TEST_REPO/docs/evidence/ci-storage-smoke.json"
+"${compose[@]}" exec -T app php scripts/governance-storage.php verify
+"${compose[@]}" restart governance-db
+"${compose[@]}" up -d --wait
+"${compose[@]}" exec -T app php /storage-probe.php resume
+address=$("${compose[@]}" port ingress 8343)
+python3 "$GOVERNANCE_TEST_REPO/scripts/governance-fixture-smoke.py" --url "http://$address" --state "$MODELLING_STORAGE_SECRET_DIR/review-state.json" --evidence "$GOVERNANCE_TEST_REPO/docs/evidence/ci-postgres-governance-smoke.json"
+"${compose[@]}" stop cache
+"${compose[@]}" exec -T app php /storage-probe.php outage

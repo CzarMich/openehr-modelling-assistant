@@ -14,6 +14,12 @@ tar --extract --gzip --file "$state_dir/incoming/$revision.tar.gz" --directory "
 ln -sfn "$state_dir/config/runtime.env" "$release_dir/.env"
 cd "$release_dir"
 compose=(docker compose -p openehr-modelling-assistant --env-file .env -f docker-compose.yml)
+storage=false
+if [[ -d "$state_dir/config/storage" ]]; then
+  export MODELLING_STORAGE_SECRET_DIR="$state_dir/config/storage"
+  compose+=(-f deploy/compose.storage.yml)
+  storage=true
+fi
 "${compose[@]}" config --quiet
 "${compose[@]}" build app ingress chat
 previous=""
@@ -21,10 +27,18 @@ if [[ -r "$state_dir/current-revision" ]]; then previous=$(cat "$state_dir/curre
 rollback() {
   if [[ -n "$previous" && -d "$state_dir/releases/$previous" ]]; then
     cd "$state_dir/releases/$previous"
-    docker compose -p openehr-modelling-assistant --env-file .env up -d --build --wait || true
+    # Never fall back to the old SQLite ledger after PostgreSQL accepts authority.
+    if [[ "$storage" == true && ! -f deploy/compose.storage.yml ]]; then
+      echo 'Previous release predates PostgreSQL support; keeping writers stopped for forward recovery.' >&2
+      return
+    fi
+    rollback_compose=(docker compose -p openehr-modelling-assistant --env-file .env -f docker-compose.yml)
+    if [[ "$storage" == true ]]; then rollback_compose+=(-f deploy/compose.storage.yml); fi
+    "${rollback_compose[@]}" up -d --build --wait || true
   fi
 }
 trap rollback ERR
+if [[ "$storage" == true ]]; then scripts/prepare-postgres.sh "$state_dir" "${compose[@]}"; fi
 "${compose[@]}" up -d --wait
 # Read only the inbound test credential into the subprocess environment, never print it.
 python3 - <<'PY'

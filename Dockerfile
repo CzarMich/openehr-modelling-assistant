@@ -4,11 +4,13 @@ ARG PHP_IMAGE=php:8.4-fpm-alpine@sha256:31b521b84d17a97481ce722068c0b9332e78f736
 # Application base
 #
 FROM ${PHP_IMAGE} AS base
+COPY --chmod=0755 --from=mlocati/php-extension-installer@sha256:1afade3e29cfc97362cf5885e5ac333bf2faab1146cb28ebbb59b17e68f87e88 /usr/bin/install-php-extensions /usr/local/bin/
 # Install extensions and tools
 RUN set -eux \
     && apk update && apk upgrade --no-cache \
     && apk add --no-cache \
       ca-certificates fcgi git openssh-client \
+    && install-php-extensions pdo_pgsql redis-6.3.0 \
     && update-ca-certificates \
     && mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 # Add production PHP INI overlays (keep extension configs clean in .docker/php)
@@ -63,6 +65,8 @@ COPY --from=vendor-builder /app/public ./public
 COPY --from=vendor-builder /app/src ./src
 COPY --from=vendor-builder /app/vendor ./vendor
 COPY resources ./resources
+COPY scripts/governance-storage.php ./scripts/governance-storage.php
+COPY deploy/postgres/001-governance.sql ./deploy/postgres/001-governance.sql
 COPY LICENSE THIRD_PARTY_NOTICES.md ./
 RUN mkdir -p /data/models /data/governance && chown -R www-data:www-data /data
 ENV MODEL_REPOSITORY_PATH=/data/models
