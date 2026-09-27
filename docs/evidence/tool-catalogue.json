@@ -1599,6 +1599,97 @@
     }
   },
   {
+    "name": "model_project_qa",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "revision": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "format": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null,
+          "enum": [
+            "xml",
+            "oet",
+            "opt",
+            "adl",
+            "aql",
+            "flat",
+            "structured",
+            null
+          ]
+        }
+      },
+      "required": [
+        "project",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Inspect an exact repository model revision, document profile, recorded provenance, requirement trail, authentic validation/review events and explicit terminology findings. Missing engine/dependency checks remain unexecuted; no approval or model write occurs.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "ckm_archetype_search",
     "title": "Search CKM archetypes",
     "inputSchema": {
@@ -3507,7 +3598,9 @@
             "oet",
             "opt",
             "adl",
-            "aql"
+            "aql",
+            "flat",
+            "structured"
           ]
         }
       },
@@ -3737,7 +3830,9 @@
             "oet",
             "opt",
             "adl",
-            "aql"
+            "aql",
+            "flat",
+            "structured"
           ]
         }
       },

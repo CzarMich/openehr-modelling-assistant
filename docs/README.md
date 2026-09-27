@@ -27,3 +27,5 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 - [Review OpenAPI contract](openapi/reviews.json): versioned internal browser-backend API and decision schemas.
 
 - [Queryable requirements traceability](REQUIREMENTS_TRACEABILITY.md): versioned requirements, decisions, exact model/evidence references and deterministic queries.
+
+[Validation and project QA](VALIDATION_AND_QA.md) documents parsing/structure/conformance separation, FLAT/STRUCTURED profiles, formal findings and exact repository/evidence checks.

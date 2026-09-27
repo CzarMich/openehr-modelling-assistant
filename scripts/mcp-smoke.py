@@ -119,7 +119,7 @@ def main():
         client.rpc("notifications/initialized", notify=True)
         record("initialize", init["serverInfo"])
         tools = client.listing("tools/list", "tools")
-        expected = {'model_traceability_save', 'model_traceability_get', 'model_traceability_explain', 'model_traceability_requirement', 'governance_prepare', 'governance_validate', 'governance_request_review', 'governance_reopen_draft', 'governance_get', 'governance_list', 'model_terminology_inspect', 'terminology_binding_plan', 'terminology_binding_plan_save', 'terminology_binding_plan_get', 'terminology_catalogue_save', 'terminology_catalogue_get', 'terminology_catalogue_search', 'terminology_catalogue_lookup', 'terminology_catalogue_validate', 'terminology_catalogue_expand', 'terminology_catalogue_translate', 'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
+        expected = {'model_project_qa', 'model_traceability_save', 'model_traceability_get', 'model_traceability_explain', 'model_traceability_requirement', 'governance_prepare', 'governance_validate', 'governance_request_review', 'governance_reopen_draft', 'governance_get', 'governance_list', 'model_terminology_inspect', 'terminology_binding_plan', 'terminology_binding_plan_save', 'terminology_binding_plan_get', 'terminology_catalogue_save', 'terminology_catalogue_get', 'terminology_catalogue_search', 'terminology_catalogue_lookup', 'terminology_catalogue_validate', 'terminology_catalogue_expand', 'terminology_catalogue_translate', 'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
         assert expected <= {t['name'] for t in tools}, 'Required tool missing from discovery'
         assert len({t['name'] for t in tools}) == len(tools)
         assert all(t['inputSchema'].get('additionalProperties') is False for t in tools)
@@ -158,6 +158,14 @@ def main():
         bad = client.tool("model_validate", {"content":"<!DOCTYPE a [<!ENTITY x SYSTEM 'file:///etc/passwd'>]><a>&x;</a>","format":"xml"})
         assert bad['valid'] is False
         record("XML validation and entity rejection")
+        for data_format, document in [('flat', '{"observations/temperature|magnitude":37.5}'), ('structured', '{"ctx":{"setting":[{"|code":"238"}]},"observations":{"temperature":[{"|magnitude":37.5}]}}')]:
+            checked = client.tool('model_validate', dict(content=document,format=data_format))
+            assert checked['parse_valid'] is True and checked['structurally_valid'] is True
+            assert checked['valid'] is None and checked['release_eligible'] is False
+            assert {s['name']:s['status'] for s in checked['stages']}['openehr_conformance'] == 'NOT_EXECUTED'
+        ambiguous = client.tool('model_validate',dict(content='{"x":1,"x":2}',format='flat'))
+        assert ambiguous['valid'] is False and ambiguous['parse_valid'] is False
+        record('separate parse, shape and conformance stages; ambiguous JSON rejected')
         qa = client.tool("model_qa", {"content":"SELECT e/ehr_id/value FROM EHR e", "format":"aql"})
         assert qa['release_eligible'] is False
         record("unavailable checks cannot certify release")
@@ -267,6 +275,12 @@ def main():
                 graph['nodes'][-1]['event']['hash'] = '0'*64
                 client.tool('model_traceability_save',dict(project=project,graph=graph,expectedRevision=linked['artifact']['revision']),error=True)
                 record('traceability resolves authentic exact-source validation and rejects fabricated event hashes')
+                project_qa = client.tool('model_project_qa',dict(project=project,path=model_path))
+                assert project_qa['release_eligible'] is False and project_qa['model_changed'] is False
+                assert project_qa['traceability']['validation_events']['V-1']['status'] == 'VERIFIED'
+                assert 'VALIDATION_NOT_QUALIFIED' in [f['code'] for f in project_qa['findings']]
+                assert client.tool('model_artifact_get',dict(project=project,path=model_path))['revision'] == source['revision']
+                record('project QA resolves actual validation evidence without modifying or approving the source')
 
 
         if args.live_ckm:

@@ -43,6 +43,7 @@ export const READ_TOOLS = new Set([
     "model_diff",
     "template_build_oet",
     "model_qa",
+    "model_project_qa",
     "terminology_capabilities",
     "terminology_lookup",
     "terminology_validate_code",

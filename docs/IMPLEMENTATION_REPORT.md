@@ -4,7 +4,7 @@
 
 The standalone project is named **openEHR Modelling Assistant**, with repository `CzarMich/openehr-modelling-assistant` and directory `/home/hyq/workspace/openehr-modelling-assistant`. Original MIT copyright and attribution remain intact. The application is independent of the CDR checkout, upstream hosting, client plugins, model-provider SDKs and a CDR.
 
-The implementation exposes 61 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
+The implementation exposes 62 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
 
 ## Incremental changes
 
@@ -130,3 +130,7 @@ The actual development HTTPS browser path passes OIDC sign-in, signed role mappi
 Four MCP tools now adapt shared project traceability services. A versioned graph records requirements, decisions, model/constraint/binding references and authoritative validation/review event hashes. Deterministic queries answer an element's explicit rationale trail and a requirement's declared model coverage. Reads verify pinned source identities, exact XML/JSON locations and tenant/project-scoped audit evidence, and report stale, invalid, unavailable or unexecuted references. Graph data cannot fabricate authoritative approval or passing validation.
 
 Filesystem, Git and isolated SharePoint contracts cover conditional saves, historical queries and stale-source detection. Security cases cover incompatible/cyclic graphs, forged audit hashes, cross-tenant evidence, different-source validation, ambiguous JSON, unsafe paths and evaluation limits. Native inherited openEHR path resolution and clinical satisfaction remain qualified-engine/human-review concerns. See [the graph guide](REQUIREMENTS_TRACEABILITY.md), [verification](evidence/traceability-verification.json) and the independent MCP evidence under `evidence/traceability-*-smoke.json`.
+
+## Staged validation and project QA
+
+Document operations now separate parse, structure, semantics, terminology, openEHR conformance and repository policy. Bounded FLAT/STRUCTURED profiles and stronger template diagnostics complement read-only exact-revision project QA, recorded provenance and authoritative traceability evidence. [Verification evidence](evidence/validation-qa-verification.json) records the executed contracts; [Validation and QA](VALIDATION_AND_QA.md) documents remaining qualified-engine checks and migration.

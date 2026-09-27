@@ -13,3 +13,5 @@ REQ-F16 adds transport-independent exact-revision governance, a protected append
 ## Project requirements and evidence graph
 
 REQ-F17 adds shared services for versioned typed requirements, decisions, exact model anchors and governance evidence. Four MCP adapters expose conditional graph saves, reads, element explanations and requirement queries. [ADR-0016](decisions/0016-versioned-requirements-graph-and-evidence-boundaries.md) explains the separation of declarations, reference checks and clinical satisfaction. [The graph contract](REQUIREMENTS_TRACEABILITY.md) documents storage, limits and migration.
+
+REQ-F18 adds separate document validation stages and exact-revision project QA through shared application services. Formal findings retain parse/profile errors, recorded evidence and unavailable engine checks independently. [ADR-0017](decisions/0017-staged-document-validation-and-project-evidence-qa.md) and [Validation and QA](VALIDATION_AND_QA.md) define contracts and migration.

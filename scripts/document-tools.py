@@ -35,6 +35,7 @@ examples = {
 catalogue_record={'kind':'code_system','canonical':'https://example.org/local/feeding','version':'1','name':'Feeding','provenance':{'source':'Organisation-authored local draft'},'concepts':[{'code':'mixed','display':'Mixed feeding'}]}
 examples.update({
  'model_traceability_save':{'project':'neonatal-care','graph':{'schema':1,'nodes':[{'id':'R-023','type':'requirement','title':'Project requirement','description':'Record the actual user-supplied modelling requirement.','provenance':['Project requirements workshop notes'],'priority':'must','status':'ACTIVE'}],'edges':[]}},
+ 'model_project_qa':{'project':'neonatal-care','path':'templates/admission.oet'},
  'model_traceability_get':{'project':'neonatal-care'},
  'model_traceability_explain':{'project':'neonatal-care','node':'C-1'},
  'model_traceability_requirement':{'project':'neonatal-care','requirement':'R-023'},

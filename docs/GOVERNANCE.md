@@ -74,3 +74,5 @@ Tests cover transactional conflicts, append-only triggers, corruption, history, 
 ## Requirements and decision evidence
 
 A [project requirements graph](REQUIREMENTS_TRACEABILITY.md) may reference authoritative validation and human review events by subject, sequence and hash. The resolver checks tenant, project, evidence type and matching model revision; graph JSON cannot create an audit event. Declared coverage and successful reference resolution do not qualify clinical satisfaction. A future qualified build must pin the graph revision with its model and dependency inputs; the current preflight continues to block approval/publication.
+
+The staged document validator and project QA distinguish authentic validation evidence from qualified validation. `model_project_qa` is read-only and cannot create audit events or approve a model. A failed or incomplete authentic event remains evidence of that result. See [Validation and QA](VALIDATION_AND_QA.md).

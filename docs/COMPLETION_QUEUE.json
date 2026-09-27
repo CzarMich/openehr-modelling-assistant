@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 1,
-  "active_capability": "structural-validation",
+  "active_capability": "ckm",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -103,10 +103,10 @@
     },
     {
       "id": "structural-validation",
-      "status": "PARTIAL",
-      "scope": "XML/OET/OPT profiles and ADL header only; separated stages required",
+      "status": "IMPLEMENTED",
+      "scope": "Separate safe parse and bounded XML/OET/OPT/FLAT/STRUCTURED document profiles; ADL header only, genuine language/RM conformance remains engine Phase 2",
       "implementation": "src/Validation/ModelValidator.php",
-      "evidence": "tests/Enterprise/ModelValidationTest.php"
+      "evidence": "docs/evidence/validation-qa-verification.json"
     },
     {
       "id": "governance",
@@ -124,10 +124,10 @@
     },
     {
       "id": "qa",
-      "status": "PARTIAL",
-      "scope": "Preflight reports unavailable checks; formal findings/policy checks missing",
-      "implementation": "src/Domain/Modelling/QualityPipeline.php",
-      "evidence": "tests/Enterprise/ModelValidationTest.php"
+      "status": "IMPLEMENTED",
+      "scope": "Formal document/project findings, exact source/provenance/requirement/audit checks and explicit unavailable qualified-engine/dependency checks",
+      "implementation": "src/Application/ProjectQuality.php",
+      "evidence": "docs/evidence/validation-qa-verification.json"
     },
     {
       "id": "designer-live",
