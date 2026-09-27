@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 - Integrate chat, model browsing and governance in one accessible blue-and-white browser workspace.
+- Preserve deployment script input during PostgreSQL cutover and verify the final deployed revision.
 
 - Add PostgreSQL governance storage, lossless ledger migration and optional model retrieval caching.
 

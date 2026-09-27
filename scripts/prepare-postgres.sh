@@ -10,11 +10,11 @@ if [[ ! -f "$state_dir/postgres-migration.json" ]]; then
   "$@" stop app
   report=$(mktemp "$state_dir/postgres-migration.XXXXXXXX")
   trap 'rm -f -- "$report"' EXIT
-  "$@" run --rm --no-deps \
+  "$@" run --rm --no-deps --interactive=false -T \
     -v "$MODELLING_STORAGE_SECRET_DIR/governance-owner-password:/run/secrets/migration-owner:ro" \
     -e GOVERNANCE_POSTGRES_USER=modelling_owner \
     -e GOVERNANCE_POSTGRES_PASSWORD_FILE=/run/secrets/migration-owner \
-    app php scripts/governance-storage.php cutover > "$report"
+    app php scripts/governance-storage.php cutover </dev/null > "$report"
   chmod 600 "$report"
   mv "$report" "$state_dir/postgres-migration.json"
   trap - EXIT

@@ -37,3 +37,6 @@ jobs:
           git archive --format=tar.gz --output="$RUNNER_TEMP/release.tar.gz" "$REVISION"
           scp "${ssh_options[@]}" "$RUNNER_TEMP/release.tar.gz" "amcdr@82.165.59.171:/opt/openehr-modelling-assistant/incoming/$REVISION.tar.gz"
           ssh "${ssh_options[@]}" amcdr@82.165.59.171 "bash -s -- '$REVISION'" < scripts/deploy-vps.sh
+
+          # Verify outside the piped shell: an early clean exit must not claim delivery.
+          ssh "${ssh_options[@]}" amcdr@82.165.59.171 "grep -Fxq '$REVISION' /opt/openehr-modelling-assistant/current-revision"
