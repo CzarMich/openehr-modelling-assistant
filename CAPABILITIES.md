@@ -23,11 +23,13 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Terminology binding plans | WORKING | Offline exact-membership proposals, explicit aliases, pinned local code validation, repository history and stale-evidence detection; review required |
 | Terminology impact and manifest | PARTIAL | Concept/property diff and declared dependencies; no hierarchy/global index |
 | Requirements traceability | PARTIAL | Explicit declared coverage; no clinical/test proof |
-| Governance and QA | PARTIAL | Tested policy boundary and truthful unavailable stages; no persisted approvals |
+| Persisted model governance | WORKING | Exact-revision lifecycle, server-produced validation evidence, append-only audit chain, sequence conflicts and independent human decisions; real approval remains blocked until qualified validation is available |
+| Browser human review and versioned review REST API | WORKING | Source/evidence inspection, role-based decisions, explicit confirmation and single-use request-bound assertions; ordinary MCP credentials cannot approve |
+| QA and release qualification | PARTIAL | Preflight truthfully records unavailable stages; complete deterministic clinical-model qualification requires the engine and formal QA work |
 | API-key authentication and hardened containers | WORKING | One deployment principal, single tenant; enterprise gateway required |
 | Native inbound OIDC | WORKING | Pinned issuer/API audience, discovery/JWKS, RS256 verification, bounded rotation and signed scopes/roles; live identity-provider acceptance, Entra-style fixture coverage |
 | Tenant storage and draft-write authorization | WORKING | Issuer/tenant namespaces, principal-bound sessions, scoped writes and distinct mapped Git remotes; API-key mode remains one service principal |
-| Enterprise project/team RBAC and human approval UI | NOT IMPLEMENTED | Native bearer identity does not prove interactive human approval; project ACLs and governance application remain separate work |
+| Enterprise project/team RBAC | PARTIAL | Tenant isolation, scoped draft writes and distinct human governance roles implemented; project/team ACLs remain separate work |
 | Git storage with GitHub/GitLab/other remotes | WORKING | Plain model files, commit history, remote sync, CAS updates; MCP branch creation and revision diff |
 | Archetype Designer repository layouts | WORKING | Configurable content root; category folders or flat native files; Unicode/spaces preserved; real private Git round trip |
 | Hosted Archetype Designer UI connection | NOT TESTED | Login required; repository integration verified independently, account linking and visual import/export not yet verified |
@@ -42,4 +44,6 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | OPT compilation, native template editing/terminology application | NOT IMPLEMENTED | Requires qualified compiler/modelling engine |
 | AQL parser/execution, composition validation, CDR deployment | NOT IMPLEMENTED | Prompts/examples and optional adapter boundary only |
 | Copilot Studio tenant connection | NOT TESTED | Current official deployment guide; no tenant available |
-| Visual editor and REST application API | NOT IMPLEMENTED | Architecture prepared |
+| Visual editor | NOT IMPLEMENTED | Architecture prepared |
+| General REST application API and CLI | PARTIAL | Versioned review API/OpenAPI implemented; remaining model application endpoints and shared CLI follow |
+| Optional client packaging | WORKING | Default browser review image contains no model-provider executable; conversational adapter uses an explicit image target |

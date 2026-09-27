@@ -12,9 +12,13 @@ import { Store } from "../src/store.mjs";
 import { createApplication } from "../src/server.mjs";
 import { McpClient } from "../src/mcp.mjs";
 
-async function fixture(t, { provider, mcp } = {}) {
+async function fixture(t, { provider, mcp, reviews, reviewOnly = false } = {}) {
     const directory = mkdtempSync(join(tmpdir(), "modelling-chat-"));
     const config = { ...loadConfig(), enabled: true, dataDir: directory, allowWrites: true, maxConcurrentTurns: 3 };
+    if (reviewOnly) {
+        config.enabled = false;
+        config.reviewEnabled = true;
+    }
     const auth = new Auth(config),
         store = new Store(directory);
     auth.sessions.set("alice", {
@@ -48,6 +52,7 @@ async function fixture(t, { provider, mcp } = {}) {
         store,
         provider: provider || defaultProvider,
         mcpFactory: () => service,
+        ...(reviews ? { reviews } : {}),
     });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
@@ -103,6 +108,32 @@ test("authentication, same-origin CSRF and response redaction", async (t) => {
     const expired = f.auth.sessions.get("alice");
     expired.expires = 0;
     assert.equal((await f.request("/chat/api/conversations")).status, 401);
+});
+
+test("review-only API requires session, same-origin CSRF and closed decision input before signing", async (t) => {
+    const calls = [];
+    const f = await fixture(t, {
+        reviewOnly: true,
+        reviews: {
+            request: async (...args) => {
+                calls.push(args);
+                return { state: "REVIEWED" };
+            },
+        },
+    });
+    const target = "/chat/api/reviews/" + "a".repeat(64) + "/transitions";
+    const data = { state: "REVIEWED", expectedSequence: 3, comment: "Reviewed exact source." };
+    assert.equal((await f.request(target, { method: "POST", data, user: null })).status, 401);
+    assert.equal((await f.request(target, { method: "POST", data, csrf: false })).status, 403);
+    assert.equal((await f.request(target, { method: "POST", data, originHeader: "https://evil.example" })).status, 403);
+    assert.equal((await f.request(target, { method: "POST", data: { ...data, human: true } })).status, 400);
+    assert.equal(calls.length, 0);
+    assert.equal((await f.request(target, { method: "POST", data })).status, 200);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][0].identity, "issuer\nalice");
+    assert.deepEqual(calls[0][3], data);
+    assert.equal((await f.request("/chat/api/conversations")).status, 503);
+    assert.equal((await (await f.request("/chat/api/session")).json()).reviewEnabled, true);
 });
 
 test("conversation IDs do not authorize another user to read, write, delete, stop or approve", async (t) => {
@@ -375,4 +406,25 @@ test("retention removes stale conversations even when their owners do not return
     f.store.prune();
     assert.throws(() => f.store.get("inactive-user", old.id));
     assert.equal(f.store.get("active-user", recent.id).id, recent.id);
+});
+
+test("review identity retains only signed OIDC subject, tenant and configured roles", async () => {
+    const f = oidcFixture({ roles: ["modelling-reviewer"], organisation: "hospital-a" });
+    f.auth.config.reviewEnabled = true;
+    f.auth.config.reviewTenantClaim = "organisation";
+    await f.auth.callback(f.req, f.res);
+    const saved = [...f.auth.sessions.values()][0].reviewIdentity;
+    assert.deepEqual(saved.roles, ["modelling-reviewer"]);
+    assert.equal(saved.tenant, "hospital-a");
+    assert.equal(saved.issuer, "https://identity.example/realm");
+    assert.equal(typeof saved.subject, "string");
+    assert.equal(typeof saved.started, "number");
+    assert.equal(JSON.stringify(f.headers).includes("modelling-reviewer"), false);
+});
+
+test("malformed review roles cannot establish an interactive approval identity", async () => {
+    const f = oidcFixture({ roles: "modelling-approver" });
+    f.auth.config.reviewEnabled = true;
+    await assert.rejects(() => f.auth.callback(f.req, f.res));
+    assert.equal(f.auth.sessions.size, 0);
 });

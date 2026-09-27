@@ -42,3 +42,5 @@ referenced from [requirements.md](../requirements.md),
 4. On merge, set status to `Accepted`.
 
 - [ADR-0014: Revision-bound terminology binding plans](0014-revision-bound-terminology-binding-plans.md)
+
+- [ADR-0015: Persisted governance and interactive human approval](0015-persisted-governance-and-interactive-human-approval.md)

@@ -32,10 +32,14 @@ CKM, or operate as a terminology server.
   changes, and produce declared terminology dependency manifests. Inspect explicit OET/OPT coded
   constraints and save revision-bound binding plans with local catalogue candidates and QA findings.
 - Report explicit requirements traceability and a QA preflight that identifies unexecuted checks.
+- Prepare exact model revisions for independent human review, record signed-in reviewer decisions,
+  and retain validation and audit evidence in a separate protected ledger. The review workspace
+  works without an LLM account; agents cannot approve models.
 
 There is **no OPT compiler, complete ADL/AQL validator, CDR execution adapter,
-visual modeller, or operational clinical approval UI**.
-The interfaces and governance policy prepare these extensions. Native OIDC bearer
+or visual modeller**. The browser review workspace records authenticated human
+reviews and immutable audit history; approval/publication requires qualified engine evidence
+and therefore remains blocked by the current validation gap. Native OIDC bearer
 verification, signed write permissions and tenant storage isolation are implemented;
 see [identity configuration and migration](docs/OIDC.md). Full project RBAC remains separate work.
 See the [capability matrix](CAPABILITIES.md) and [verification report](docs/IMPLEMENTATION_REPORT.md).
@@ -48,6 +52,9 @@ select **Sign in to start chatting**, and use your organisation account. Try:
 [Browser chat](docs/BROWSER_CHAT.md) explains use, deployment, identity/model configuration,
 privacy, limits and testing. Other deployments enable this optional client separately.
 The PHP MCP service remains usable with external AI clients and without browser chat.
+Open `/chat/reviews` for human review: select a project, inspect the recorded source and
+validation, then record an explicitly confirmed decision permitted by your role.
+See [review deployment and identity configuration](docs/REVIEW_DEPLOYMENT.md).
 
 ## Start locally
 
@@ -90,6 +97,13 @@ flowchart TD
     W <--> I[OIDC sign-in]
     W <--> AIC[Isolated Codex client]
     W -->|Declared modelling tools over MCP| S[openEHR Modelling Assistant]
+    HU[Human review workspace: no model provider required] --> HR[Browser OIDC and explicit decision confirmation]
+    HR <--> I
+    HR -->|Short-lived request-bound assertion| RA[Versioned human review REST API]
+    RA --> GV[Shared governance service and validation gate]
+    S -->|Prepare and request review only| GV
+    GV --> AU[Separate append-only audit ledger]
+    GV --> R
     M[Copilot Studio, Codex or another MCP client] -->|MCP| S[openEHR Modelling Assistant]
     S --> ID[Transport identity: local, API key or verified OIDC]
     ID --> TEN[Signed tenant namespace and write permissions]
@@ -131,11 +145,18 @@ flowchart TD
     T -->|Yes| B[Inspect saved source; preserve references; compare local catalogue]
     B --> TB[Save binding plan against source revision; review findings and freshness]
     TB --> PR
-    PR --> H[Independent human review and qualified validation]
+    PR --> GP[Register exact revision and run installed validation]
+    GP --> RR[Request human review]
+    RR --> H[Signed-in independent reviewer: inspect source and evidence]
+    H --> Q{Qualified validation available?}
+    Q -->|No| F[Record findings or request changes; approval blocked]
+    Q -->|Yes| A[Human approver confirms exact revision and validation digest]
+    A --> PUB[Human publisher records publication]
 ```
 
-Saving a draft does not approve or release it. The assistant can request a hosted draft review. Human review and merge take place
-in the hosting service; the assistant has no approval endpoint. AQL creation/review
+Saving a draft does not approve or release it. Hosted Git review remains separate from clinical governance.
+The assistant can prepare and request review; only the authenticated human review adapter exposes
+clinical decisions. Its approval gate requires qualified validation, which the current preflight cannot supply. AQL creation/review
 uses the agent plus grounded prompts and paths; execution is not implemented.
 
 Follow the [shared Git model workflow](docs/workflows/shared-git-models.md) or the

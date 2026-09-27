@@ -22,3 +22,6 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 - [Project terminology catalogue](TERMINOLOGY_CATALOGUE.md): local CodeSystem/ValueSet/ConceptMap records, optional external references, revisions, deterministic operations and migration.
 
 - [Terminology binding plans](TERMINOLOGY_BINDING_PLANS.md): explicit XML inspection, catalogue proposals and revision-bound review evidence.
+
+- [Human review deployment](REVIEW_DEPLOYMENT.md): provider-independent browser review, roles, audit persistence and key rotation.
+- [Review OpenAPI contract](openapi/reviews.json): versioned internal browser-backend API and decision schemas.

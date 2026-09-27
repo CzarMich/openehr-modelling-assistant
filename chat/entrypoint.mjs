@@ -1,9 +1,12 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync, copyFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { spawnSync } from "node:child_process";
 import { createApplication } from "./src/server.mjs";
 import { loadConfig } from "./src/config.mjs";
 const config = loadConfig();
 if (config.enabled) {
+    if (spawnSync(config.codexBinary, ["--version"], { stdio: "ignore", timeout: 10000 }).status !== 0)
+        throw new Error("Conversational chat requires the chat image target; model review uses the reviews target.");
     const codexDir = homedir() + "/.codex";
     mkdirSync(codexDir, { recursive: true, mode: 0o700 });
     chmodSync(codexDir, 0o700);
@@ -13,6 +16,9 @@ if (config.enabled) {
         chmodSync(codexDir + "/auth.json", 0o600);
     }
     if (!existsSync(codexDir + "/auth.json")) throw new Error("Configure a Codex login for the chat service");
+}
+if (config.enabled || config.reviewEnabled) {
+    mkdirSync(config.dataDir, { recursive: true, mode: 0o700 });
     if (existsSync("/run/secrets/dev-ca.crt")) {
         const path = config.dataDir + "/ca-bundle.pem";
         writeFileSync(

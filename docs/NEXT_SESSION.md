@@ -24,7 +24,7 @@ The older isolated identity worktree is retained as historical work; its unfinis
 
 ## Remaining scope
 
-Complete the partial/unimplemented rows in the matrix: validated modelling engine/OPT compilation, ADL/AQL and composition checks, optional CDR integration using synthetic fixtures, application API/visual modeller, persisted trusted-human governance, native terminology binding preservation and stronger QA/traceability evidence. Enterprise tenant and hosted Designer acceptance need real account access; record that limit without inventing results.
+Complete the partial/unimplemented rows in the matrix: validated modelling engine/OPT compilation, ADL/AQL and composition checks, optional CDR integration using synthetic fixtures, application API/visual modeller, qualified approval evidence, native terminology binding preservation and stronger QA/traceability evidence. Enterprise tenant and hosted Designer acceptance need real account access; record that limit without inventing results.
 
 Research identified the Apache-licensed openEHR Archie library for ADL 2/AOM/RM and operational templates, openEHR Java libraries for ADL 1.4, and the openEHR SDK for AQL and composition/template handling. Inspect and pin actual supported APIs/versions before integration. The available CDR's ADL utility is not a substitute for a complete grammar/compiler. Do not edit its unrelated dirty working directory.
 
@@ -34,4 +34,6 @@ Hosted repository code reuses generic Git storage and adds six MCP tools. GitHub
 
 The terminology protocol increment adds three MCP tools, independent edition evidence, preserved designations and review-only ConceptMap candidates. The managed local catalogue is implemented with repository and offline-operation contracts. Continue with deterministic binding decisions; native inherited-node semantics still require the qualified engine phase. Consult live evidence for provider-specific operation availability.
 
-Binding plans now provide explicit XML inspection, catalogue proposals and revision-bound evidence. Continue Phase 1 governance, traceability, structural/QA and packaging gaps; complete native/inherited binding application with the qualified engine in Phase 2. The authoritative queue is `COMPLETION_QUEUE.json`.
+Binding plans now provide explicit XML inspection, catalogue proposals and revision-bound evidence. Continue Phase 1 traceability, structural/QA and CKM gaps; complete native/inherited binding application with the qualified engine in Phase 2. The authoritative queue is `COMPLETION_QUEUE.json`.
+
+Persisted exact-revision human governance and the independent review workspace are implemented. The separate ledger records authentic decisions and installed validation; real approval remains blocked by incomplete engine qualification. Default browser builds now exclude the provider runtime. The authoritative next capability is requirements traceability.

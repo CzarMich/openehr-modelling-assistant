@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 1,
-  "active_capability": "governance",
+  "active_capability": "traceability",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -110,10 +110,10 @@
     },
     {
       "id": "governance",
-      "status": "PARTIAL",
-      "scope": "Pure state-transition policy; no persisted trusted-human review/audit",
-      "implementation": "src/Domain/Modelling/Governance.php",
-      "evidence": "tests/Enterprise/RepositoryAndGovernanceTest.php"
+      "status": "IMPLEMENTED",
+      "scope": "Persisted exact-revision lifecycle, independent interactive human roles, append-only audit and browser/REST decisions; real approval requires qualified validation still pending engine phase",
+      "implementation": "src/Application/ModelGovernance.php",
+      "evidence": "docs/evidence/governance-verification.json"
     },
     {
       "id": "traceability",
@@ -152,10 +152,10 @@
     },
     {
       "id": "optional-client-packaging",
-      "status": "PARTIAL",
-      "scope": "PHP core is provider-neutral; make default deployment/build independent of the optional browser provider image",
-      "implementation": "docker-compose.yml",
-      "evidence": null
+      "status": "IMPLEMENTED",
+      "scope": "Default provider-neutral OIDC/review image; conversational provider runtime requires an explicit target",
+      "implementation": "chat/Dockerfile",
+      "evidence": "docs/evidence/governance-verification.json"
     },
     {
       "id": "gitlab-live-acceptance",
@@ -170,6 +170,13 @@
       "scope": "Requires tenant credentials, site/list/library identifiers and resource permissions; adapter and contract/container tests complete",
       "implementation": "scripts/sharepoint-smoke.php",
       "evidence": "tests/Enterprise/SharePointRepositoryTest.php"
+    },
+    {
+      "id": "server-review-live-acceptance",
+      "status": "BLOCKED EXTERNALLY",
+      "scope": "Server browser OIDC client not configured; stored identity administration credential rejected. Core governance configured; actual development OIDC/browser review passes.",
+      "implementation": "docs/REVIEW_DEPLOYMENT.md",
+      "evidence": "docs/evidence/governance-verification.json"
     }
   ],
   "phases": [
@@ -272,14 +279,14 @@
     {
       "phase": 13,
       "scope": "Provider-neutral reviews, comments, resolutions and human approval policy",
-      "status": "NOT IMPLEMENTED",
+      "status": "PARTIAL",
       "capabilities": [],
       "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
     },
     {
       "phase": 14,
       "scope": "Tenants, organisations, workspaces, teams, RBAC and audit",
-      "status": "NOT IMPLEMENTED",
+      "status": "PARTIAL",
       "capabilities": [],
       "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
     },

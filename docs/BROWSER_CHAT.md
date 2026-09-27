@@ -101,3 +101,9 @@ This probe uses the configured provider account and reports successful turns and
 The MCP client bounds a complete response at 16 MiB, including both structured and text representations. This permits bounded catalogue/model records without truncating the protocol result; streaming is cancelled above the limit. Tool outputs remain untrusted input to the assistant, and writes still require exact-change confirmation.
 
 Draft binding-plan saves display the exact model revision, plan revision and declared aliases for confirmation. This confirms a repository write only; it cannot approve clinical content. Read-only inspection, planning and freshness checks are available without an external terminology server.
+
+## Independent human review
+
+The **Model review** link opens `/chat/reviews`. Select a project, inspect the exact source revision, validation findings and audit history, and explicitly confirm a role-permitted decision. This workspace can run with `CHAT_ENABLED=false` and no model-provider account. See [review identity/deployment](REVIEW_DEPLOYMENT.md) and [governance](GOVERNANCE.md). Chat tools can prepare and request review but cannot clinically approve a model.
+
+The default browser image now uses the `reviews` target. To enable conversational chat, set `MODELLING_BROWSER_TARGET=chat` in the Compose environment or use the existing development chat override before rebuilding. This keeps the default deployment independent of a provider executable.

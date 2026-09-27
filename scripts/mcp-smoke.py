@@ -103,6 +103,7 @@ def main():
     parser.add_argument("--live-ckm", action="store_true")
     parser.add_argument("--live-terminology", action="store_true")
     parser.add_argument("--without-terminology", action="store_true", help="Assert optional external terminology is unconfigured")
+    parser.add_argument("--governance", action="store_true", help="Exercise enabled governance persistence with --writes")
     parser.add_argument("--writes", action="store_true", help="Create an isolated smoke project; requires enabled writes")
     args = parser.parse_args()
     client, checks = Client(args.url), []
@@ -118,7 +119,7 @@ def main():
         client.rpc("notifications/initialized", notify=True)
         record("initialize", init["serverInfo"])
         tools = client.listing("tools/list", "tools")
-        expected = {'model_terminology_inspect', 'terminology_binding_plan', 'terminology_binding_plan_save', 'terminology_binding_plan_get', 'terminology_catalogue_save', 'terminology_catalogue_get', 'terminology_catalogue_search', 'terminology_catalogue_lookup', 'terminology_catalogue_validate', 'terminology_catalogue_expand', 'terminology_catalogue_translate', 'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
+        expected = {'governance_prepare', 'governance_validate', 'governance_request_review', 'governance_reopen_draft', 'governance_get', 'governance_list', 'model_terminology_inspect', 'terminology_binding_plan', 'terminology_binding_plan_save', 'terminology_binding_plan_get', 'terminology_catalogue_save', 'terminology_catalogue_get', 'terminology_catalogue_search', 'terminology_catalogue_lookup', 'terminology_catalogue_validate', 'terminology_catalogue_expand', 'terminology_catalogue_translate', 'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
         assert expected <= {t['name'] for t in tools}, 'Required tool missing from discovery'
         assert len({t['name'] for t in tools}) == len(tools)
         assert all(t['inputSchema'].get('additionalProperties') is False for t in tools)
@@ -222,6 +223,19 @@ def main():
             client.tool('model_artifact_save',dict(project=project,path=model_path,content=model_xml+'\n',expectedRevision=model['revision']))
             assert client.tool('terminology_binding_plan_get', args_plan)['freshness']['status'] == 'STALE_OR_MODIFIED'
             record('revision-bound binding plans, offline validation, unchanged source and stale evidence detection')
+            if args.governance:
+                source = client.tool('model_artifact_get', dict(project=project, path=model_path))
+                prepared = client.tool('governance_prepare', dict(project=project, path=model_path, modelRevision=source['revision'], comment='Independent synthetic protocol check.'))
+                checked = client.tool('governance_validate', dict(subject=prepared['subject'], expectedSequence=prepared['sequence']))
+                assert checked['state'] == 'DRAFT' and checked['validation']['release_eligible'] is False
+                reviewed = client.tool('governance_request_review', dict(subject=checked['subject'], expectedSequence=checked['sequence'], comment='Review incomplete synthetic model.'))
+                assert reviewed['state'] == 'REVIEW_REQUESTED' and reviewed['clinical_approval'] is False
+                assert reviewed['events'][-1]['actor']['human'] is False and len(reviewed['events']) == 3
+                client.tool('governance_request_review', dict(subject=checked['subject'], expectedSequence=checked['sequence'], comment='Stale review must fail.'), error=True)
+                assert len(client.tool('governance_list', dict(project=project))['items']) == 1
+                assert client.tool('governance_get', dict(subject=prepared['subject']))['source']['sha256'] == source['sha256']
+                record('authoritative governance audit, incomplete validation, agent review request and stale-event rejection')
+
         if args.live_ckm:
             for name, arguments in [('ckm_archetype_search', {'keyword':'body weight','maxResults':2}),
                                     ('ckm_archetype_get', {'identifier':'openEHR-EHR-OBSERVATION.body_weight.v2','format':'adl'}),

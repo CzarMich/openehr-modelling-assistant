@@ -22,7 +22,7 @@
         rewrite * /landing.html
         file_server
     }
-    @mcp path /mcp /health /ready
+    @mcp path /mcp /health /ready /api/v1/reviews /api/v1/reviews/*
     handle @mcp {
         reverse_proxy app:9000 {
             transport fastcgi {

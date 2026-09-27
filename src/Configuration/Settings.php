@@ -23,6 +23,10 @@ final class Settings
         'OIDC_REQUIRED_SCOPES' => 'modelling.read', 'OIDC_ROLES_CLAIM' => 'roles', 'OIDC_REQUIRED_ROLES' => '',
         'OIDC_WRITE_ROLES' => 'modeller,administrator', 'OIDC_TENANT_CLAIM' => '', 'OIDC_ALLOWED_TENANTS' => '',
         'OIDC_TENANT_GIT_REMOTES' => '{}',
+        'GOVERNANCE_ENABLED' => 'false', 'GOVERNANCE_DATABASE_PATH' => '/data/governance/audit.sqlite',
+        'GOVERNANCE_BROWSER_ORIGIN' => '', 'GOVERNANCE_OIDC_ISSUER' => '', 'GOVERNANCE_BROWSER_KEYS' => '{}',
+        'GOVERNANCE_SESSION_MAX_AGE' => '900',
+        'GOVERNANCE_ROLE_MAP' => '{"modeller":["modelling-modeller"],"reviewer":["modelling-reviewer"],"approver":["modelling-approver"],"publisher":["modelling-publisher"]}',
         'CKM_API_BASE_URL' => 'https://ckm.openehr.org/ckm/rest/', 'CKM_TIMEOUT' => '15',
         'CKM_SOURCES' => '{}', 'CKM_DEFAULT_SOURCE' => 'default',
         'TERMINOLOGY_FHIR_BASE_URL' => '', 'TERMINOLOGY_BEARER_TOKEN' => '',
@@ -78,7 +82,7 @@ final class Settings
         if ((int) $this->get('MCP_PORT') > 65535) {
             throw new InvalidArgumentException('MCP_PORT must be <= 65535.');
         }
-        foreach (['HTTP_SSL_VERIFY', 'MODEL_REPOSITORY_WRITE_ENABLED'] as $key) {
+        foreach (['HTTP_SSL_VERIFY', 'MODEL_REPOSITORY_WRITE_ENABLED', 'GOVERNANCE_ENABLED'] as $key) {
             if (!in_array($this->get($key), ['true', 'false'], true)) {
                 throw new InvalidArgumentException("$key must be true or false.");
             }
@@ -93,7 +97,7 @@ final class Settings
             throw new InvalidArgumentException('Invalid AUTH_API_KEY_HEADER.');
         }
         foreach (['SHAREPOINT_GRAPH_URL', 'SHAREPOINT_TOKEN_URL', 'MODEL_HOSTED_API_URL', 'CKM_API_BASE_URL', 'TERMINOLOGY_FHIR_BASE_URL', 'OIDC_ISSUER', 'OIDC_JWKS_URI',
-            'PRODUCT_URL', 'PRODUCT_SUPPORT_URL', 'PRODUCT_DOCUMENTATION_URL', 'PRODUCT_LOGO_URL'] as $key) {
+            'GOVERNANCE_BROWSER_ORIGIN', 'GOVERNANCE_OIDC_ISSUER', 'PRODUCT_URL', 'PRODUCT_SUPPORT_URL', 'PRODUCT_DOCUMENTATION_URL', 'PRODUCT_LOGO_URL'] as $key) {
             if ($this->get($key) !== '') {
                 self::validateUrl($this->get($key));
             }
@@ -104,6 +108,13 @@ final class Settings
         if ($this->get('MODEL_REPOSITORY_PROVIDER') === 'sharepoint' && $this->get('SHAREPOINT_ACCESS_TOKEN') !== ''
             && ($this->get('SHAREPOINT_CLIENT_ID') !== '' || $this->get('SHAREPOINT_CLIENT_SECRET') !== '')) {
             throw new InvalidArgumentException('Configure one SharePoint authentication method.');
+        }
+        if (!ctype_digit($this->get('GOVERNANCE_SESSION_MAX_AGE')) || (int) $this->get('GOVERNANCE_SESSION_MAX_AGE') < 60 || (int) $this->get('GOVERNANCE_SESSION_MAX_AGE') > 3600) {
+            throw new InvalidArgumentException('Governance session maximum age must be 60..3600 seconds.');
+        }
+        $this->governanceRoleMap();
+        if ($this->governanceBrowserKeys() !== [] && ($this->get('GOVERNANCE_BROWSER_ORIGIN') === '' || $this->get('GOVERNANCE_OIDC_ISSUER') === '')) {
+            throw new InvalidArgumentException('Governance browser keys require an explicit browser origin and OIDC issuer.');
         }
         $this->ckmSources();
         $this->tenantGitRemotes();
@@ -117,6 +128,31 @@ final class Settings
                 throw new InvalidArgumentException('CORS_ALLOWED_ORIGINS must contain origins without paths.');
             }
         }
+    }
+
+    /** @return array<string, string> */
+    public function governanceBrowserKeys(): array
+    {
+        $keys = json_decode($this->get('GOVERNANCE_BROWSER_KEYS'), true, 8, JSON_THROW_ON_ERROR);
+        if (!is_array($keys) || count($keys) > 3) { throw new InvalidArgumentException('INVALID_GOVERNANCE_BROWSER_KEYS'); }
+        foreach ($keys as $id => $key) {
+            if (!is_string($id) || !preg_match('/^[A-Za-z][A-Za-z0-9_-]{0,63}$/D', $id) || !is_string($key) || !preg_match('/^[a-f0-9]{64,128}$/D', $key)) {
+                throw new InvalidArgumentException('INVALID_GOVERNANCE_BROWSER_KEYS');
+            }
+        }
+        return $keys;
+    }
+
+    /** @return array<string, list<string>> */
+    public function governanceRoleMap(): array
+    {
+        $map = json_decode($this->get('GOVERNANCE_ROLE_MAP'), true, 8, JSON_THROW_ON_ERROR);
+        if (!is_array($map) || array_diff(array_keys($map), ['modeller', 'reviewer', 'approver', 'publisher']) !== []) { throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP'); }
+        foreach ($map as $roles) {
+            if (!is_array($roles) || !array_is_list($roles) || count($roles) > 20) { throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP'); }
+            foreach ($roles as $role) { if (!is_string($role) || $role === '' || strlen($role) > 200) { throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP'); } }
+        }
+        return $map;
     }
 
     public static function fromEnvironment(): self

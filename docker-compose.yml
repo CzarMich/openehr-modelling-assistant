@@ -13,6 +13,7 @@ services:
       MODEL_REPOSITORY_PATH: /data/models
     volumes:
       - models:/data/models
+      - governance:/data/governance
     tmpfs:
       - /tmp:mode=1777,size=64m
     read_only: true
@@ -26,6 +27,7 @@ services:
     build:
       context: .
       dockerfile: chat/Dockerfile
+      target: ${MODELLING_BROWSER_TARGET:-reviews}
     env_file:
       - path: ${MODELLING_CHAT_ENV_FILE:-.env.chat}
         required: false
@@ -72,5 +74,6 @@ services:
     restart: unless-stopped
 volumes:
   models:
+  governance:
   chat-data:
   chat-codex:

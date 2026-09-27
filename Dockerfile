@@ -64,7 +64,7 @@ COPY --from=vendor-builder /app/src ./src
 COPY --from=vendor-builder /app/vendor ./vendor
 COPY resources ./resources
 COPY LICENSE THIRD_PARTY_NOTICES.md ./
-RUN mkdir -p /data/models && chown -R www-data:www-data /data
+RUN mkdir -p /data/models /data/governance && chown -R www-data:www-data /data
 ENV MODEL_REPOSITORY_PATH=/data/models
 STOPSIGNAL SIGQUIT
 USER www-data

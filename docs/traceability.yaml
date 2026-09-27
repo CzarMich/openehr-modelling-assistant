@@ -249,3 +249,12 @@ requirements:
     packages: [chat/src/*.mjs, public/chat, chat/Dockerfile]
     tests: [chat/test/security.test.mjs, chat/test/codex.test.mjs, chat/test/mcp.test.mjs, chat/test/browser.spec.mjs]
     verification: npm --prefix chat test and npm --prefix chat run test:browser
+
+  - id: REQ-F16
+    title: Persisted exact-revision governance and independent interactive human approval
+    canonical: docs/requirements.md
+    status: draft
+    implementation: partial
+    packages: [src/Domain/Governance/*.php, src/Integrations/Governance/*.php, src/Application/ModelGovernance.php, src/Rest/ReviewApi.php, src/Tools/GovernanceTools.php]
+    tests: [tests/Enterprise/GovernanceAuditStoreTest.php, tests/Enterprise/ModelGovernanceTest.php, tests/Enterprise/InteractiveReviewAuthenticatorTest.php, tests/Enterprise/ReviewApiTest.php, chat/test/reviews.test.mjs, chat/test/browser.spec.mjs]
+    adr: ["0015"]

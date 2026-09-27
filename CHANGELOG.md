@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add persisted human governance, an independent browser review workspace and versioned review API.
+
 - Add revision-bound terminology binding plans with offline catalogue proposals, preserved native references and stale-evidence checks.
 
 - Add a versioned project terminology catalogue with offline operations and conditional draft saves.

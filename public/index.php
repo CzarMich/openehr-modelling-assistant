@@ -66,13 +66,22 @@ try {
         $request = (new ServerRequestCreator($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory))->fromGlobals()
             ->withHeader('Host', (string) ($_SERVER['HTTP_HOST'] ?? ''));
         $path = $request->getUri()->getPath();
-        if (!in_array($path, ['/mcp', '/health', '/ready'], true)) {
+        if (!in_array($path, ['/mcp', '/health', '/ready'], true) && !str_starts_with($path, '/api/v1/reviews')) {
             http_response_code(404);
             exit;
         }
         if ($path === '/health' && $request->getMethod() === 'GET') {
             header('Content-Type: application/json');
             echo '{"status":"alive"}';
+            exit;
+        }
+        if (str_starts_with($path, '/api/v1/reviews')) {
+            $audit = new \OpenEHR\Assistant\Integrations\Governance\ConfiguredAuditStore($settings);
+            $validator = new \OpenEHR\Assistant\Integrations\Governance\PreflightValidation(new \OpenEHR\Assistant\Domain\Modelling\QualityPipeline(new \OpenEHR\Assistant\Validation\ModelValidator()));
+            $response = (new \OpenEHR\Assistant\Rest\ReviewApi($settings, $audit, $validator))->handle($request);
+            http_response_code($response->getStatusCode());
+            foreach ($response->getHeaders() as $name => $values) { foreach ($values as $value) { header($name . ': ' . $value, false); } }
+            echo $response->getBody();
             exit;
         }
         if ($path !== '/ready') {
@@ -114,7 +123,15 @@ try {
 
     // Initialize API clients, resources, etc.
     $container->set(Settings::class, $settings);
-    $container->set(AccessPolicy::class, new AccessPolicy($settings, $identity));
+    $access = new AccessPolicy($settings, $identity);
+    $container->set(AccessPolicy::class, $access);
+    $governanceRoles = [];
+    try { $access->assertModelWrite(); $governanceRoles = ['modeller']; } catch (RuntimeException) { /* Read-only callers cannot prepare or promote models. */ }
+    $container->set(\OpenEHR\Assistant\Domain\Governance\Actor::class, new \OpenEHR\Assistant\Domain\Governance\Actor(
+        $identity->id ?? $principal, $identity->tenant ?? 'shared', $governanceRoles));
+    $container->set(\OpenEHR\Assistant\Domain\Governance\AuditStore::class, new \OpenEHR\Assistant\Integrations\Governance\ConfiguredAuditStore($settings));
+    $container->set(\OpenEHR\Assistant\Domain\Governance\ValidationProvider::class,
+        new \OpenEHR\Assistant\Integrations\Governance\PreflightValidation(new \OpenEHR\Assistant\Domain\Modelling\QualityPipeline(new \OpenEHR\Assistant\Validation\ModelValidator())));
     $ckmClient = new CkmClient($logger, settings: $settings);
     $container->set(CkmClient::class, $ckmClient);
     $container->set(ArchetypeSource::class, new CkmArchetypeSource(new CkmService($ckmClient, $logger), $ckmClient));
@@ -137,7 +154,7 @@ try {
     // rather than silently serving a mismatched, previously-cached capability set.
     // The namespace becomes a subdirectory under $cacheDir and old ones are never pruned
     // (no TTL), so releases accumulate directories there — see docs/development.md.
-    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-bindings-1', 0, $cacheDir));
+    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-governance-1', 0, $cacheDir));
 
     // Load server instructions. Optional at the protocol level, but this server
     // ships a canonical resources/server-instructions.md — a missing/unreadable
