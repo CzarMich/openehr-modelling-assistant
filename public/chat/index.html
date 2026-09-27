@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#123f3b" />
+        <title>Chat · openEHR Modelling Assistant</title>
+        <link rel="stylesheet" href="/chat/style.css" />
+        <script src="/chat/app.js" defer></script>
+    </head>
+    <body>
+        <div class="workspace">
+            <aside id="sidebar" class="sidebar" aria-label="Conversations">
+                <a class="brand" href="/chat/" aria-label="openEHR Modelling Assistant"
+                    ><span class="brand-symbol" aria-hidden="true"
+                        ><svg
+                            viewBox="0 0 28 28"
+                            width="28"
+                            height="28"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                        >
+                            <rect x="5" y="5" width="15" height="18" rx="2" />
+                            <path d="M9 5V2h15v18h-4M9 11h7M9 15h7M9 19h4" /></svg></span
+                    ><span>openEHR<span class="brand-subtitle">Modelling Assistant</span></span></a
+                >
+                <button id="new-chat" class="new-chat" disabled>
+                    <span aria-hidden="true">+</span> New conversation
+                </button>
+                <div class="sidebar-label">YOUR CONVERSATIONS</div>
+                <nav id="conversations" aria-label="Your conversations">
+                    <p class="empty-list">Sign in to start a conversation.</p>
+                </nav>
+                <div class="sidebar-bottom">
+                    <span class="status-dot"></span><span>Models, with context.</span
+                    ><a
+                        href="https://github.com/CzarMich/openehr-modelling-assistant/blob/main/docs/BROWSER_CHAT.md"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >User guide ↗</a
+                    >
+                </div>
+            </aside>
+            <main class="main">
+                <header class="topbar">
+                    <div class="topbar-left">
+                        <button id="toggle-sidebar" class="icon-button mobile-only" aria-label="Toggle conversations">
+                            ☰</button
+                        ><span class="workspace-name">Modelling workspace</span
+                        ><span class="context-badge">Drafts &amp; discovery</span>
+                    </div>
+                    <div class="account">
+                        <span id="user-name"></span><button id="sign-out" class="text-button" hidden>Sign out</button>
+                    </div>
+                </header>
+                <div id="notice" role="alert" class="notice" hidden></div>
+                <section id="welcome" class="welcome">
+                    <div class="eyebrow"><span class="status-dot"></span> OPEN KNOWLEDGE. BETTER MODELS.</div>
+                    <h1>What are you<br /><em>modelling today?</em></h1>
+                    <p class="intro">
+                        Find the right archetypes, explore your models, and turn requirements into a considered first
+                        draft.
+                    </p>
+                    <div id="login-panel" class="login-panel" hidden>
+                        <a class="primary-button" href="/chat/auth/login"
+                            >Sign in to start chatting <span aria-hidden="true">→</span></a
+                        >
+                        <p>
+                            Use your organisation account. Your conversations are private to your sign-in; model
+                            repositories may be shared.
+                        </p>
+                    </div>
+                    <div id="suggestions" class="suggestions">
+                        <button
+                            class="suggestion"
+                            data-prompt="List the available CKM sources, then help me find a blood pressure archetype. Retrieve real results and explain which source you used."
+                            disabled
+                        >
+                            <span class="suggestion-icon"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    width="24"
+                                    height="24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                >
+                                    <circle cx="10" cy="10" r="6" />
+                                    <path d="m15 15 5 5" /></svg></span
+                            ><strong>Find an archetype</strong><span>Discover reusable models for blood pressure.</span
+                            ><span class="arrow" aria-hidden="true">↗</span>
+                        </button>
+                        <button
+                            class="suggestion"
+                            data-prompt="Help me plan a neonatal admission template. Begin with requirements and available openEHR guides. Keep unresolved concepts explicit and treat the model as a draft."
+                            disabled
+                        >
+                            <span class="suggestion-icon"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    width="24"
+                                    height="24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                >
+                                    <rect x="3" y="6" width="14" height="15" rx="2" />
+                                    <path d="M7 6V2h14v15h-4M7 11h6M7 15h6" /></svg></span
+                            ><strong>Shape a template</strong><span>Turn a modelling requirement into a draft.</span
+                            ><span class="arrow" aria-hidden="true">↗</span>
+                        </button>
+                        <button
+                            class="suggestion"
+                            data-prompt="List the modelling projects I can access and explain how I can inspect their artifacts and revision history. Do not change anything."
+                            disabled
+                        >
+                            <span class="suggestion-icon"
+                                ><svg
+                                    viewBox="0 0 24 24"
+                                    width="24"
+                                    height="24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                >
+                                    <circle cx="6" cy="5" r="2.5" />
+                                    <circle cx="6" cy="19" r="2.5" />
+                                    <circle cx="18" cy="5" r="2.5" />
+                                    <path d="M6 7.5v9M18 7.5c0 6-12 3-12 8" /></svg></span
+                            ><strong>Explore your models</strong
+                            ><span>Review projects, artifacts and revision history.</span
+                            ><span class="arrow" aria-hidden="true">↗</span>
+                        </button>
+                    </div>
+                    <div class="welcome-note">
+                        <span aria-hidden="true">◇</span> Start with your requirements. Terminology binding is optional.
+                    </div>
+                </section>
+                <section id="thread" class="thread" aria-label="Chat messages" hidden></section>
+                <div id="activity" class="activity" role="status" aria-live="polite"></div>
+                <div class="composer-wrap">
+                    <form id="chat-form" class="composer">
+                        <label class="sr-only" for="message">Message the modelling assistant</label
+                        ><textarea
+                            id="message"
+                            maxlength="8000"
+                            rows="2"
+                            placeholder="Ask about an archetype, describe a model, or paste a draft…"
+                            disabled
+                        ></textarea>
+                        <div class="composer-actions">
+                            <span id="composer-hint">Sign in to begin</span
+                            ><button id="stop" type="button" class="stop-button" hidden>Stop response</button
+                            ><button id="send" type="submit" class="send-button" aria-label="Send message" disabled>
+                                ↑
+                            </button>
+                        </div>
+                    </form>
+                    <p class="disclaimer">
+                        Generated models remain drafts. Check sources and obtain qualified review before use.
+                    </p>
+                </div>
+            </main>
+        </div>
+    </body>
+</html>

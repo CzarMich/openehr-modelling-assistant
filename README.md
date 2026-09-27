@@ -14,6 +14,9 @@ CKM, or operate as a terminology server.
 
 ## What it can do
 
+- Chat in a browser with organisation sign-in, streamed replies, private conversation history
+  and visible modelling-tool activity. Review and confirm each proposed model write.
+
 - Search and retrieve archetypes and templates directly from multiple configured CKMs.
   Select a named international, national or organisational CKM on each call.
 - Supply bundled openEHR specifications, modelling guides, examples and terminology.
@@ -33,6 +36,15 @@ visual modeller, SharePoint storage adapter, hosted Git review API, or operation
 The interfaces and governance policy prepare these extensions. OIDC/Entra token
 verification is an extension point; `AUTH_MODE=oidc` fails closed until implemented.
 See the [capability matrix](CAPABILITIES.md) and [verification report](docs/IMPLEMENTATION_REPORT.md).
+
+## Chat in your browser
+
+Open the [development chat](https://dev-openehr-modelling.sandbox.hygeoniq.com/chat/),
+select **Sign in to start chatting**, and use your organisation account. Try:
+“List the configured CKMs and find a blood pressure archetype.”
+[Browser chat](docs/BROWSER_CHAT.md) explains use, deployment, identity/model configuration,
+privacy, limits and testing. Other deployments enable this optional client separately.
+The PHP MCP service remains usable with external AI clients and without browser chat.
 
 ## Start locally
 
@@ -71,6 +83,10 @@ return schemas, examples and dependency/failure notes for every exposed tool.
 
 ```mermaid
 flowchart TD
+    U[Browser chat] --> W[Chat service: history, streaming and write confirmation]
+    W <--> I[OIDC sign-in]
+    W <--> AIC[Isolated Codex client]
+    W -->|Declared modelling tools over MCP| S[openEHR Modelling Assistant]
     M[Copilot Studio, Codex or another MCP client] -->|MCP| S[openEHR Modelling Assistant]
     S --> K[Multiple named CKM sources]
     S --> B[Bundled specifications and guides]
@@ -95,7 +111,7 @@ Modelling and persistence work without a terminology server or terminology bindi
 
 ```mermaid
 flowchart TD
-    P[Select filesystem or Git storage] --> R[Open project and read current revision]
+    Chat[Browser chat or another MCP client] --> P[Select filesystem or Git storage] --> R[Open project and read current revision]
     R --> D[Retrieve CKM sources and draft model changes]
     D --> V[Run available structural checks and inspect diff]
     V --> T{Terminology binding needed?}

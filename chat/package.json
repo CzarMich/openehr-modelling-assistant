@@ -1,0 +1,21 @@
+{
+  "name": "openehr-modelling-chat",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.22"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:browser": "playwright test --config playwright.config.mjs",
+    "check:format": "prettier --check src test entrypoint.mjs playwright.config.mjs ../public/chat"
+  },
+  "dependencies": {
+    "openid-client": "6.8.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "prettier": "3.8.1"
+  }
+}

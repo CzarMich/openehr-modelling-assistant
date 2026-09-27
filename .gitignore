@@ -54,3 +54,10 @@ CLAUDE.local.md
 
 __pycache__/
 *.pyc
+
+# Browser chat dependencies and local test output
+chat/node_modules/
+chat/test-results/
+chat/playwright-report/
+
+.env.chat

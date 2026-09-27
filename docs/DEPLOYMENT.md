@@ -35,10 +35,10 @@ curl --fail http://127.0.0.1:8343/ready
 ```
 
 The app image serves **FastCGI on 9000**, not HTTP. Caddy serves a public introduction at `/`, plus `/mcp`, `/health`
-and `/ready` on container port 8343. Compose publishes 8343 on loopback by default.
+and `/ready` on container port 8343. The optional Node chat client serves `/chat/` through the same ingress. Compose publishes 8343 on loopback by default.
 No FPM port is published. Change `MCP_HOST` and `MCP_PORT` for the published socket;
 they do not configure an embedded PHP web server. TLS belongs to the enterprise gateway.
-Both images build from this checkout. Image digests and Composer lock pin the
+The application, ingress and optional chat images build from this checkout. Image digests and Composer lock pin the
 application inputs; Alpine package security updates are resolved at build time.
 
 ## Enterprise deployment
@@ -128,3 +128,7 @@ This overlay expects the `hygeoniq-proxy` external Docker network, a TLS-configu
 Run `scripts/mcp-smoke.py --url https://dev-openehr-modelling.sandbox.hygeoniq.com/mcp --writes --without-terminology` with the dev key in `AUTH_API_KEY`. This tests authenticated discovery, persistence, history, conflict detection and absent terminology. Codex connection instructions are in [MCP clients](MCP_CLIENTS.md).
 
 For the configured private model remote, also supply `MODEL_GIT_KEY_HOST_PATH` and `MODEL_GIT_HOSTS_HOST_PATH`, then append `-f deploy/compose.git-secrets.example.yml` before `up`. The external runtime configuration selects `/data/models/designer`, content path `local` and layout `flat`. The generic command above is sufficient for local Git or anonymous HTTPS; SSH requires the credential mounts.
+
+## Optional browser chat
+
+See [browser chat deployment](BROWSER_CHAT.md#deploying-browser-chat) for the separate OIDC client, Codex account, private conversation/credential volumes, environment variables and browser acceptance tests. Default deployments keep chat disabled until those dependencies are configured. Enabling it does not change MCP API-key authentication or require a terminology server.

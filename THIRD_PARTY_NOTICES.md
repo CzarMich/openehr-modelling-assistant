@@ -15,3 +15,7 @@ attributions. Composer dependencies retain their own licences in the installed
 `vendor/` tree; run `composer licenses` to inspect the locked dependency inventory.
 No SNOMED CT, LOINC or other restricted external terminology database is bundled.
 External terminology responses must be used under the source's applicable terms.
+
+## Optional browser chat
+
+The chat runtime uses Node.js (MIT and bundled notices), openid-client and oauth4webapi (MIT), and the pinned OpenAI Codex distribution (Apache-2.0 and its bundled third-party notices). Playwright (Apache-2.0) and Prettier (MIT) are development dependencies. Package lockfiles and the chat Dockerfile record versions. No provider trademark implies endorsement.

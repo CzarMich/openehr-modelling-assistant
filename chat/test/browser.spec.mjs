@@ -1,0 +1,68 @@
+import { test, expect } from "@playwright/test";
+async function login(page) {
+    await page.goto("/chat/");
+    await page.getByRole("link", { name: "Sign in to start chatting" }).click();
+    await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+}
+async function send(page, message) {
+    await page.getByRole("textbox", { name: "Message the modelling assistant" }).fill(message);
+    const response = page.waitForResponse(
+        (response) => response.request().method() === "POST" && response.url().endsWith("/messages"),
+    );
+    await page.getByRole("button", { name: "Send message", exact: true }).click();
+    expect((await response).status()).toBe(200);
+}
+
+test("sign in, tool-backed chat, code rendering, history and sign out", async ({ page }) => {
+    await login(page);
+    await send(page, "Which CKMs are configured?");
+    await expect(page.locator(".message.assistant")).toContainText("Terminology binding is optional.");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await expect(page.locator(".tool-chip")).toContainText("CKM sources");
+    await expect(page.locator(".message-content strong")).toHaveText("default");
+    await expect(page.locator("pre code")).toContainText("<draft/>");
+    await page.reload();
+    await page
+        .getByRole("navigation", { name: "Your conversations" })
+        .getByRole("button", { name: "Which CKMs are configured?", exact: true })
+        .click();
+    await expect(page.locator(".message.assistant")).toContainText("default");
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Sign in to start chatting" })).toBeVisible();
+    await expect(page.locator(".message")).toHaveCount(0);
+});
+
+test("model writes wait for an explicit browser confirmation", async ({ page }) => {
+    await login(page);
+    await send(page, "save");
+    await expect(page.getByRole("heading", { name: "Review this model change" })).toBeVisible();
+    await expect(page.locator(".approval pre")).toContainText("revision-one");
+    await page.getByRole("button", { name: "Confirm save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
+});
+
+test("stopping a turn allows another message", async ({ page }) => {
+    await login(page);
+    await send(page, "wait");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Stop response", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await expect(page.locator(".message.assistant")).toContainText("Response stopped");
+    await send(page, "Which sources?");
+    await expect(page.locator(".message.assistant").last()).toContainText("default");
+});
+
+test("mobile layout and untrusted markup remain safe", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await send(page, '<img src=x onerror="window.__executed=true"> [unsafe](javascript:alert(1))');
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await expect(page.locator(".message.user")).toContainText("<img");
+    expect(await page.evaluate(() => window.__executed)).toBeUndefined();
+    await expect(page.locator(".message img")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole("button", { name: "Toggle conversations", exact: true }).click();
+    await expect(page.locator("#new-chat")).toBeVisible();
+});

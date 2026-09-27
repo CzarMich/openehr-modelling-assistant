@@ -48,7 +48,7 @@ repository and stores no patient data.
 
 ## Current extension boundaries
 
-Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human approval, remote repository providers, tenant RBAC and a visual editor are not implemented. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
+Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human approval, provider-specific hosted review APIs, tenant RBAC and a visual editor are not implemented. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
 
 ## Modelling platform requirements
 
@@ -58,5 +58,6 @@ Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human 
 | **REQ-F12** | Provider-neutral persistent projects, artifacts and revisions. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-F13** | Draft OET generation, bounded validation and structural diff. | partial; exact boundaries in CAPABILITIES.md |
 | **REQ-F14** | Explicit terminology, value sets, bindings, provenance and diff. | partial; exact boundaries in CAPABILITIES.md |
+| **REQ-F15** | Authenticated browser chat with grounded tool calls, private conversation history, streaming and explicit confirmation of model writes. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N11** | Authenticated bounded transport and redacted failures. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N12** | Client-neutral deployment and truthful capability documentation. | landed; exact boundaries in CAPABILITIES.md |

@@ -76,3 +76,27 @@ jobs:
           name: modelling-assistant-protocol-evidence
           path: docs/evidence/ci-*-smoke.json
           if-no-files-found: warn
+
+  browser-chat:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+          cache: npm
+          cache-dependency-path: chat/package-lock.json
+      - run: npm ci --prefix chat --ignore-scripts
+      - run: npm --prefix chat run check:format
+      - run: npm --prefix chat test
+      - run: npx playwright install --with-deps chromium
+        working-directory: chat
+      - run: npm --prefix chat run test:browser
+      - run: npm audit --prefix chat
+      - name: Preserve browser verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modelling-browser-evidence
+          path: chat/test-results/
+          if-no-files-found: ignore

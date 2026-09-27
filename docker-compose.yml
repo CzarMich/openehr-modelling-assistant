@@ -21,6 +21,25 @@ services:
     pids_limit: 128
     mem_limit: 512m
     restart: unless-stopped
+  chat:
+    image: openehr-modelling-chat:local
+    build:
+      context: .
+      dockerfile: chat/Dockerfile
+    env_file:
+      - path: ${MODELLING_CHAT_ENV_FILE:-.env.chat}
+        required: false
+    volumes:
+      - chat-data:/data/chat
+      - chat-codex:/home/node/.codex
+    tmpfs:
+      - /tmp:mode=1777,size=64m
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 512
+    mem_limit: 1536m
+    restart: unless-stopped
   ingress:
     image: openehr-modelling-ingress:local
     build:
@@ -53,3 +72,5 @@ services:
     restart: unless-stopped
 volumes:
   models:
+  chat-data:
+  chat-codex:

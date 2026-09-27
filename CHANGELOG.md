@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add authenticated browser chat for modelling discovery and confirmed draft changes.
+
 - Add Git model repositories, optional remote synchronization, and documented Codex development connectivity.
 
 ### Added

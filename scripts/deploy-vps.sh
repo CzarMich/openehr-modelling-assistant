@@ -15,7 +15,7 @@ ln -sfn "$state_dir/config/runtime.env" "$release_dir/.env"
 cd "$release_dir"
 compose=(docker compose -p openehr-modelling-assistant --env-file .env -f docker-compose.yml)
 "${compose[@]}" config --quiet
-"${compose[@]}" build app ingress
+"${compose[@]}" build app ingress chat
 previous=""
 if [[ -r "$state_dir/current-revision" ]]; then previous=$(cat "$state_dir/current-revision"); fi
 rollback() {

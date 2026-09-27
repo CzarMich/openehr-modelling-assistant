@@ -1,0 +1,30 @@
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync, copyFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { createApplication } from "./src/server.mjs";
+import { loadConfig } from "./src/config.mjs";
+const config = loadConfig();
+if (config.enabled) {
+    const codexDir = homedir() + "/.codex";
+    mkdirSync(codexDir, { recursive: true, mode: 0o700 });
+    chmodSync(codexDir, 0o700);
+    const seed = "/run/secrets/codex-auth.json";
+    if (existsSync(seed) && !existsSync(codexDir + "/auth.json")) {
+        copyFileSync(seed, codexDir + "/auth.json");
+        chmodSync(codexDir + "/auth.json", 0o600);
+    }
+    if (!existsSync(codexDir + "/auth.json")) throw new Error("Configure a Codex login for the chat service");
+    if (existsSync("/run/secrets/dev-ca.crt")) {
+        const path = config.dataDir + "/ca-bundle.pem";
+        writeFileSync(
+            path,
+            readFileSync("/etc/ssl/certs/ca-certificates.crt", "utf8") +
+                "\n" +
+                readFileSync("/run/secrets/dev-ca.crt", "utf8"),
+            { mode: 0o600 },
+        );
+        process.env.SSL_CERT_FILE = path;
+    }
+}
+createApplication(config).listen(config.port, "0.0.0.0", () =>
+    console.log(JSON.stringify({ event: "chat_started", enabled: config.enabled })),
+);
