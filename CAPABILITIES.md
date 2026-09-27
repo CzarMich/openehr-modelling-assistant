@@ -7,7 +7,7 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | MCP HTTP and stdio; discovery, prompts and resources | WORKING | Client-neutral SDK protocol; no model SDK |
 | Branding and named CKM selection | WORKING | Administrator-configured HTTPS sources; same CKM REST contract |
 | Existing CKM, guide, examples, terminology and type tools | WORKING | Upstream features retained |
-| Persistent projects, artifacts, metadata and history | WORKING | Filesystem snapshots or plain files in Git; expected revisions and opt-in writes |
+| Persistent projects, artifacts, metadata and history | WORKING | Filesystem/SharePoint snapshots or plain files in Git; expected revisions and opt-in writes |
 | Local value sets, lookup and code membership | WORKING | Explicit codes and versions; inactive codes rejected |
 | Modelling without terminology server or bindings | WORKING | Authenticated Git persistence, local checks and empty terminology manifests verified over HTTPS |
 | External FHIR terminology (optional) | WORKING | Capabilities, lookup, validation, bounded expansion; provider-dependent datasets |
@@ -32,7 +32,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Service introduction page | WORKING | Root URL links to browser chat, MCP connection and optional integrations; not a visual modeller |
 | GitHub/GitLab hosting capabilities | WORKING | Shared Git storage plus configured-repository metadata, branches/protection and draft reviews; live GitHub acceptance, GitLab contract tests |
 | GitLab live hosted acceptance | NOT TESTED | Adapter and contract tests implemented; requires a configured GitLab account/token |
-| SharePoint storage | NOT IMPLEMENTED | Graph repository adapter remains queued |
+| SharePoint storage | WORKING | Graph-backed immutable snapshots, conditional index updates, revisions/history/metadata and tenant mappings; OAuth and production-container contracts verified |
+| SharePoint live tenant acceptance | NOT TESTED | Implementation and integration harness complete; requires external tenant credentials, identifiers and permissions |
 | OPT compilation, native template editing/terminology application | NOT IMPLEMENTED | Requires qualified compiler/modelling engine |
 | AQL parser/execution, composition validation, CDR deployment | NOT IMPLEMENTED | Prompts/examples and optional adapter boundary only |
 | Copilot Studio tenant connection | NOT TESTED | Current official deployment guide; no tenant available |

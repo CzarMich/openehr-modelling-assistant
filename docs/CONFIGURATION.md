@@ -50,7 +50,7 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `MAX_REQUEST_BYTES` | `2097152` | HTTP body limit; effective tool content budget is smaller due to JSON envelope. |
 | `MAX_UPSTREAM_BYTES` | `8388608` | Maximum downloaded response bytes; also bounded by format-specific parsers. |
 | `LOG_LEVEL` | `info` | debug/info/notice/warning/error/critical/alert/emergency; logs remain redacted. |
-| `MODEL_REPOSITORY_PROVIDER` | `filesystem` | filesystem, git, github and gitlab are implemented; SharePoint remains queued. Hosted modes reuse Git storage and add API capabilities. |
+| `MODEL_REPOSITORY_PROVIDER` | `filesystem` | filesystem, git, github, gitlab and sharepoint are implemented. Hosted modes reuse Git storage and add API capabilities. |
 | `MODEL_REPOSITORY_PATH` | `/tmp/openehr-models` | Absolute private writable path. Compose overrides it to /data/models; development override uses /tmp/development-models. |
 | `MODEL_REPOSITORY_WRITE_ENABLED` | `false` | true enables draft project/artifact write tools; false denies them. |
 
@@ -68,7 +68,7 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `MODEL_GIT_SSH_KEY_FILE` | empty | Private SSH key path inside container; configure with known-hosts path. |
 | `MODEL_GIT_KNOWN_HOSTS_FILE` | empty | Pinned SSH host identities; strict verification remains enabled. |
 
-Other supported process settings: `HTTPS_PROXY` and comma-separated `NO_PROXY` control outbound HTTPS; `XDG_DATA_HOME` changes the cache/session root (default `/tmp`, application subdirectory added). Legacy `ALLOWED_HOSTS` is accepted only when `MCP_ALLOWED_HOSTS` is absent. Composer development uses `COMPOSER_HOME`. No model-provider or CDR secret is required by the MCP core. The optional browser chat has its own identity and model-provider configuration. Private Git remotes use the optional SSH credential files above; hosted GitHub/GitLab APIs use MODEL_HOSTED_TOKEN; Graph credentials remain separate future configuration.
+Other supported process settings: `HTTPS_PROXY` and comma-separated `NO_PROXY` control outbound HTTPS; `XDG_DATA_HOME` changes the cache/session root (default `/tmp`, application subdirectory added). Legacy `ALLOWED_HOSTS` is accepted only when `MCP_ALLOWED_HOSTS` is absent. Composer development uses `COMPOSER_HOME`. No model-provider or CDR secret is required by the MCP core. The optional browser chat has its own identity and model-provider configuration. Private Git remotes use the optional SSH credential files above; hosted GitHub/GitLab APIs use MODEL_HOSTED_TOKEN; SharePoint Graph credentials use the dedicated settings below.
 
 ## Multiple CKMs
 
@@ -84,3 +84,24 @@ See [deployment](DEPLOYMENT.md) for environment choices, [security](SECURITY.md)
 ## Browser chat settings
 
 The optional Node client reads `.env.chat` or the external `MODELLING_CHAT_ENV_FILE`. Its complete variable table is in [browser chat configuration](BROWSER_CHAT.md#configuration), with a copyable [example](../.env.chat.example). These settings do not change the PHP configuration contract.
+
+## SharePoint repository settings
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `SHAREPOINT_GRAPH_URL` | `https://graph.microsoft.com/v1.0/` | Pinned HTTPS Graph API root; configure the matching cloud authority/scope. |
+| `SHAREPOINT_SITE_ID` | empty | Site containing the dedicated project-index list. |
+| `SHAREPOINT_LIST_ID` | empty | Index list with required unique project key and snapshot-pointer columns. |
+| `SHAREPOINT_DRIVE_ID` | empty | Document-library drive containing snapshots. |
+| `SHAREPOINT_FOLDER_ID` | empty | Dedicated snapshot folder item identifier. |
+| `SHAREPOINT_DOWNLOAD_HOSTS` | empty | Comma-separated exact HTTPS download hostnames; no wildcard or credential forwarding. |
+| `SHAREPOINT_MAX_PROJECT_BYTES` | `8388608` | Project snapshot/history bound, 1–32 MiB; must not exceed MAX_UPSTREAM_BYTES. |
+| `SHAREPOINT_ACCESS_TOKEN` | empty | Externally renewed Graph bearer token; alternative to client credentials. |
+| `SHAREPOINT_TENANT_ID` | empty | Outbound directory tenant used to construct the default token endpoint. |
+| `SHAREPOINT_CLIENT_ID` | empty | Outbound application identity for client credentials. |
+| `SHAREPOINT_CLIENT_SECRET` | empty | Private outbound client credential; never model content. |
+| `SHAREPOINT_TOKEN_URL` | empty | Optional explicit HTTPS token endpoint; otherwise constructed from tenant ID. |
+| `SHAREPOINT_TOKEN_SCOPE` | `https://graph.microsoft.com/.default` | Resource scope for outbound token acquisition. |
+| `OIDC_TENANT_SHAREPOINT_REPOSITORIES` | `{}` | Verified platform tenant namespace to distinct site/list/drive/folder map. |
+
+See [SharePoint setup, permissions, migration and acceptance](SHAREPOINT_REPOSITORY.md). These settings are unnecessary for other providers. Inbound identity and outbound Graph credentials remain separate.

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 1,
-  "active_capability": "sharepoint",
+  "active_capability": "terminology",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -54,10 +54,10 @@
     },
     {
       "id": "sharepoint",
-      "status": "NOT IMPLEMENTED",
-      "scope": "Graph repository, authentication, versions and conditional writes",
-      "implementation": "src/Integrations/Repository/RepositoryFactory.php",
-      "evidence": null
+      "status": "IMPLEMENTED",
+      "scope": "Graph snapshots, OAuth/static credentials, revisions/history, conditional writes and tenant mapping; live tenant acceptance external",
+      "implementation": "src/Integrations/Repository/SharePointRepository.php",
+      "evidence": "docs/evidence/sharepoint-container-smoke.json"
     },
     {
       "id": "oidc",
@@ -149,6 +149,13 @@
       "scope": "Live GitLab installation acceptance requires a configured account/token; adapter and contract tests complete",
       "implementation": "scripts/hosted-repository-smoke.php",
       "evidence": "tests/Enterprise/HostedRepositoryTest.php"
+    },
+    {
+      "id": "sharepoint-live-acceptance",
+      "status": "BLOCKED EXTERNALLY",
+      "scope": "Requires tenant credentials, site/list/library identifiers and resource permissions; adapter and contract/container tests complete",
+      "implementation": "scripts/sharepoint-smoke.php",
+      "evidence": "tests/Enterprise/SharePointRepositoryTest.php"
     }
   ],
   "phases": [

@@ -35,8 +35,15 @@ final class RepositoryFactory
             }
             return new GitModelRepository($settings, Hosted\HostedProviderFactory::create($settings));
         }
-        if ($settings->get('MODEL_REPOSITORY_PROVIDER') !== 'filesystem') {
-            throw new \InvalidArgumentException('REPOSITORY_PROVIDER_NOT_IMPLEMENTED: Use filesystem, git, github or gitlab. SharePoint is not yet implemented.');
+        if ($settings->get('MODEL_REPOSITORY_PROVIDER') === 'sharepoint') {
+            if ($settings->get('AUTH_MODE') === 'oidc') {
+                $map = $settings->tenantSharePointRepositories();
+                $target = $principal === null ? array_fill_keys(['site_id', 'list_id', 'drive_id', 'folder_id'], 'unauthenticated')
+                    : ($map[$principal->tenant] ?? throw new \InvalidArgumentException('TENANT_REPOSITORY_NOT_CONFIGURED'));
+                $settings = $settings->with(['SHAREPOINT_SITE_ID' => $target['site_id'], 'SHAREPOINT_LIST_ID' => $target['list_id'],
+                    'SHAREPOINT_DRIVE_ID' => $target['drive_id'], 'SHAREPOINT_FOLDER_ID' => $target['folder_id']]);
+            }
+            return new SharePointRepository($settings);
         }
         return new FileSystemRepository($settings->get('MODEL_REPOSITORY_PATH'));
     }

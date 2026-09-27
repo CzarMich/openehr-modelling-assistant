@@ -161,12 +161,10 @@ final class GitModelRepository implements HostedGitRepository
     public function saveArtifact(string $project, string $path, string $content, array $metadata, ?string $expectedRevision): array
     {
         $this->artifactPath($path);
-        if (strlen($content) > 2097152 || strlen($this->json($metadata)) > 65536 || preg_match('//u', $content) !== 1) {
+        if (strlen($content) > 2097152 || preg_match('//u', $content) !== 1) {
             throw new \InvalidArgumentException('ARTIFACT_TOO_LARGE_OR_INVALID_TEXT');
         }
-        foreach (['status', 'validation', 'approved_by', 'released_by', 'revision', 'created_by'] as $field) {
-            if (array_key_exists($field, $metadata)) { throw new \InvalidArgumentException('RESERVED_METADATA_FIELD: ' . $field); }
-        }
+        \OpenEHR\Assistant\Domain\Repository\ArtifactMetadata::validate($metadata);
         return $this->locked(true, function () use ($project, $path, $content, $metadata, $expectedRevision): array {
             $this->activeProject($project);
             $fullPath = $this->storagePath($project, $path);

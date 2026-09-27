@@ -201,9 +201,9 @@ requirements:
     canonical: docs/requirements.md
     status: draft
     implementation: landed
-    packages: [src/Domain/Repository/*.php, src/Integrations/Repository/*.php, src/Integrations/Repository/Hosted/*.php, src/Application/RepositoryService.php, src/Tools/RepositoryTools.php, src/Tools/ProjectService.php]
-    tests: [tests/Enterprise/RepositoryAndGovernanceTest.php, tests/Enterprise/GitRepositoryTest.php, tests/Enterprise/HostedRepositoryTest.php, tests/Enterprise/OidcAuthenticationTest.php]
-    adr: ["0008", "0009", "0010"]
+    packages: [src/Domain/Repository/*.php, src/Integrations/Repository/*.php, src/Integrations/Repository/Hosted/*.php, src/Integrations/Repository/SharePoint/*.php, src/Application/RepositoryService.php, src/Tools/RepositoryTools.php, src/Tools/ProjectService.php]
+    tests: [tests/Enterprise/RepositoryAndGovernanceTest.php, tests/Enterprise/GitRepositoryTest.php, tests/Enterprise/HostedRepositoryTest.php, tests/Enterprise/SharePointRepositoryTest.php, tests/Enterprise/OidcAuthenticationTest.php]
+    adr: ["0008", "0009", "0010", "0011"]
 
   - id: REQ-F13
     title: Draft OET generation, bounded validation and structural diff
@@ -228,9 +228,9 @@ requirements:
     canonical: docs/requirements.md
     status: draft
     implementation: landed
-    packages: [src/Auth/*.php, src/Apis/HttpClientFactory.php, src/Helpers/ToolResult.php]
+    packages: [src/Auth/*.php, src/Integrations/Auth/*.php, src/Apis/HttpClientFactory.php, src/Helpers/ToolResult.php]
     tests: [tests/Enterprise/ConfigurationAndAuthTest.php, tests/Enterprise/OidcAuthenticationTest.php]
-    adr: ["0008", "0009", "0010"]
+    adr: ["0008", "0009", "0010", "0011"]
 
   - id: REQ-N12
     title: Client-neutral deployment and truthful capability documentation

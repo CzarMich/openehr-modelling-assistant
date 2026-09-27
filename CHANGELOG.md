@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add SharePoint snapshot repositories and shared revision semantics with bounded artifact metadata.
+
 - Add hosted GitHub/GitLab metadata, branches and draft reviews using the shared Git repository.
 
 - Add native OIDC verification, signed draft-write authorization and isolated tenant repositories.

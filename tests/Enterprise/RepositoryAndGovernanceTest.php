@@ -59,7 +59,7 @@ final class RepositoryAndGovernanceTest extends TestCase
         return [['../../outside'], ['/etc/passwd'], ['templates/../../outside'], ['templates/%2e%2e/file'], ['templates//file'], ["templates/file\0"]];
     }
 
-    public function test_symlink_escape_and_unsupported_providers_fail_closed(): void
+    public function test_symlink_escape_and_unconfigured_providers_fail_closed(): void
     {
         symlink('/tmp', $this->root . '/linked');
         try {

@@ -1,11 +1,13 @@
 # Shared model repository workflow
 
-Use the same `ModelRepository` tools with either filesystem or Git storage. Filesystem keeps projects in local snapshots. Git keeps native files and commit revisions and can synchronize with GitHub, GitLab or another approved remote. Terminology is optional throughout. Users can follow this workflow in the [browser chat](../BROWSER_CHAT.md) or another connected MCP client. Browser users review and confirm each proposed repository write before it is executed.
+Use the same `ModelRepository` tools with filesystem, SharePoint or Git storage. Filesystem keeps projects in local snapshots. Git keeps native files and commit revisions and can synchronize with GitHub, GitLab or another approved remote. Terminology is optional throughout. Users can follow this workflow in the [browser chat](../BROWSER_CHAT.md) or another connected MCP client. Browser users review and confirm each proposed repository write before it is executed.
 
 ```mermaid
 flowchart TD
     Start[Choose model repository provider] --> Choice{Storage}
     Choice --> FS[Filesystem project snapshots]
+    Choice --> SP[SharePoint project snapshots]
+    SP --> Open
     Choice --> Git[Git: local or configured remote]
     FS --> Open[Open project and read current artifact revision]
     Git --> Open
