@@ -35,3 +35,5 @@ The traceability increment adds a persistent typed graph, exact source/audit ref
 Staged validation and formal project QA now cover the Phase 1 document/evidence scope: XML/JSON parsing, OET/OPT and simplified-data profiles, exact source/provenance/requirement/audit checks and explicit unavailable-check findings. Qualified RM/native-path/dependency semantics remain Phase 2 work. Continue CKM and protocol completion without relabelling unavailable conformance.
 
 The CKM increment adds source-bound service credentials, mounted rotation and bounded federated discovery with distinct version/source identities and explicit failures/truncation. Public international/Norwegian retrieval and isolated authenticated HTTPS contracts pass; private account acceptance needs organisation credentials.
+
+The Phase 1 gate now includes explicit MCP capabilities, supported-version negotiation, production HTTP/stdio product probes and applicable pinned official scenarios. Whole demonstration-suite diagnostics are not a universal conformance claim. Proceed to Phase 2 native engine integration; structural/evidence checks remain distinct from clinical-model qualification.

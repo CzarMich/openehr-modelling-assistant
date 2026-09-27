@@ -71,6 +71,7 @@ export class McpClient {
         this.signal = signal;
         this.sequence = 0;
         this.session = null;
+        this.protocolVersion = "2025-03-26";
     }
     async rpc(method, params, notification = false) {
         const id = ++this.sequence,
@@ -78,7 +79,7 @@ export class McpClient {
         if (this.config.mcpKey) headers[this.config.mcpKeyHeader] = this.config.mcpKey;
         if (this.session) {
             headers["Mcp-Session-Id"] = this.session;
-            headers["MCP-Protocol-Version"] = "2025-03-26";
+            headers["MCP-Protocol-Version"] = this.protocolVersion;
         }
         const response = await fetch(this.config.mcpUrl, {
             method: "POST",
@@ -89,6 +90,10 @@ export class McpClient {
         });
         if (!response.ok) throw new Error("Modelling service unavailable");
         this.session = response.headers.get("mcp-session-id") || this.session;
+        if (!response.body) {
+            if (notification && response.status === 202) return {};
+            throw new Error("Modelling service returned an empty response");
+        }
         const reader = response.body.getReader();
         let size = 0,
             parts = [];
@@ -108,18 +113,22 @@ export class McpClient {
             ? JSON.parse(text)
             : text
                   .split("\n")
-                  .filter((line) => line.startsWith("data:"))
+                  .filter((line) => line.startsWith("data:") && line.slice(5).trim())
                   .map((line) => JSON.parse(line.slice(5)))
                   .find((item) => item.id === id);
-        if (!result || result.error) throw new Error("Modelling tool request failed");
+        if (!result || result.jsonrpc !== "2.0" || result.id !== id || result.error)
+            throw new Error("Modelling tool request failed");
         return result.result;
     }
     async tools() {
-        await this.rpc("initialize", {
-            protocolVersion: "2025-03-26",
+        const initialized = await this.rpc("initialize", {
+            protocolVersion: "2025-11-25",
             capabilities: {},
             clientInfo: { name: "openehr-browser-chat", version: "1.0" },
         });
+        if (!["2025-03-26", "2025-06-18", "2025-11-25"].includes(initialized.protocolVersion))
+            throw new Error("Unsupported modelling protocol version");
+        this.protocolVersion = initialized.protocolVersion;
         await this.rpc("notifications/initialized", {}, true);
         const tools = [];
         let cursor;

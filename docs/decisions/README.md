@@ -50,3 +50,5 @@ referenced from [requirements.md](../requirements.md),
 - [0017: Staged document validation and project evidence QA](0017-staged-document-validation-and-project-evidence-qa.md)
 
 - [0018: Source-bound CKM authentication and federated discovery](0018-source-bound-ckm-authentication-and-federated-discovery.md)
+
+- [0019: Advertised MCP profile and wire acceptance](0019-advertised-mcp-profile-and-wire-acceptance.md)

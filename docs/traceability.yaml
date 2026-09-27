@@ -285,3 +285,12 @@ requirements:
     packages: [src/Apis/CkmClient.php, src/Configuration/CkmAuthentication.php, src/Domain/Knowledge/*.php, src/Integrations/Knowledge/*.php, src/Application/FederatedCkmSearch.php, src/Tools/CkmFederationTools.php]
     tests: [tests/Enterprise/CkmFederationTest.php, tests/Clients/CkmClientTest.php, tests/Tools/OutputSchemaConformanceTest.php, scripts/ckm-fixture-smoke.py]
     adr: ["0018"]
+
+  - id: REQ-F20
+    title: Explicit MCP profile and actual transport acceptance
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Mcp/*.php, public/index.php, chat/src/mcp.mjs]
+    tests: [tests/Enterprise/McpProtocolTest.php, scripts/protocol-smoke.py, scripts/test-protocol-container.sh, chat/test/mcp.test.mjs]
+    adr: ["0019"]

@@ -138,3 +138,5 @@ Document operations now separate parse, structure, semantics, terminology, openE
 ## Authenticated and federated CKM discovery
 
 Source-specific credentials, mounted secret rotation, bounded shared search time and distinct model/version provenance are implemented through the existing CKM HTTP boundary. [CKM documentation](CKM_SOURCES.md) explains authentication, configuration and result windows. [Public acceptance](evidence/ckm-public-smoke.json), [isolated HTTPS acceptance](evidence/ckm-container-smoke.json) and [verification metadata](evidence/ckm-verification.json) preserve their respective scopes.
+
+MCP acceptance now gates the advertised product surface over real HTTP and stdio, plus applicable pinned official scenarios without expected failures. The SDK upgrade preserves error correlation, while explicit negotiation/capability configuration avoids unsupported push claims. See [protocol scope](MCP_PROTOCOL.md) and [verification](evidence/protocol-verification.json).

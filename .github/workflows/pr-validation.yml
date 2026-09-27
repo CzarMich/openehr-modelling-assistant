@@ -58,6 +58,9 @@ jobs:
           docker compose up -d --build --wait
           python3 scripts/mcp-smoke.py --evidence docs/evidence/ci-http-smoke.json
 
+      - name: Verify advertised MCP profile over HTTP and stdio
+        run: scripts/test-protocol-container.sh
+
       - name: Exercise Git persistence without terminology
         shell: bash
         run: |

@@ -26,6 +26,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class Client:
     def __init__(self, url, bearer=None):
         self.url, self.session, self.sequence = url, None, 0
+        self.protocol_version = '2025-03-26'
         self.opener = urllib.request.build_opener(NoRedirect())
         self.headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
         if bearer is not None:
@@ -42,7 +43,7 @@ class Client:
             payload["id"] = self.sequence
         headers = dict(self.headers)
         if self.session:
-            headers.update({"Mcp-Session-Id": self.session, "MCP-Protocol-Version": "2025-03-26"})
+            headers.update({"Mcp-Session-Id": self.session, "MCP-Protocol-Version": self.protocol_version})
         request = urllib.request.Request(self.url, data=json.dumps(payload).encode(), headers=headers)
         with self.opener.open(request, timeout=90) as response:
             self.session = response.headers.get("Mcp-Session-Id", self.session)
@@ -55,10 +56,14 @@ class Client:
         if body.lstrip().startswith("{"):
             result = json.loads(body)
         else:
-            events = [json.loads(line[5:].strip()) for line in body.splitlines() if line.startswith("data:")]
+            events = [json.loads(line[5:].strip()) for line in body.splitlines() if line.startswith("data:") and line[5:].strip()]
             result = next(e for e in events if e.get("id") == self.sequence)
+        assert result.get('jsonrpc') == '2.0' and result.get('id') == self.sequence, 'Mismatched JSON-RPC response'
         if "error" in result:
             raise RpcError(method, result["error"].get("code"))
+        if method == 'initialize':
+            self.protocol_version = result['result']['protocolVersion']
+            assert self.protocol_version in ['2025-03-26', '2025-06-18', '2025-11-25']
         return result["result"]
 
     def listing(self, method, key):
@@ -113,7 +118,7 @@ def main():
         print("PASS " + name, flush=True)
 
     try:
-        init = client.rpc("initialize", {"protocolVersion": "2025-03-26", "capabilities": {},
+        init = client.rpc("initialize", {"protocolVersion": "2025-11-25", "capabilities": {},
                                           "clientInfo": {"name": "independent-smoke-client", "version": "1.0"}})
         assert init["serverInfo"]["name"] == os.getenv("MCP_SERVER_NAME", "openehr-modelling-assistant")
         client.rpc("notifications/initialized", notify=True)

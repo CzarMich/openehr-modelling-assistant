@@ -121,3 +121,5 @@ Persisted governance is opt-in with `GOVERNANCE_ENABLED=true`; its SQLite file b
 The [requirements graph](REQUIREMENTS_TRACEABILITY.md) uses existing model repository and write settings, without a graph database or model-provider configuration. Optional audit-event links use `GOVERNANCE_ENABLED` and the configured ledger; ordinary requirement/model links work without governance or terminology services. Native inherited path checks remain an engine integration boundary.
 
 Document validation and project QA add no mandatory settings. They use the configured repository and tenant; authentic validation/review links require governance storage. FLAT/STRUCTURED input files can select their format explicitly. See [Validation and QA](VALIDATION_AND_QA.md).
+
+MCP versions and capability advertising are product contracts rather than administrator overrides. Explicit HTTP loopback CORS origins are allowed only outside production; other origins require HTTPS. See [the MCP protocol profile](MCP_PROTOCOL.md).

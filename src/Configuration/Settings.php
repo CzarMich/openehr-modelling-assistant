@@ -130,7 +130,10 @@ final class Settings
             throw new InvalidArgumentException('MCP_ALLOWED_HOSTS requires explicit hostnames.');
         }
         foreach ($this->csv('CORS_ALLOWED_ORIGINS') as $origin) {
-            self::validateUrl($origin);
+            $localHttp = $this->get('APP_ENV') !== 'production'
+                && preg_match('~^http://(?:localhost|127\.0\.0\.1|\[::1\])(?::[1-9][0-9]{0,4})?$~D', $origin);
+            // Local browser development is explicit; upstream URLs still require HTTPS.
+            self::validateUrl($localHttp ? 'https' . substr($origin, 4) : $origin);
             if (rtrim($origin, '/') !== $origin || parse_url($origin, PHP_URL_PATH)) {
                 throw new InvalidArgumentException('CORS_ALLOWED_ORIGINS must contain origins without paths.');
             }

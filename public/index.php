@@ -24,13 +24,15 @@ use OpenEHR\Assistant\Resources\Terminologies;
 use Mcp\Capability\Registry\Container;
 use Mcp\Schema\Enum\ProtocolVersion;
 use Mcp\Schema\Icon;
+use Mcp\Schema\Implementation;
+use OpenEHR\Assistant\Mcp\ProtocolProfile;
 use Mcp\Server;
 use Mcp\Server\Session\FileSessionStore;
 use Mcp\Server\Transport\Http\Middleware\CorsMiddleware;
 use Mcp\Server\Transport\Http\Middleware\DnsRebindingProtectionMiddleware;
 use Mcp\Server\Transport\Http\Middleware\ProtocolVersionMiddleware;
-use Mcp\Server\Transport\StdioTransport;
-use Mcp\Server\Transport\StreamableHttpTransport;
+use OpenEHR\Assistant\Mcp\StdioTransport;
+use OpenEHR\Assistant\Mcp\StreamableHttpTransport;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level as LogLevel;
 use Monolog\Logger;
@@ -171,6 +173,10 @@ try {
     // Build the server
     $builder = Server::builder()
         ->setServerInfo(APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_ICON === '' ? null : [new Icon(APP_ICON)], $settings->get('PRODUCT_URL') ?: null)
+        ->setCapabilities(ProtocolProfile::capabilities())
+        ->addRequestHandler(new \OpenEHR\Assistant\Mcp\InitializeHandler(
+            new Implementation(APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_ICON === '' ? null : [new Icon(APP_ICON)], $settings->get('PRODUCT_URL') ?: null),
+            APP_TITLE . "\n" . $instructions))
         ->setDiscovery(APP_DIR, ['src/Prompts', 'src/Tools', 'src/Resources'], cache: $cache)
         // mcp/sdk 0.7.0 makes element loading lazy by default. Force eager
         // loading so a broken capability fails at build() (on every request
@@ -179,7 +185,7 @@ try {
         // can actually load (lazy mode can advertise tools it then fails to list).
         ->setLazyLoading(false)
         ->setSession(new FileSessionStore(APP_DATA_DIR . '/sessions/' . hash('sha256', $principal), ttl: 10 * 60))
-        ->setProtocolVersion(ProtocolVersion::V2025_03_26)
+        ->setProtocolVersion(ProtocolVersion::V2025_11_25)
         ->setContainer($container)
         ->setInstructions(APP_TITLE . "\n" . $instructions)
         ->setLogger($logger);
@@ -222,7 +228,7 @@ try {
         [
             new CorsMiddleware(allowedOrigins: $settings->csv('CORS_ALLOWED_ORIGINS'), allowedHeaders: ['Accept', 'Content-Type', 'Authorization', $settings->get('AUTH_API_KEY_HEADER'), 'Mcp-Session-Id', 'MCP-Protocol-Version']),
             new DnsRebindingProtectionMiddleware(array_values(array_unique(array_merge($allowedHosts, array_map(static fn (string $origin): string => (string) parse_url($origin, PHP_URL_HOST), $settings->csv('CORS_ALLOWED_ORIGINS')))))),
-            new ProtocolVersionMiddleware(),
+            new ProtocolVersionMiddleware(ProtocolProfile::versions()),
         ],
         maxBodyBytes: (int) $settings->get('MAX_REQUEST_BYTES')
     );

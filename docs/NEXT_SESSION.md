@@ -1,45 +1,23 @@
-# Continuation handoff
+# Autonomous implementation continuation
 
-The user has resumed full implementation under the A–Z mandate. Follow the [completion audit](COMPLETION_AUDIT.md) and [execution queue](COMPLETION_QUEUE.json) continuously through the remaining phases. The [autonomous execution policy](AUTONOMOUS_EXECUTION_POLICY.md) remains in force; no routine development or delivery confirmation is needed. Keep terminology/bindings optional and use generic user-facing names: terminology server, server and CDR.
+The active objective is the user's A–Z platform mandate. The earlier pause is superseded. Continue implementing, testing, documenting, committing, pushing, monitoring all checks and verifying deployment without routine permission prompts. Clinical model approval remains restricted to independent authenticated humans.
 
-## Accepted work
+## Accepted foundation
 
-- Filesystem, SharePoint and Git ModelRepository providers, private hosted remotes, revision conflict handling and native files.
-- Configurable Git content root and category/flat layouts for authoring repositories; Unicode filenames.
-- Authenticated development HTTPS endpoint and actual local Codex discovery verification.
-- Shared private model repository with scoped SSH credentials and bidirectional native-file tests.
-- Architecture/workflow updates, capability evidence and metadata schema regression fix.
+The execution queue is [COMPLETION_QUEUE.json](COMPLETION_QUEUE.json). The Phase 1 document/evidence scope now includes native OIDC, filesystem/Git/hosted Git/SharePoint storage contracts, optional FHIR and local terminology, exact-revision binding plans, persisted governance, requirements traceability, formal project QA, named authenticated/federated CKMs and advertised MCP HTTP/stdio acceptance. Each capability has scoped evidence in the implementation report. Do not repeat superseded incomplete checkpoints.
 
-The capability matrix describes shipped code, not work in an isolated branch. Hosted Designer login/account authorization is still unavailable; Git interoperability does not establish a visual round trip. Do not claim that connection is complete.
+The optional browser client offers chat, controlled draft writes and independent human reviews. Its default review-only image requires no model-provider account. Real incomplete validation still blocks approval/publication.
 
-## Browser chat follow-up delivered
+## Next implementation
 
-The user subsequently requested an actual browser chat, so that feature was implemented as a separate Node MCP client. See [browser chat](BROWSER_CHAT.md). Browser OIDC sign-in and conversation ownership are separate from native MCP bearer verification. Both are delivered; preserve both boundaries and do not claim shared model access is per-project RBAC. The broader compiler/CDR/editor/governance work remains the next implementation scope.
+Evaluate and integrate a mature openEHR engine behind a clean service boundary. Archie is the preferred ADL 2/AOM/RM candidate; verify its actual legacy OET/OPT support before selecting complementary components. Implement genuine ADL/AQL parsing, dependency resolution, template compilation, OPT validation and reproducible persistent evidence. Existing local checks are document profiles; do not relabel them as native conformance.
 
-## Native OIDC increment
+Then follow the queue through shared domain/REST/OpenAPI/CLI, vendor-neutral workflows, semantic model trees, visual workspace, release/CDR/mapping/terminology governance, collaboration/RBAC, search/packages, policies, observability, performance and backup/restore. Preserve all phases in the supplied mandate.
 
-Native bearer verification, discovery/JWKS, signed draft-write permissions and tenant storage/session isolation now pass unit, real Git and live identity-provider acceptance. See [OIDC](OIDC.md) and the implementation report. CI also exercises the production HTTP path against a disposable HTTPS issuer. Browser login remains a separate client boundary; ordinary development/server clients keep API keys until deliberately migrated. A bearer token does not establish interactive human approval.
+## External acceptance boundaries
 
-The older isolated identity worktree is retained as historical work; its unfinished fixture and missing discovery are superseded by the accepted implementation. Hosted Git review capabilities are now implemented and tested. SharePoint is now implemented with contract/container evidence; live tenant acceptance needs external credentials. Continue Phase 1 with terminology, structural checks, persisted governance, traceability and QA. Do not resume the old checkpoint as if these repairs were still missing.
+Live GitLab, SharePoint, Entra/Copilot, hosted Designer and private CKM acceptance require their respective account/tenant access. Adapter implementation and isolated contracts are complete where the queue says IMPLEMENTED. The server browser review client still needs identity administration access: the stored credential was rejected. The development identity/browser review path passed. Never reset shared identity administration or invent an acceptance result.
 
-## Remaining scope
+## Delivery
 
-Complete the partial/unimplemented rows in the matrix: validated modelling engine/OPT compilation, ADL/AQL and composition checks, optional CDR integration using synthetic fixtures, application API/visual modeller, qualified approval evidence, native terminology binding preservation and stronger QA/traceability evidence. Enterprise tenant and hosted Designer acceptance need real account access; record that limit without inventing results.
-
-Research identified the Apache-licensed openEHR Archie library for ADL 2/AOM/RM and operational templates, openEHR Java libraries for ADL 1.4, and the openEHR SDK for AQL and composition/template handling. Inspect and pin actual supported APIs/versions before integration. The available CDR's ADL utility is not a substitute for a complete grammar/compiler. Do not edit its unrelated dirty working directory.
-
-For each stage: implement, test, document, commit, push, run `scripts/watch-ci.sh <full-sha>` immediately, fix failures, verify deployment, and continue. Runtime credentials stay outside Git. Preserve both existing model volumes and the old local Git cache.
-
-Hosted repository code reuses generic Git storage and adds six MCP tools. GitHub live acceptance and cleanup are recorded in `evidence/hosted-github-acceptance.json`; GitLab contract tests pass, while live tenant acceptance needs credentials. The current execution queue points to terminology completion.
-
-The terminology protocol increment adds three MCP tools, independent edition evidence, preserved designations and review-only ConceptMap candidates. The managed local catalogue is implemented with repository and offline-operation contracts. Continue with deterministic binding decisions; native inherited-node semantics still require the qualified engine phase. Consult live evidence for provider-specific operation availability.
-
-Binding plans now provide explicit XML inspection, catalogue proposals and revision-bound evidence. Continue Phase 1 traceability, structural/QA and CKM gaps; complete native/inherited binding application with the qualified engine in Phase 2. The authoritative queue is `COMPLETION_QUEUE.json`.
-
-Persisted exact-revision human governance and the independent review workspace are implemented. The separate ledger records authentic decisions and installed validation; real approval remains blocked by incomplete engine qualification. Default browser builds now exclude the provider runtime. The authoritative next capability is requirements traceability.
-
-Requirements traceability now persists a typed graph and answers element/requirement queries with exact source/anchor/audit evidence. Native inherited paths and clinical satisfaction remain separate from declared coverage. Continue Phase 1 structural validation, formal QA and CKM completion; do not repeat implemented graph work.
-
-Staged document validation and exact-revision project QA now implement the Phase 1 profile/evidence scope. Continue authenticated/federated CKM and protocol acceptance, then the qualified engine phase; full conformance, native dependency checks and release qualification remain unavailable.
-
-CKM source authentication and federated discovery now implement the Phase 1 source scope. Finish advertised-protocol acceptance, then evaluate/integrate the qualified engine. Live organisation CKM account access remains external; public international/Norwegian and isolated authentication checks are separate evidence.
+Work only in this repository or an isolated worktree. Do not alter the unrelated dirty CDR checkout. PHP/Composer run in Docker. For each completed increment, update capabilities, diagrams and evidence; commit and push; immediately run `scripts/watch-ci.sh <full-sha> CzarMich/openehr-modelling-assistant`; fix every failed workflow and verify both deployments. Keep credentials and clinical data outside Git. Preserve existing live model volumes and audit records.

@@ -285,7 +285,7 @@ test("MCP tool filtering fails closed for new or disabled write tools", async ()
     client.rpc = async (method) =>
         method === "tools/list"
             ? { tools: [{ name: "ckm_sources" }, { name: "model_artifact_save" }, { name: "delete_all_models" }] }
-            : {};
+            : { protocolVersion: "2025-03-26" };
     assert.deepEqual(
         (await client.tools()).map((t) => t.name),
         ["ckm_sources"],
