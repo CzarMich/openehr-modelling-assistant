@@ -71,23 +71,51 @@ return schemas, examples and dependency/failure notes for every exposed tool.
 
 ```mermaid
 flowchart TD
-    M[Microsoft AI agent] -->|MCP| S[openEHR Modelling Assistant]
-    G[Other MCP clients] -->|MCP| S
-    S --> K[Named CKM sources]
+    M[Copilot Studio, Codex or another MCP client] -->|MCP| S[openEHR Modelling Assistant]
+    S --> K[Multiple named CKM sources]
     S --> B[Bundled specifications and guides]
-    S --> D[Modelling and validation services]
+    S --> D[Modelling services and structural checks]
     D --> R[Model Repository interface]
-    R --> F[Filesystem revisions]
-    D --> T[Terminology Provider interface]
+    R --> F[Filesystem snapshots and revisions]
+    R --> G[Git adapter: native model files and commit revisions]
+    G --> O[Persistent local Git object store]
+    G <--> H[Optional GitHub, GitLab or other Git remote]
+    A[Archetype Designer: account connection unverified] -.-> H
+    D --> T[Optional terminology checks and bindings]
     T --> L[Local value sets]
-    T --> H[FHIR terminology server]
-    D -. optional future boundary .-> C[CDR adapter]
+    T --> E[Optional FHIR terminology server]
+    D -. future extension .-> C[CDR adapter]
 ```
 
-Start with the [neonatal modelling workflow](workflows/neonatal-admission.md),
+Solid edges show implemented paths. Git works locally or with a configured remote;
+filesystem and Git expose the same Model Repository interface. The shared Git
+round trip is verified, while the dotted Archetype Designer connection still needs
+an authenticated hosted UI acceptance test. The CDR adapter remains unimplemented.
+Modelling and persistence work without a terminology server or terminology bindings.
+
+```mermaid
+flowchart TD
+    P[Select filesystem or Git storage] --> R[Open project and read current revision]
+    R --> D[Retrieve CKM sources and draft model changes]
+    D --> V[Run available structural checks and inspect diff]
+    V --> T{Terminology binding needed?}
+    T -->|No| S[Save DRAFT with expectedRevision]
+    T -->|Yes| B[Use local value sets or an optional FHIR server]
+    B --> S
+    S --> C{Revision or push conflict?}
+    C -->|Yes: reread and reconcile| R
+    C -->|No| H[Independent human review and qualified validation]
+```
+
+Saving a draft does not approve or release it. Hosted Git review and merge take place
+in the hosting service; the assistant has no approval endpoint. AQL creation/review
+uses the agent plus grounded prompts and paths; execution is not implemented.
+
+Follow the [shared Git model workflow](docs/workflows/shared-git-models.md) or the
+[neonatal modelling workflow](docs/workflows/neonatal-admission.md). See the detailed
 [architecture](docs/ARCHITECTURE.md), [model repository](docs/MODEL_REPOSITORY.md),
+[Archetype Designer integration](docs/ARCHETYPE_DESIGNER_INTEGRATION.md),
 [terminology](docs/TERMINOLOGY.md) and [governance](docs/GOVERNANCE.md).
-AQL creation/review uses the agent plus grounded prompts and paths; execution is not implemented.
 
 ## Development and testing
 
