@@ -4,7 +4,7 @@
 
 The standalone project is named **openEHR Modelling Assistant**, with repository `CzarMich/openehr-modelling-assistant` and directory `/home/hyq/workspace/openehr-modelling-assistant`. Original MIT copyright and attribution remain intact. The application is independent of the CDR checkout, upstream hosting, client plugins, model-provider SDKs and a CDR.
 
-The implementation exposes 62 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
+The implementation exposes 63 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
 
 ## Incremental changes
 
@@ -38,7 +38,7 @@ Execution metadata belongs in [evidence](evidence/), including the baseline and 
 
 The official suite expects synthetic tools/resources/prompts not provided by this product, plus optional sampling/elicitation/subscription features. Its localhost-Origin success assertion conflicts with the deployment's default deny-browser-origin policy; its malicious Host assertion passes. Product-specific resource, prompt and tool paths are exercised separately. No baseline entry was added to hide a new failure.
 
-Multiple named CKMs are configuration- and unit-tested; only the international CKM was live-tested. terminology server initially required an explicit `system` compatibility parameter for CodeSystem validation. The fix in `CzarMich/AmTerminology` is deployed to development, the server and Kubernetes. Live development/server probes verify GET/POST standard `url` validation, API-key authentication, browser-session ICD-10-GM lookup, Swagger security schemes and rejected credentials; see `amyterm-deployed-verification.json`. A service key sees its configured namespaces; a missing code is not proof of missing content for every user. No restricted expansion or patient content is committed as evidence.
+Multiple named CKMs now have public international/Norwegian live discovery/retrieval evidence and isolated authenticated HTTPS contracts; organisation account acceptance remains separate. terminology server initially required an explicit `system` compatibility parameter for CodeSystem validation. The fix in `CzarMich/AmTerminology` is deployed to development, the server and Kubernetes. Live development/server probes verify GET/POST standard `url` validation, API-key authentication, browser-session ICD-10-GM lookup, Swagger security schemes and rejected credentials; see `amyterm-deployed-verification.json`. A service key sees its configured namespaces; a missing code is not proof of missing content for every user. No restricted expansion or patient content is committed as evidence.
 
 ## Validation and platform limits
 
@@ -134,3 +134,7 @@ Filesystem, Git and isolated SharePoint contracts cover conditional saves, histo
 ## Staged validation and project QA
 
 Document operations now separate parse, structure, semantics, terminology, openEHR conformance and repository policy. Bounded FLAT/STRUCTURED profiles and stronger template diagnostics complement read-only exact-revision project QA, recorded provenance and authoritative traceability evidence. [Verification evidence](evidence/validation-qa-verification.json) records the executed contracts; [Validation and QA](VALIDATION_AND_QA.md) documents remaining qualified-engine checks and migration.
+
+## Authenticated and federated CKM discovery
+
+Source-specific credentials, mounted secret rotation, bounded shared search time and distinct model/version provenance are implemented through the existing CKM HTTP boundary. [CKM documentation](CKM_SOURCES.md) explains authentication, configuration and result windows. [Public acceptance](evidence/ckm-public-smoke.json), [isolated HTTPS acceptance](evidence/ckm-container-smoke.json) and [verification metadata](evidence/ckm-verification.json) preserve their respective scopes.

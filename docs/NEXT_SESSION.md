@@ -41,3 +41,5 @@ Persisted exact-revision human governance and the independent review workspace a
 Requirements traceability now persists a typed graph and answers element/requirement queries with exact source/anchor/audit evidence. Native inherited paths and clinical satisfaction remain separate from declared coverage. Continue Phase 1 structural validation, formal QA and CKM completion; do not repeat implemented graph work.
 
 Staged document validation and exact-revision project QA now implement the Phase 1 profile/evidence scope. Continue authenticated/federated CKM and protocol acceptance, then the qualified engine phase; full conformance, native dependency checks and release qualification remain unavailable.
+
+CKM source authentication and federated discovery now implement the Phase 1 source scope. Finish advertised-protocol acceptance, then evaluate/integrate the qualified engine. Live organisation CKM account access remains external; public international/Norwegian and isolated authentication checks are separate evidence.

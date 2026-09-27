@@ -78,6 +78,9 @@ jobs:
       - name: Exercise SharePoint contracts with isolated HTTPS Graph and OAuth fixtures
         run: scripts/test-sharepoint-container.sh
 
+      - name: Exercise authenticated federated CKM discovery over HTTPS
+        run: scripts/test-ckm-container.sh
+
       - name: Exercise FHIR operations over isolated authenticated HTTPS
         run: scripts/test-terminology-container.sh
 

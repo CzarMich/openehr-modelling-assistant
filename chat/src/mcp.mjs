@@ -19,6 +19,7 @@ export const READ_TOOLS = new Set([
     "governance_list",
     "ckm_sources",
     "ckm_archetype_search",
+    "ckm_federated_search",
     "ckm_archetype_get",
     "ckm_template_search",
     "ckm_template_get",

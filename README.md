@@ -18,7 +18,9 @@ CKM, or operate as a terminology server.
   and visible modelling-tool activity. Review and confirm each proposed model write.
 
 - Search and retrieve archetypes and templates directly from multiple configured CKMs.
-  Select a named international, national or organisational CKM on each call.
+  Select a named international, national or organisational CKM on each call, or search several
+  with explicit source/version provenance and partial-failure reporting. [Private CKMs](docs/CKM_SOURCES.md)
+  use source-specific deployment credentials.
 - Supply bundled openEHR specifications, modelling guides, examples and terminology.
 - Guide archetype, template, ADL, AQL and simplified-format design/review through MCP prompts.
 - Generate a **draft OET** containing a retrieved COMPOSITION and direct ENTRY archetypes,
@@ -111,7 +113,8 @@ flowchart TD
     M[Copilot Studio, Codex or another MCP client] -->|MCP| S[openEHR Modelling Assistant]
     S --> ID[Transport identity: local, API key or verified OIDC]
     ID --> TEN[Signed tenant namespace and write permissions]
-    S --> K[Multiple named CKM sources]
+    S --> FK[Bounded federated CKM discovery: source and version provenance]
+    FK --> K[Multiple named CKMs with source-specific credentials]
     S --> B[Bundled specifications and guides]
     S --> D[Modelling services and structural checks]
     D --> VQ[Separate validation stages and exact-revision project QA]
@@ -144,7 +147,7 @@ Modelling and persistence work without a terminology server or terminology bindi
 ```mermaid
 flowchart TD
     Chat[Browser chat or another MCP client] --> P[Select filesystem, SharePoint or Git storage] --> R[Open project and read current revision]
-    R --> D[Retrieve CKM sources and draft model changes]
+    R --> D[Search configured CKMs; select exact source; draft model changes]
     D --> V[Run available structural checks and inspect diff]
     V --> S[Save model DRAFT with expectedRevision]
     S --> C{Revision or push conflict?}

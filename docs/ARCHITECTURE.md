@@ -45,7 +45,8 @@ flowchart TB
     Core --> Terms[Optional terminology checks: TerminologyProvider]
     Terms --> Local[Project catalogue: code systems, value sets and concept maps]
     Terms --> FHIR[Optional FHIR terminology server: CodeSystem, ValueSet and ConceptMap]
-    Core --> CKM[Named CKM sources]
+    Core --> Federation[FederatedCkmSearch: bounded windows and source provenance]
+    Federation --> CKM[Named CKMs and per-source outbound authentication]
     Core -.-> CDR[Optional future CDR adapter]
 ```
 
@@ -61,7 +62,7 @@ Model files, local value sets, binding records, requirements and decisions share
 
 XML/JSON parsing is deterministic and separate from document structure. OET/OPT and FLAT/STRUCTURED profiles, exact-revision project QA and formal findings are implemented; ADL checks inspect its header. AQL parsing/execution and OPT compilation require the qualified engine. [Validation and QA](VALIDATION_AND_QA.md) records each boundary. QA records those stages as NOT_EXECUTED and keeps release eligibility false. The installed validation executor records authoritative evidence in the governance ledger. Its incomplete stages prevent approval/publication. An AI-supplied report or approval field cannot bypass that gate.
 
-Source selection is deployment-controlled. Each CKM tool accepts a configured source name; it cannot accept an arbitrary destination URL. See [configuration](CONFIGURATION.md), [repository](MODEL_REPOSITORY.md), [terminology](TERMINOLOGY.md), [governance](GOVERNANCE.md), and the [capability matrix](../CAPABILITIES.md).
+Source selection and outbound credentials are deployment-controlled. The CKM domain port isolates shared federated aggregation from its configured integration; credentials never appear in source discovery. Each CKM tool accepts a configured source name; it cannot accept an arbitrary destination URL. See [configuration](CONFIGURATION.md), [repository](MODEL_REPOSITORY.md), [terminology](TERMINOLOGY.md), [governance](GOVERNANCE.md), and the [capability matrix](../CAPABILITIES.md).
 
 The optional [browser chat](BROWSER_CHAT.md) is a separate Node MCP client with a pinned Codex runtime. It keeps provider/MCP credentials server-side and requires exact-change confirmation for repository writes. Browser OIDC authenticates chat users independently of native MCP bearer verification; neither boundary yet supplies project-level RBAC. Conversation storage is private to each signed-in identity, while the configured model repository may be shared.
 

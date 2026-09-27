@@ -36,9 +36,11 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `OIDC_ALLOWED_TENANTS` | empty | Optional explicit signed-tenant allowlist. |
 | `OIDC_TENANT_GIT_REMOTES` | `{}` | Tenant namespace hashes mapped to distinct Git remotes; see [OIDC migration](OIDC.md). |
 | `CKM_API_BASE_URL` | `https://ckm.openehr.org/ckm/rest/` | HTTPS REST base for source default. |
-| `CKM_TIMEOUT` | `15` | CKM timeout seconds, positive integer. |
-| `CKM_SOURCES` | `{}` | JSON object mapping additional names to HTTPS REST base URLs. |
+| `CKM_TIMEOUT` | `15` | CKM timeout seconds, 1–60. |
+| `CKM_SOURCES` | `{}` | JSON object mapping additional names to HTTPS REST base URLs; at most 32 including default. |
 | `CKM_DEFAULT_SOURCE` | `default` | Configured name used when a tool omits ckm. |
+| `CKM_AUTH` | `{}` | Private per-source Basic/session/bearer/API-key profiles; prefer `secret_file`. |
+| `CKM_FEDERATION_TIMEOUT` | `30` | Shared request budget for one federated search, 1–60 seconds. |
 | `TERMINOLOGY_FHIR_BASE_URL` | empty | Optional HTTPS FHIR base; empty disables external terminology calls. |
 | `TERMINOLOGY_BEARER_TOKEN` | empty | Optional external terminology bearer secret; mutually exclusive with API key. No token refresh. |
 | `TERMINOLOGY_API_KEY` | empty | Optional external terminology service secret, separate from inbound AUTH_API_KEY. |
@@ -77,7 +79,7 @@ CKM_SOURCES='{"regional":"https://regional.example.org/ckm/rest/","organisation"
 CKM_DEFAULT_SOURCE=regional
 ```
 
-Replace example domains with actual CKM REST bases. The default international source remains available as `default`; change `CKM_API_BASE_URL` to replace it. Call `ckm_sources`, then pass `ckm:"regional"` to search/get/draft tools. Each server must implement the compatible CKM REST API; authenticated/private CKM credentials and federation across different API families are not implemented. Configuring multiple named sources is supported and unit-tested; only the public international CKM has a live endpoint test.
+Replace example domains with actual CKM REST bases. The default international source remains available as `default`; change `CKM_API_BASE_URL` to replace it. Call `ckm_sources`, then pass `ckm:"regional"` to search/get/draft tools. Each server must implement the compatible CKM REST API. Per-source authentication and bounded federated discovery are implemented; unrelated API families need their own adapter. Public international/Norwegian acceptance and isolated authenticated HTTPS contracts pass. See [CKM sources and authentication](CKM_SOURCES.md) for profiles, secret mounts, limits and repeatable verification.
 
 See [deployment](DEPLOYMENT.md) for environment choices, [security](SECURITY.md) for trust boundaries, and [terminology](TERMINOLOGY.md) for terminology server/Keycloak configuration.
 

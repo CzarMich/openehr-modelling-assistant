@@ -35,6 +35,15 @@ final class OutputSchemaConformanceTest extends TestCase
     use TraceabilityOutputCases;
     private const string TOOLS_NAMESPACE = 'OpenEHR\\Assistant\\Tools\\';
 
+    public function test_ckm_federated_search_result_matches_output_schema(): void
+    {
+        $provider = $this->createStub(\OpenEHR\Assistant\Domain\Knowledge\CkmSearchProvider::class);
+        $provider->method('sources')->willReturn(['default' => 'https://ckm.example/']);
+        $provider->method('search')->willReturn(['items' => [['cid' => '1.2.3', 'name' => 'Synthetic template', 'version' => '2', 'score' => 100]], 'total' => 1]);
+        $service = new \OpenEHR\Assistant\Tools\CkmFederationTools(new \OpenEHR\Assistant\Application\FederatedCkmSearch($provider, new \OpenEHR\Assistant\Configuration\Settings()));
+        $this->assertConforms($service, 'search', ['template', 'synthetic']);
+    }
+
     public function test_guide_search_result_matches_output_schema(): void
     {
         $service = new GuideService(new NullLogger());

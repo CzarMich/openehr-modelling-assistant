@@ -6,6 +6,7 @@ from pathlib import Path
 catalogue = Path('docs/evidence/tool-catalogue.json')
 tools = json.loads(catalogue.read_text())
 examples = {
+ 'ckm_federated_search':{'kind':'archetype','keyword':'body weight','sources':['default'],'maxResults':5},
  'ckm_sources':{}, 'ckm_archetype_search':{'keyword':'body weight','maxResults':5},
  'ckm_archetype_get':{'identifier':'openEHR-EHR-OBSERVATION.body_weight.v2','format':'adl'},
  'ckm_template_search':{'keyword':'encounter','maxResults':5},'ckm_template_get':{'identifier':'1013.26.1','format':'oet'},

@@ -135,6 +135,7 @@ try {
     $container->set(\OpenEHR\Assistant\Domain\Traceability\AnchorInspector::class, new \OpenEHR\Assistant\Integrations\Traceability\ModelAnchorInspector());
     $ckmClient = new CkmClient($logger, settings: $settings);
     $container->set(CkmClient::class, $ckmClient);
+    $container->set(\OpenEHR\Assistant\Domain\Knowledge\CkmSearchProvider::class, new \OpenEHR\Assistant\Integrations\Knowledge\ConfiguredCkmSearch($ckmClient, $logger));
     $container->set(ArchetypeSource::class, new CkmArchetypeSource(new CkmService($ckmClient, $logger), $ckmClient));
     $container->set(ModelRepository::class, RepositoryFactory::create($settings, $identity));
     $terminology = new FhirTerminologyProvider($settings);
@@ -155,7 +156,7 @@ try {
     // rather than silently serving a mismatched, previously-cached capability set.
     // The namespace becomes a subdirectory under $cacheDir and old ones are never pruned
     // (no TTL), so releases accumulate directories there — see docs/development.md.
-    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-staged-quality-1', 0, $cacheDir));
+    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-ckm-federation-1', 0, $cacheDir));
 
     // Load server instructions. Optional at the protocol level, but this server
     // ships a canonical resources/server-instructions.md — a missing/unreadable

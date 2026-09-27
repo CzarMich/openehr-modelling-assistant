@@ -16,6 +16,7 @@ const toolLabels = {
     governance_get: "Model review and audit",
     governance_list: "Project reviews",
     ckm_sources: "CKM sources",
+    ckm_federated_search: "Search configured CKMs",
     ckm_archetype_search: "Archetype search",
     ckm_archetype_get: "Archetype retrieval",
     guide_get: "Modelling guide",

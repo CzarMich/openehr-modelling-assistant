@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 1,
-  "active_capability": "ckm",
+  "active_capability": "mcp-conformance",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -26,10 +26,10 @@
     },
     {
       "id": "ckm",
-      "status": "PARTIAL",
-      "scope": "Named CKM retrieval works; authenticated sources and federated search missing",
-      "implementation": "src/Apis/CkmClient.php",
-      "evidence": "docs/evidence/live-smoke.json"
+      "status": "IMPLEMENTED",
+      "scope": "Named public/authenticated CKM retrieval and bounded federated discovery with source/version provenance; isolated authentication and two live public CKMs verified",
+      "implementation": "src/Application/FederatedCkmSearch.php",
+      "evidence": "docs/evidence/ckm-verification.json"
     },
     {
       "id": "filesystem",
@@ -177,6 +177,13 @@
       "scope": "Server browser OIDC client not configured; stored identity administration credential rejected. Core governance configured; actual development OIDC/browser review passes.",
       "implementation": "docs/REVIEW_DEPLOYMENT.md",
       "evidence": "docs/evidence/governance-verification.json"
+    },
+    {
+      "id": "private-ckm-live-acceptance",
+      "status": "BLOCKED EXTERNALLY",
+      "scope": "Private CKM account and permissions not configured; isolated Basic/session/bearer/API-key contracts pass",
+      "implementation": "docs/CKM_SOURCES.md",
+      "evidence": "docs/evidence/ckm-container-smoke.json"
     }
   ],
   "phases": [
@@ -195,7 +202,8 @@
         "traceability",
         "qa",
         "mcp-conformance",
-        "optional-client-packaging"
+        "optional-client-packaging",
+        "ckm"
       ],
       "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
     },
