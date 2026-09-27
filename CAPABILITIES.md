@@ -54,3 +54,5 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 Chat and model governance share the verified browser identity. Explicit platform-administrator permissions cover all governance roles; validation and human-review policy still govern transitions. See [review deployment](docs/REVIEW_DEPLOYMENT.md).
 
 PostgreSQL governance storage and optional Valkey/Redis model retrieval caching are implemented. SQLite migration preserves event bytes, hashes and nonce history. Cache invalidation follows authoritative revisions; cache failures fall back to model storage. See [deployment and acceptance](docs/POSTGRES_AND_CACHE.md).
+
+The [browser workspace](docs/BROWSER_WORKSPACE.md) integrates Chat, exact-revision model browsing and Governance in one responsive interface with shared identity and keyboard navigation. This is a model browser and review workspace; full visual model editing and native identity administration remain separate implementation items.

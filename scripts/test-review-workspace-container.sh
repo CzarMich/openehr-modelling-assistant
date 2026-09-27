@@ -31,7 +31,10 @@ assert.equal(health.enabled, false); assert.equal(health.review_enabled, true);
 const status = (path) => new Promise((resolve, reject) => {
   http.get({ hostname: '127.0.0.1', port: 8350, path, headers: { Host: 'browser.fixture' } }, (response) => { response.resume(); resolve(response.statusCode); }).on('error', reject);
 });
-assert.equal(await status('/chat/reviews'), 200);
+assert.equal(await status('/chat/reviews'), 302);
+assert.equal(await status('/'), 200);
+assert.equal(await status('/chat/workspace.js'), 200);
+assert.equal(await status('/chat/api/models/projects'), 401);
 assert.equal(await status('/chat/api/reviews?project=default'), 401);
 console.log('PASS: provider-independent review workspace starts without model runtime or account and rejects unauthenticated review access.');
 JS

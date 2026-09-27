@@ -1,5 +1,5 @@
 "use strict";
-const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById("review-" + id);
 let session,
     selected,
     pending,
@@ -17,6 +17,7 @@ const labels = {
 };
 function notice(message) {
     $("notice").textContent = message || "";
+    $("notice").hidden = !message;
 }
 async function api(path, input) {
     const response = await fetch(path, {
@@ -32,14 +33,14 @@ async function run(action) {
     if (busy) return;
     busy = true;
     notice("");
-    for (const button of document.querySelectorAll("button")) button.disabled = true;
+    for (const button of document.querySelectorAll("#panel-governance button")) button.disabled = true;
     try {
         await action();
     } catch (error) {
         notice(error.message);
     } finally {
         busy = false;
-        for (const button of document.querySelectorAll("button")) button.disabled = false;
+        for (const button of document.querySelectorAll("#panel-governance button")) button.disabled = false;
         $("load").disabled = !session?.authenticated || !session?.reviewEnabled;
         $("review-decision").disabled = !selected?.available_transitions?.length;
         $("confirm-decision").disabled = !pending;
@@ -71,6 +72,8 @@ async function open(subject) {
     pending = null;
     $("confirmation").hidden = true;
     $("detail").hidden = false;
+    $("detail").setAttribute("tabindex", "-1");
+    $("detail").focus({ preventScroll: true });
     $("title").textContent = selected.source.path;
     $("state").textContent = selected.state;
     $("identity").textContent =
@@ -120,6 +123,10 @@ async function open(subject) {
 $("project-form").onsubmit = (event) => {
     event.preventDefault();
     offset = 0;
+    selected = null;
+    pending = null;
+    $("detail").hidden = true;
+    $("confirmation").hidden = true;
     run(load);
 };
 $("decision-form").onsubmit = (event) => {
@@ -170,13 +177,27 @@ $("signout").onclick = () =>
         await api("/chat/auth/logout", {});
         location.reload();
     });
-run(async () => {
-    session = await api("/chat/api/session");
-    $("signed-in-user").textContent = session.authenticated ? "Signed in as " + session.user.name : "";
-    $("signin").textContent = session.authenticated ? "Refresh sign-in" : "Sign in for model review";
-    $("signout").hidden = !session.authenticated;
-    if (!session.reviewEnabled) notice("Model review is not configured on this deployment.");
-    else if (session.authenticated) await load();
+async function initializeReview() {
+    await run(async () => {
+        session = await api("/chat/api/session");
+        $("signed-in-user").textContent = session.authenticated ? "Signed in as " + session.user.name : "";
+        $("signin").textContent = session.authenticated ? "Refresh sign-in" : "Sign in for model review";
+        $("signout").hidden = true; // The workspace header owns sign-out.
+        if (!session.reviewEnabled) notice("Model review is not configured on this deployment.");
+        else if (session.authenticated) await load();
+    });
+}
+document.addEventListener("workspace:governance", () => {
+    if (!session) initializeReview();
+});
+document.addEventListener("workspace:project", (event) => {
+    $("project").value = event.detail.project;
+    offset = 0;
+    selected = null;
+    pending = null;
+    $("detail").hidden = true;
+    $("confirmation").hidden = true;
+    if (session?.authenticated) run(load);
 });
 
 $("previous").onclick = () =>

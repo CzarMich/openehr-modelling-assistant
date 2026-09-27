@@ -15,6 +15,15 @@ cleanup() {
 }
 trap cleanup EXIT
 "${compose[@]}" up -d --build --wait
+# Reproduce deployment through a piped shell: the one-off container must not consume the rest.
+{
+  printf '%s\n' '"$1/scripts/prepare-postgres.sh" "$2" "${@:3}"'
+  for ignored in {1..1000}; do printf '%s\n' ': # deployment continuation must remain in the parent shell'; done
+  printf '%s\n' 'echo STORAGE_DEPLOYMENT_CONTINUED'
+} | bash -se -- "$GOVERNANCE_TEST_REPO" "$MODELLING_STORAGE_SECRET_DIR" "${compose[@]}" > "$MODELLING_STORAGE_SECRET_DIR/continuation.log"
+grep -Fxq STORAGE_DEPLOYMENT_CONTINUED "$MODELLING_STORAGE_SECRET_DIR/continuation.log"
+"${compose[@]}" up -d --wait
+
 "${compose[@]}" exec -T app php /storage-probe.php > "$GOVERNANCE_TEST_REPO/docs/evidence/ci-storage-smoke.json"
 "${compose[@]}" exec -T app php scripts/governance-storage.php verify
 "${compose[@]}" restart governance-db

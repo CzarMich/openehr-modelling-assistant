@@ -247,7 +247,7 @@ requirements:
     status: draft
     implementation: landed
     packages: [chat/src/*.mjs, public/chat, chat/Dockerfile]
-    tests: [chat/test/security.test.mjs, chat/test/codex.test.mjs, chat/test/mcp.test.mjs, chat/test/browser.spec.mjs]
+    tests: [chat/test/security.test.mjs, chat/test/codex.test.mjs, chat/test/mcp.test.mjs, chat/test/models.test.mjs, chat/test/browser.spec.mjs]
     verification: npm --prefix chat test and npm --prefix chat run test:browser
 
   - id: REQ-F16

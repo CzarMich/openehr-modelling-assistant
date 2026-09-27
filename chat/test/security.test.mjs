@@ -428,3 +428,34 @@ test("malformed review roles cannot establish an interactive approval identity",
     await assert.rejects(() => f.auth.callback(f.req, f.res));
     assert.equal(f.auth.sessions.size, 0);
 });
+
+test("model browsing requires the shared session and cannot mutate repository data", async (t) => {
+    const f = await fixture(t);
+    assert.equal((await f.request("/chat/api/models/projects", { user: null })).status, 401);
+    assert.equal((await f.request("/chat/api/models/projects", { method: "POST", data: {} })).status, 403);
+    assert.equal((await f.request("/chat/api/models/artifact?project=default&path=../secret")).status, 400);
+    assert.equal(f.calls.length, 0);
+});
+
+test("concurrent model reads are bounded and capacity is recovered after errors", async (t) => {
+    let release;
+    const gate = new Promise((resolve) => (release = resolve));
+    const f = await fixture(t, {
+        mcp: {
+            tools: async () => {
+                await gate;
+                return [];
+            },
+            call: async () => {
+                throw new Error("Should not run");
+            },
+        },
+    });
+    const first = f.request("/chat/api/models/projects"),
+        second = f.request("/chat/api/models/projects");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal((await f.request("/chat/api/models/projects")).status, 429);
+    release();
+    await Promise.all([first, second]);
+    assert.equal((await f.request("/chat/api/models/projects")).status, 503);
+});

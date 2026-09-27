@@ -18,9 +18,7 @@
         }
     }
     handle / {
-        root * /srv
-        rewrite * /landing.html
-        file_server
+        reverse_proxy chat:8350
     }
     @mcp path /mcp /health /ready /api/v1/reviews /api/v1/reviews/*
     handle @mcp {

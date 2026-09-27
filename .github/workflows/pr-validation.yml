@@ -56,6 +56,8 @@ jobs:
           set -euo pipefail
           cp .env.example .env
           docker compose up -d --build --wait
+          curl --fail --silent --output /tmp/modelling-workspace.html http://127.0.0.1:8343/
+          grep -q 'role="tablist"' /tmp/modelling-workspace.html
           python3 scripts/mcp-smoke.py --evidence docs/evidence/ci-http-smoke.json
 
       - name: Verify advertised MCP profile over HTTP and stdio

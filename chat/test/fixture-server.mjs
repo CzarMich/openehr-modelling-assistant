@@ -146,6 +146,9 @@ const provider = {
 };
 const mcpFactory = () => ({
     tools: async () => [
+        { name: "model_projects", inputSchema: { type: "object" } },
+        { name: "model_project_get", inputSchema: { type: "object" } },
+        { name: "model_artifact_get", inputSchema: { type: "object" } },
         { name: "ckm_sources", inputSchema: { type: "object" } },
         { name: "model_traceability_save", inputSchema: { type: "object" } },
         { name: "model_artifact_save", inputSchema: { type: "object" } },
@@ -153,6 +156,27 @@ const mcpFactory = () => ({
         { name: "terminology_catalogue_save", inputSchema: { type: "object" } },
         { name: "model_review_request", inputSchema: { type: "object" } },
     ],
-    call: async () => ({ content: [{ type: "text", text: "Fixture data" }] }),
+    call: async (name) => {
+        const artifact = {
+            path: "templates/admission.oet",
+            revision: "d".repeat(40),
+            sha256: "e".repeat(64),
+            status: "DRAFT",
+            content: "<template><script>window.__modelInjected=true</script></template>",
+            metadata: { purpose: "Synthetic fixture" },
+        };
+        const result =
+            name === "model_projects"
+                ? { projects: [{ id: "default", name: "Clinical model library" }] }
+                : name === "model_project_get"
+                  ? { project: { id: "default" }, artifacts: [artifact] }
+                  : name === "model_artifact_get"
+                    ? artifact
+                    : {};
+        return {
+            structuredContent: { success: true, result, error: null },
+            content: [{ type: "text", text: "Fixture data" }],
+        };
+    },
 });
 createApplication(config, { auth, provider, reviews, mcpFactory }).listen(config.port, "127.0.0.1");

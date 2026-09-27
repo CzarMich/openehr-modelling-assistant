@@ -4,7 +4,7 @@ openEHR Modelling Assistant is a PHP 8.4 application. MCP and a versioned human 
 
 ```mermaid
 flowchart TB
-    Browser[Browser chat workspace] --> Chat[Chat service: sessions, history and write confirmation]
+    Browser[Unified workspace: Chat, Models and Governance] --> Chat[Chat service: sessions, history and write confirmation]
     Chat <--> Identity[OIDC identity provider]
     Chat <--> Codex[Isolated Codex client]
     Chat --> MCP[MCP tools, prompts and resources]
@@ -80,3 +80,5 @@ The [MCP adapter](MCP_PROTOCOL.md) selects supported protocol revisions and capa
 Browser chat and model governance share one verified human session. Review browsing and decision freshness have separate bounded lifetimes; the explicit platform-administrator role maps to all governance roles. See [review deployment](REVIEW_DEPLOYMENT.md#one-browser-identity-for-chat-and-governance).
 
 PostgreSQL is the recommended governance backend. Optional Valkey accelerates repeated model/template reads while source revisions remain authoritative. See [storage and cache deployment](POSTGRES_AND_CACHE.md) for configuration, SQLite migration and recovery.
+
+The main browser URL now opens one [tabbed modelling workspace](BROWSER_WORKSPACE.md). Chat, repository browsing and governance share navigation and sign-in; switching tabs preserves the conversation and selected revision.
