@@ -39,6 +39,14 @@ const provider = {
                 content: "A reviewed draft",
                 expectedRevision: "revision-one",
             });
+        else if (text === "bindings")
+            await callTool("terminology_binding_plan_save", {
+                project: "default",
+                path: "templates/admission.oet",
+                modelRevision: "source-revision",
+                expectedRevision: "plan-revision",
+                aliases: [],
+            });
         else if (text === "terminology")
             await callTool("terminology_catalogue_save", {
                 project: "default",
@@ -56,7 +64,7 @@ const provider = {
             await callTool("model_review_request", { branch: "draft/model", title: "Review model" });
         else await callTool("ckm_sources", {});
         const answer =
-            text === "save" || text === "terminology"
+            text === "save" || text === "terminology" || text === "bindings"
                 ? "The draft was saved after your confirmation."
                 : text === "review"
                   ? "The draft review was requested after your confirmation."
@@ -73,6 +81,7 @@ const mcpFactory = () => ({
     tools: async () => [
         { name: "ckm_sources", inputSchema: { type: "object" } },
         { name: "model_artifact_save", inputSchema: { type: "object" } },
+        { name: "terminology_binding_plan_save", inputSchema: { type: "object" } },
         { name: "terminology_catalogue_save", inputSchema: { type: "object" } },
         { name: "model_review_request", inputSchema: { type: "object" } },
     ],

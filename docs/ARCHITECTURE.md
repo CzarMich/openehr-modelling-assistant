@@ -24,6 +24,9 @@ flowchart TB
     Git --> Hosting[HostedRepositoryProvider: GitHub or GitLab APIs]
     Hosting --> Reviews[Metadata, branches, protection and draft reviews]
     Designer[Archetype Designer: account connection required] -.-> Remote
+    Core --> Plans[Binding plan service: inspector and deterministic planner]
+    Plans --> Repository
+    Plans --> Local
     Core --> Terms[Optional terminology checks: TerminologyProvider]
     Terms --> Local[Project catalogue: code systems, value sets and concept maps]
     Terms --> FHIR[Optional FHIR terminology server: CodeSystem, ValueSet and ConceptMap]
@@ -46,3 +49,5 @@ XML parsing is deterministic. OET/OPT checks cover a documented structural subse
 Source selection is deployment-controlled. Each CKM tool accepts a configured source name; it cannot accept an arbitrary destination URL. See [configuration](CONFIGURATION.md), [repository](MODEL_REPOSITORY.md), [terminology](TERMINOLOGY.md), [governance](GOVERNANCE.md), and the [capability matrix](../CAPABILITIES.md).
 
 The optional [browser chat](BROWSER_CHAT.md) is a separate Node MCP client with a pinned Codex runtime. It keeps provider/MCP credentials server-side and requires exact-change confirmation for repository writes. Browser OIDC authenticates chat users independently of native MCP bearer verification; neither boundary yet supplies project-level RBAC. Conversation storage is private to each signed-in identity, while the configured model repository may be shared.
+
+The [binding-plan application service](TERMINOLOGY_BINDING_PLANS.md) combines a domain inspector interface, an XML adapter and a pure membership planner. It preserves source bytes, records source/catalogue revisions, exposes unresolved choices, and recomputes evidence freshness. It never applies native bindings or approves a clinical model. Native inherited semantics remain an engine boundary.

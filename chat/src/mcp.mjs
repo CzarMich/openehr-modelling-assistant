@@ -4,6 +4,7 @@ export const WRITE_TOOLS = new Set([
     "model_branch_create",
     "model_review_request",
     "terminology_catalogue_save",
+    "terminology_binding_plan_save",
 ]);
 export const READ_TOOLS = new Set([
     "ckm_sources",
@@ -42,6 +43,9 @@ export const READ_TOOLS = new Set([
     "terminology_binding_validate",
     "terminology_diff",
     "terminology_manifest",
+    "model_terminology_inspect",
+    "terminology_binding_plan",
+    "terminology_binding_plan_get",
     "terminology_catalogue_get",
     "terminology_catalogue_search",
     "terminology_catalogue_lookup",

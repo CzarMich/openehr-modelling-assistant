@@ -19,6 +19,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | ADL validation | PARTIAL | Declaration/header preflight; no grammar or RM validator |
 | Model diff | PARTIAL | XML structure, attributes and leaf values; not full semantic equivalence |
 | Binding validation | PARTIAL | Explicit records, path presence, selected-code validation; no native application |
+| Explicit XML terminology inspection | WORKING | Bounded OET/OPT coded choices, named queries and native reference preservation; revision-specific locations, without inherited ADL semantics |
+| Terminology binding plans | WORKING | Offline exact-membership proposals, explicit aliases, pinned local code validation, repository history and stale-evidence detection; review required |
 | Terminology impact and manifest | PARTIAL | Concept/property diff and declared dependencies; no hierarchy/global index |
 | Requirements traceability | PARTIAL | Explicit declared coverage; no clinical/test proof |
 | Governance and QA | PARTIAL | Tested policy boundary and truthful unavailable stages; no persisted approvals |

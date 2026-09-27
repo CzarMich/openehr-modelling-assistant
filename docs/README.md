@@ -20,3 +20,5 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 [SharePoint repository](SHAREPOINT_REPOSITORY.md) documents Graph storage, authentication, conditional writes, provisioning and acceptance.
 
 - [Project terminology catalogue](TERMINOLOGY_CATALOGUE.md): local CodeSystem/ValueSet/ConceptMap records, optional external references, revisions, deterministic operations and migration.
+
+- [Terminology binding plans](TERMINOLOGY_BINDING_PLANS.md): explicit XML inspection, catalogue proposals and revision-bound review evidence.

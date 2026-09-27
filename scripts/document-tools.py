@@ -34,6 +34,10 @@ examples = {
 }
 catalogue_record={'kind':'code_system','canonical':'https://example.org/local/feeding','version':'1','name':'Feeding','provenance':{'source':'Organisation-authored local draft'},'concepts':[{'code':'mixed','display':'Mixed feeding'}]}
 examples.update({
+ 'model_terminology_inspect':{'project':'neonatal-care','path':'templates/admission.oet'},
+ 'terminology_binding_plan':{'project':'neonatal-care','path':'templates/admission.oet'},
+ 'terminology_binding_plan_get':{'project':'neonatal-care','path':'templates/admission.oet'},
+ 'terminology_binding_plan_save':{'project':'neonatal-care','path':'templates/admission.oet','modelRevision':'<observed-model-revision>','aliases':[]},
  'terminology_catalogue_save':{'project':'neonatal-care','record':catalogue_record},
  'terminology_catalogue_get':{'project':'neonatal-care','kind':'code_system','canonical':catalogue_record['canonical'],'version':'1'},
  'terminology_catalogue_search':{'project':'neonatal-care','query':'feeding'},

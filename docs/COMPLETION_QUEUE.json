@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 1,
-  "active_capability": "binding",
+  "active_capability": "governance",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -88,11 +88,18 @@
       "evidence": "docs/evidence/catalogue-sharepoint-smoke.json"
     },
     {
+      "id": "binding-plans",
+      "status": "IMPLEMENTED",
+      "scope": "Revision-bound explicit OET/OPT inspection, exact-membership catalogue candidates, pinned local code checks and persisted unresolved-choice evidence; no native application or clinical approval",
+      "implementation": "src/Application/TerminologyBindingPlans.php",
+      "evidence": "docs/evidence/binding-verification.json"
+    },
+    {
       "id": "binding",
       "status": "PARTIAL",
-      "scope": "Explicit binding records; native inspection/application and unresolved-choice records missing",
-      "implementation": "src/Domain/Terminology/BindingService.php",
-      "evidence": "tests/Enterprise/TerminologyProviderTest.php"
+      "scope": "Explicit OET/OPT inspection, persisted revision-bound plans, local catalogue candidates and unresolved-choice findings implemented; native ADL/inherited application and compilation require qualified engine",
+      "implementation": "src/Application/TerminologyBindingPlans.php",
+      "evidence": "tests/Enterprise/TerminologyBindingPlanTest.php"
     },
     {
       "id": "structural-validation",

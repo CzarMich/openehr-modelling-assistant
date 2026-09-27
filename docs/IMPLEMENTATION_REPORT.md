@@ -4,7 +4,7 @@
 
 The standalone project is named **openEHR Modelling Assistant**, with repository `CzarMich/openehr-modelling-assistant` and directory `/home/hyq/workspace/openehr-modelling-assistant`. Original MIT copyright and attribution remain intact. The application is independent of the CDR checkout, upstream hosting, client plugins, model-provider SDKs and a CDR.
 
-The implementation exposes 47 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
+The implementation exposes 51 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
 
 ## Incremental changes
 
@@ -107,3 +107,10 @@ The application catalogue stores CodeSystem, multi-system ValueSet and ConceptMa
 Repository contracts exercise filesystem, Git and stateful SharePoint storage. Actual MCP container checks cover offline operation, versions, candidate review and stale-write rejection. Browser saves require exact-record confirmation. Invalid external edits remain QA findings. The [catalogue guide](TERMINOLOGY_CATALOGUE.md) documents schema, limits, migration and repeatable checks; native model binding application and terminology approval/publication remain separate work.
 
 [Catalogue verification](evidence/catalogue-verification.json), [Git MCP evidence](evidence/catalogue-git-smoke.json), [filesystem MCP evidence](evidence/catalogue-filesystem-smoke.json) and [SharePoint MCP evidence](evidence/catalogue-sharepoint-smoke.json) retain execution results. These are synthetic storage/protocol checks; they do not constitute clinical review or live SharePoint tenant acceptance.
+
+
+## Revision-bound terminology binding plans
+
+The [binding-plan service](TERMINOLOGY_BINDING_PLANS.md) inspects explicit OET/OPT coded choices, preserves named queries and canonical references, proposes project ValueSets from exact membership, and validates codes against explicitly pinned local CodeSystem editions. Plans retain source/catalogue revisions and detect source changes, new catalogue editions and modified analysis. Filesystem, Git and isolated HTTPS SharePoint contract runs pass. Browser saves confirm both source and plan revisions. Existing ambiguous relative targets now fail unless an exact revision-specific location is supplied.
+
+The source model remains unchanged. Clinical suitability, binding strength, inherited ADL semantics, native application and compiler round trips are not inferred. These remain explicit review/qualified-engine gates. Tests and repeatable limits are documented in the binding guide; execution metadata is in `evidence/binding-verification.json`.

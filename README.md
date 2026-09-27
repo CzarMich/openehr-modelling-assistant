@@ -29,7 +29,8 @@ CKM, or operate as a terminology server.
   using filesystem/SharePoint snapshots or Git, including GitHub/GitLab metadata and draft reviews, with revision conflict detection.
 - Represent local/external value sets and bindings, invoke FHIR terminology operations,
   discover canonical resources, retain translation candidates for review, compare terminology
-  changes, and produce declared terminology dependency manifests.
+  changes, and produce declared terminology dependency manifests. Inspect explicit OET/OPT coded
+  constraints and save revision-bound binding plans with local catalogue candidates and QA findings.
 - Report explicit requirements traceability and a QA preflight that identifies unexecuted checks.
 
 There is **no OPT compiler, complete ADL/AQL validator, CDR execution adapter,
@@ -103,7 +104,9 @@ flowchart TD
     G <--> H[Optional GitHub, GitLab or other Git remote]
     G --> HP[GitHub or GitLab API: metadata, branches and draft reviews]
     A[Archetype Designer: account connection unverified] -.-> H
-    D --> T[Optional terminology checks and bindings]
+    D --> T[Optional terminology catalogue, inspection and binding plans]
+    T --> BP[Preserved references, explicit candidates and revision-bound evidence]
+    BP --> R
     T --> L[Local catalogue: code systems, value sets and mapping drafts]
     T --> E[Optional FHIR: CodeSystem, ValueSet and ConceptMap operations]
     D -. future extension .-> C[CDR adapter]
@@ -120,14 +123,14 @@ flowchart TD
     Chat[Browser chat or another MCP client] --> P[Select filesystem, SharePoint or Git storage] --> R[Open project and read current revision]
     R --> D[Retrieve CKM sources and draft model changes]
     D --> V[Run available structural checks and inspect diff]
-    V --> T{Terminology binding needed?}
-    T -->|No| S[Save DRAFT with expectedRevision]
-    T -->|Yes| B[Use versioned local catalogue or optional FHIR references]
-    B --> TB[Inspect editions and codes; review mapping candidates]
-    TB --> S
+    V --> S[Save model DRAFT with expectedRevision]
     S --> C{Revision or push conflict?}
     C -->|Yes: reread and reconcile| R
-    C -->|No| PR[Optional hosted draft review request]
+    C -->|No| T{Terminology binding needed?}
+    T -->|No| PR[Optional hosted draft review request]
+    T -->|Yes| B[Inspect saved source; preserve references; compare local catalogue]
+    B --> TB[Save binding plan against source revision; review findings and freshness]
+    TB --> PR
     PR --> H[Independent human review and qualified validation]
 ```
 

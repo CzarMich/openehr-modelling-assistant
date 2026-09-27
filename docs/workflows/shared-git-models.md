@@ -15,14 +15,14 @@ flowchart TD
     Git <--> Remote
     Open --> Draft[Review requirements and draft model changes]
     Draft --> Check[Run available structural checks and inspect diff]
-    Check --> Terms{Terminology binding required?}
-    Terms -->|No| Save[Save DRAFT using expectedRevision]
-    Terms -->|Yes| LocalOrRemote[Use local value sets or optional FHIR server]
-    LocalOrRemote --> Evidence[Record results and unresolved checks]
-    Evidence --> Save
+    Check --> Save[Save model DRAFT using expectedRevision]
     Save --> Conflict{Revision or push conflict?}
     Conflict -->|Yes| Open
-    Conflict -->|No| Hosted[Optional draft pull or merge request]
+    Conflict -->|No| Terms{Terminology binding required?}
+    Terms -->|No| Hosted[Optional draft pull or merge request]
+    Terms -->|Yes| Plan[Inspect saved source; preserve references; propose catalogue candidates]
+    Plan --> Evidence[Save revision-bound DRAFT plan; review findings and freshness]
+    Evidence --> Hosted
     Hosted --> Human[Independent human review and qualified validation]
     Human --> Review[Review and merge through the hosting service]
 ```
@@ -39,3 +39,5 @@ The Designer edge requires account authorization and verified directory/format c
 8. Refresh the authoring client after the reviewed merge. Verify imports/exports against the original model, dependent archetypes, languages, cardinalities and bindings before claiming lossless interoperability.
 
 For an entirely local workflow leave `MODEL_GIT_REMOTE_URL` empty, or select `filesystem`. Choose the repository based on collaboration and backup needs; no terminology or model-provider service is required for either.
+
+For coded XML sources, use [binding plans](../TERMINOLOGY_BINDING_PLANS.md) to inspect explicit choices, preserve references, compare project ValueSets and record unresolved decisions. Save the plan against the source revision, then regenerate it after source or catalogue changes. This does not edit the native model or establish clinical approval.

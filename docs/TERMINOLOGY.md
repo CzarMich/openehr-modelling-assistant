@@ -79,3 +79,7 @@ The node in this example is a placeholder and must be replaced with an actual mo
 `terminology_diff` compares additions, removals, changed displays/properties, inactive codes and replacement suggestions. It never replaces codes automatically. Hierarchy change analysis is NOT_EXECUTED. `model_diff` reports XML attribute/leaf changes including serialized binding changes, but cannot infer external dependency changes; run both comparisons.
 
 `terminology_manifest` emits only bindings explicitly linked to the requested artifact, including requirement IDs. It declares dependencies; it does not certify a release. Repository revisions allow review of records and reports together. Native binding application, cross-project impact indexing, terminology approval/publication remain extension work; Git PR/MR draft review is available separately. The client may propose candidates, but must use deterministic checks before treating a code as verified.
+
+## Model binding plans
+
+[Binding plans](TERMINOLOGY_BINDING_PLANS.md) inspect explicit OET/OPT constraints, preserve existing references, compare local catalogue memberships and persist revision-bound DRAFT evidence. They work offline. Native ADL/inherited binding application and compiler round trips remain qualified-engine work; a candidate or CURRENT report never confers clinical approval. Ambiguous relative targets in `terminology_binding_validate` now require an exact `binding.target_location`.

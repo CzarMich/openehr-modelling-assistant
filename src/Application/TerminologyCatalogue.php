@@ -37,7 +37,7 @@ final readonly class TerminologyCatalogue
             Resource::text($version, 200);
             $path = 'terminology/catalogue/' . $kind . '/' . Resource::identity($kind, $canonical, $version) . '.json';
             $artifact = $this->repository->getArtifact($project, $path, $revision);
-            return $this->entry($this->decode($artifact), $artifact);
+            return $this->entry(Resource::fromArtifact($artifact), $artifact);
         }
         $scan = $this->search($project, $kind, $canonical, null, 100);
         if ($scan['findings'] !== []) { throw new \RuntimeException('CATALOGUE_HAS_INVALID_RECORDS'); }
@@ -58,7 +58,7 @@ final readonly class TerminologyCatalogue
         foreach ($this->repository->listArtifacts($project) as $artifact) {
             if (!str_starts_with($artifact['path'], 'terminology/catalogue/')) { continue; }
             if (++$examined > 1000) { throw new \RuntimeException('CATALOGUE_SCAN_LIMIT_EXCEEDED'); }
-            try { $resource = $this->decode($artifact); }
+            try { $resource = Resource::fromArtifact($artifact); }
             catch (\InvalidArgumentException|\JsonException) {
                 $findings[] = ['severity' => 'error', 'code' => 'INVALID_TERMINOLOGY_RECORD', 'location' => $artifact['path'],
                     'message' => 'The stored terminology record does not satisfy the catalogue schema or identity.',
@@ -121,17 +121,6 @@ final readonly class TerminologyCatalogue
         $result = $resource->data['source'] === 'local' ? $this->local->translate($resource, $system, $code, $codeSystemVersion, $targetSystem)
             : $this->mappings->translate($conceptMap, $system, $code, $resource->data['version'], $codeSystemVersion, null, null, $targetSystem);
         return $this->evidence($result, $entry);
-    }
-
-    /** @param array<string, mixed> $artifact */
-    private function decode(array $artifact): Resource
-    {
-        if (!is_string($artifact['content'] ?? null) || strlen($artifact['content']) > 2097152) { throw new \InvalidArgumentException('INVALID_TERMINOLOGY_RECORD'); }
-        $data = json_decode($artifact['content'], true, 32, JSON_THROW_ON_ERROR);
-        if (!is_array($data)) { throw new \InvalidArgumentException('INVALID_TERMINOLOGY_RECORD'); }
-        $resource = new Resource($data);
-        if ($resource->path() !== $artifact['path']) { throw new \InvalidArgumentException('CATALOGUE_IDENTITY_MISMATCH'); }
-        return $resource;
     }
 
     /** @param array<string, mixed> $artifact

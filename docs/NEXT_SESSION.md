@@ -33,3 +33,5 @@ For each stage: implement, test, document, commit, push, run `scripts/watch-ci.s
 Hosted repository code reuses generic Git storage and adds six MCP tools. GitHub live acceptance and cleanup are recorded in `evidence/hosted-github-acceptance.json`; GitLab contract tests pass, while live tenant acceptance needs credentials. The current execution queue points to terminology completion.
 
 The terminology protocol increment adds three MCP tools, independent edition evidence, preserved designations and review-only ConceptMap candidates. The managed local catalogue is implemented with repository and offline-operation contracts. Continue with deterministic binding decisions; native inherited-node semantics still require the qualified engine phase. Consult live evidence for provider-specific operation availability.
+
+Binding plans now provide explicit XML inspection, catalogue proposals and revision-bound evidence. Continue Phase 1 governance, traceability, structural/QA and packaging gaps; complete native/inherited binding application with the qualified engine in Phase 2. The authoritative queue is `COMPLETION_QUEUE.json`.

@@ -40,3 +40,5 @@ referenced from [requirements.md](../requirements.md),
 3. Cite the `REQ-#`(s) it serves and add a row to this index and to
    [traceability.md](../traceability.md).
 4. On merge, set status to `Accepted`.
+
+- [ADR-0014: Revision-bound terminology binding plans](0014-revision-bound-terminology-binding-plans.md)

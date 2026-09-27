@@ -2271,6 +2271,102 @@ Output schema:
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
 
+## `model_terminology_inspect`
+
+Inspect explicit OET/OPT coded constraints and existing references without changing source bytes. Positional locations apply only to the recorded revision; inherited ADL semantics require the engine.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "revision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "path"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_terminology_inspect",
+  "arguments": {
+    "project": "neonatal-care",
+    "path": "templates/admission.oet"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
 ## `model_validate`
 
 Run deterministic bounded preflight checks. Partial results never certify deployment.
@@ -2478,6 +2574,316 @@ Output schema:
 ```
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `terminology_binding_plan`
+
+Propose review candidates from exact project ValueSet membership. Preserve existing bindings and original constraints; aliases explicitly declare terminology_id, canonical system, optional version and archetype. No code is invented or applied.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "revision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "aliases": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object"
+      },
+      "maxItems": 100
+    }
+  },
+  "required": [
+    "project",
+    "path"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_binding_plan",
+  "arguments": {
+    "project": "neonatal-care",
+    "path": "templates/admission.oet"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_binding_plan_get`
+
+Read a saved terminology plan and recompute freshness against current source and the whole project catalogue. Historical evidence never establishes current validation or clinical approval.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "revision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "path"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_binding_plan_get",
+  "arguments": {
+    "project": "neonatal-care",
+    "path": "templates/admission.oet"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_binding_plan_save`
+
+Recompute and persist a DRAFT terminology plan against an explicit model revision. expectedRevision is required to replace an existing plan. This writes evidence only; it cannot alter or clinically approve the model.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "modelRevision": {
+      "type": "string"
+    },
+    "aliases": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object"
+      },
+      "maxItems": 100
+    },
+    "expectedRevision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "path",
+    "modelRevision"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_binding_plan_save",
+  "arguments": {
+    "project": "neonatal-care",
+    "path": "templates/admission.oet",
+    "modelRevision": "<observed-model-revision>",
+    "aliases": []
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
 
 ## `terminology_binding_validate`
 

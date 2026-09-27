@@ -87,3 +87,13 @@ test("terminology saves present the exact version and revision for confirmation"
     await page.getByRole("button", { name: "Confirm save", exact: true }).click();
     await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
 });
+
+test("binding plan confirmation includes both source and plan revisions", async ({ page }) => {
+    await login(page);
+    await send(page, "bindings");
+    await expect(page.getByRole("heading", { name: "Save draft binding plan" })).toBeVisible();
+    await expect(page.locator(".approval pre")).toContainText("source-revision");
+    await expect(page.locator(".approval pre")).toContainText("plan-revision");
+    await page.getByRole("button", { name: "Confirm save", exact: true }).click();
+    await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
+});
