@@ -1,6 +1,6 @@
 # Continuation handoff
 
-The user requested a pause after publishing the verified capability update, with the remaining implementation to resume in the next session. The [autonomous execution policy](AUTONOMOUS_EXECUTION_POLICY.md) remains in force; no routine development or delivery confirmation is needed. Resume the [implementation plan](IMPLEMENTATION_PLAN.md), keeping terminology/bindings optional and using generic user-facing names: terminology server, server and CDR.
+The user has resumed full implementation under the A–Z mandate. Follow the [completion audit](COMPLETION_AUDIT.md) and [execution queue](COMPLETION_QUEUE.json) continuously through the remaining phases. The [autonomous execution policy](AUTONOMOUS_EXECUTION_POLICY.md) remains in force; no routine development or delivery confirmation is needed. Keep terminology/bindings optional and use generic user-facing names: terminology server, server and CDR.
 
 ## Accepted work
 
@@ -16,15 +16,11 @@ The capability matrix describes shipped code, not work in an isolated branch. Ho
 
 The user subsequently requested an actual browser chat, so that feature was implemented as a separate Node MCP client. See [browser chat](BROWSER_CHAT.md). Browser OIDC sign-in and conversation ownership are separate from the saved native MCP bearer-verification branch below. Merge this chat delivery into that branch before continuing; do not remove either identity boundary or claim shared model access is per-project RBAC. The broader compiler/CDR/editor/governance work remains the next implementation scope.
 
-## Saved OIDC work in progress
+## Native OIDC increment
 
-The isolated worktree is `/home/hyq/workspace/openehr-modelling-assistant-identity`, branch `feat/oidc-identity`. Local checkpoint commit: `97085c3`. It is intentionally not pushed, deployed or merged. Its Docker test container is `openehr-modelling-identity-tests`.
+Native bearer verification, discovery/JWKS, signed draft-write permissions and tenant storage/session isolation now pass unit, real Git and live identity-provider acceptance. See [OIDC](OIDC.md) and the implementation report. CI also exercises the production HTTP path against a disposable HTTPS issuer. Browser login remains a separate client boundary; ordinary development/server clients keep API keys until deliberately migrated. A bearer token does not establish interactive human approval.
 
-Implemented but not accepted yet: a maintained JWT dependency, pinned issuer/audience/JWKS verifier, bounded key refresh, signed scopes/roles/tenant claims, write authorization, tenant-isolated filesystem/local Git storage, and HTTP wiring. Security tests cover forged signatures, wrong claims, key rotation, role checks and tenant isolation.
-
-First unfinished check: the test fixture passes an uninitialized typed static string by reference to `openssl_pkey_export`. Initialize the fixture property before running the security tests; then fix any actual failures and run full regression/static checks. The last failed test output is `/tmp/openehr-identity-tests.log`. Do not mark OIDC working based on code presence.
-
-Merge the completed shared-repository changes into this branch before continuing. Reconcile the project-service metadata schema and discovery cache changes. Extend tenant isolation to remote Git using the now-available content-root mapping (or explicitly configured isolated remotes); the provisional shared-remote rejection is intentional until that mapping is tested. Validate real identity-provider tokens without exposing credentials. Keep the existing API-key deployments working.
+The older isolated identity worktree is retained as historical work; its unfinished fixture and missing discovery are superseded by the accepted implementation. Continue Phase 1 with hosted Git review capabilities and SharePoint, then terminology, structural checks, persisted governance, traceability and QA. Do not resume the old checkpoint as if these repairs were still missing.
 
 ## Remaining scope
 

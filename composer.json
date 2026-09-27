@@ -15,6 +15,7 @@
         "ext-dom": "*",
         "ext-json": "*",
         "ext-simplexml": "*",
+        "firebase/php-jwt": "^7.2",
         "guzzlehttp/guzzle": "^7.9",
         "mcp/sdk": "^0.7.0",
         "monolog/monolog": "^3.9",

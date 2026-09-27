@@ -18,11 +18,19 @@ class RpcError(Exception):
         super().__init__(f"{method}: JSON-RPC error {code}")
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 class Client:
-    def __init__(self, url):
+    def __init__(self, url, bearer=None):
         self.url, self.session, self.sequence = url, None, 0
+        self.opener = urllib.request.build_opener(NoRedirect())
         self.headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
-        if os.getenv("AUTH_API_KEY"):
+        if bearer is not None:
+            self.headers["Authorization"] = "Bearer " + bearer
+        elif os.getenv("AUTH_API_KEY"):
             self.headers[os.getenv("AUTH_API_KEY_HEADER", "X-API-Key")] = os.environ["AUTH_API_KEY"]
 
     def rpc(self, method, params=None, notify=False):
@@ -36,9 +44,12 @@ class Client:
         if self.session:
             headers.update({"Mcp-Session-Id": self.session, "MCP-Protocol-Version": "2025-03-26"})
         request = urllib.request.Request(self.url, data=json.dumps(payload).encode(), headers=headers)
-        with urllib.request.urlopen(request, timeout=90) as response:
+        with self.opener.open(request, timeout=90) as response:
             self.session = response.headers.get("Mcp-Session-Id", self.session)
-            body = response.read(16 * 1024 * 1024).decode()
+            raw = response.read(16 * 1024 * 1024 + 1)
+            if len(raw) > 16 * 1024 * 1024:
+                raise RuntimeError("MCP response exceeds the smoke client's size limit")
+            body = raw.decode()
         if notify or not body:
             return {}
         if body.lstrip().startswith("{"):

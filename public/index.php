@@ -6,6 +6,8 @@ declare(strict_types=1);
 use OpenEHR\Assistant\Apis\CkmClient;
 use OpenEHR\Assistant\Apis\CkmArchetypeSource;
 use OpenEHR\Assistant\Auth\HttpGuard;
+use OpenEHR\Assistant\Auth\OidcAuthenticator;
+use OpenEHR\Assistant\Auth\AccessPolicy;
 use OpenEHR\Assistant\Configuration\Settings;
 use OpenEHR\Assistant\Domain\Modelling\ArchetypeSource;
 use OpenEHR\Assistant\Domain\Repository\ModelRepository;
@@ -50,9 +52,11 @@ try {
     if ($transportOption !== 'stdio' && APP_ENV === 'production' && $settings->get('AUTH_MODE') === 'none') {
         throw new InvalidArgumentException('Production HTTP requires authentication.');
     }
-    if ($settings->get('AUTH_MODE') === 'oidc') {
-        throw new InvalidArgumentException('OIDC_VERIFIER_NOT_CONFIGURED: OIDC is a prepared extension point only.');
+    if ($transportOption === 'stdio' && $settings->get('AUTH_MODE') === 'oidc') {
+        throw new InvalidArgumentException('OIDC_REQUIRES_HTTP: use local authentication for a trusted stdio process.');
     }
+    $oidc = $settings->get('AUTH_MODE') === 'oidc' ? new OidcAuthenticator($settings) : null;
+    $identity = null;
     $request = null;
     $principal = 'local-stdio';
     $psr17Factory = new Psr17Factory();
@@ -72,7 +76,7 @@ try {
             exit;
         }
         if ($path !== '/ready') {
-            $guard = new HttpGuard($settings);
+            $guard = new HttpGuard($settings, $oidc);
             if (($rejection = $guard->check($request)) !== null) {
                 http_response_code($rejection->getStatusCode());
                 foreach ($rejection->getHeaders() as $name => $values) {
@@ -84,6 +88,7 @@ try {
                 exit;
             }
             $principal = $guard->principal($request) ?? throw new RuntimeException('AUTHENTICATION_REQUIRED');
+            $identity = $oidc?->identity($request);
         }
     }
 
@@ -109,10 +114,11 @@ try {
 
     // Initialize API clients, resources, etc.
     $container->set(Settings::class, $settings);
+    $container->set(AccessPolicy::class, new AccessPolicy($settings, $identity));
     $ckmClient = new CkmClient($logger, settings: $settings);
     $container->set(CkmClient::class, $ckmClient);
     $container->set(ArchetypeSource::class, new CkmArchetypeSource(new CkmService($ckmClient, $logger), $ckmClient));
-    $container->set(ModelRepository::class, RepositoryFactory::create($settings));
+    $container->set(ModelRepository::class, RepositoryFactory::create($settings, $identity));
     $terminology = new FhirTerminologyProvider($settings);
     $container->set(FhirTerminologyProvider::class, $terminology);
     $container->set(TerminologyProvider::class, $terminology);
@@ -129,7 +135,7 @@ try {
     // rather than silently serving a mismatched, previously-cached capability set.
     // The namespace becomes a subdirectory under $cacheDir and old ones are never pruned
     // (no TTL), so releases accumulate directories there — see docs/development.md.
-    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-3', 0, $cacheDir));
+    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-identity-1', 0, $cacheDir));
 
     // Load server instructions. Optional at the protocol level, but this server
     // ships a canonical resources/server-instructions.md — a missing/unreadable

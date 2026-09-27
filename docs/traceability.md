@@ -70,7 +70,7 @@ the Implementation column is either dead code or an undocumented requirement.
 | REQ-F12 | Filesystem/Git persistent projects, artifacts and revisions (landed) | `tests/Enterprise/RepositoryAndGovernanceTest.php`, `tests/Enterprise/GitRepositoryTest.php` |
 | REQ-F13 | Draft OET generation, bounded validation and structural diff (partial) | `tests/Enterprise/ModelValidationTest.php` |
 | REQ-F14 | Explicit terminology, value sets, bindings, provenance and diff (partial) | `tests/Enterprise/TerminologyProviderTest.php` |
-| REQ-N11 | Authenticated bounded transport and redacted failures (landed) | `tests/Enterprise/ConfigurationAndAuthTest.php` |
+| REQ-N11 | Authenticated bounded transport, native OIDC and redacted failures (landed); [ADR-0009](decisions/0009-native-identity-and-tenant-boundaries.md) | `tests/Enterprise/ConfigurationAndAuthTest.php`, `tests/Enterprise/OidcAuthenticationTest.php`, `scripts/oidc-smoke.py` |
 | REQ-N12 | Client-neutral deployment and truthful capability documentation (landed) | `tests/Content/InstallDocContractTest.php` |
 
 ## Browser chat

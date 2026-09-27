@@ -8,13 +8,14 @@ use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;
 use OpenEHR\Assistant\Configuration\Settings;
+use OpenEHR\Assistant\Auth\AccessPolicy;
 use OpenEHR\Assistant\Domain\Repository\ModelRepository;
 use OpenEHR\Assistant\Domain\Modelling\Traceability;
 use OpenEHR\Assistant\Helpers\ToolResult;
 
 final readonly class ProjectService
 {
-    public function __construct(private ModelRepository $repository, private Settings $settings, private Traceability $traceability)
+    public function __construct(private ModelRepository $repository, private Settings $settings, private Traceability $traceability, private ?AccessPolicy $access = null)
     {
     }
 
@@ -36,7 +37,7 @@ final readonly class ProjectService
         return ToolResult::run(fn (): array => ['project' => $this->repository->getProject($project), 'artifacts' => $this->repository->listArtifacts($project)]);
     }
 
-    /** Create a persistent modelling workspace. Requires deployment write enablement.
+    /** Create a persistent modelling workspace. Requires deployment write enablement and authorized draft-write scope or role in OIDC mode.
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'model_project_create', annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
@@ -57,7 +58,7 @@ final readonly class ProjectService
         return ToolResult::run(fn (): array => $this->repository->getArtifact($project, $path, $revision));
     }
 
-    /** Save a DRAFT artefact with optimistic concurrency. Pass the previous revision when replacing an artefact; null only creates.
+    /** Save a DRAFT artefact with optimistic concurrency and authorized write access. Pass the previous revision when replacing an artefact; null only creates.
      *
      * @param array<string, mixed>|null $metadata
      * @return array<string, mixed>
@@ -100,8 +101,6 @@ final readonly class ProjectService
 
     private function assertWrites(): void
     {
-        if ($this->settings->get('MODEL_REPOSITORY_WRITE_ENABLED') !== 'true') {
-            throw new \RuntimeException('WRITES_DISABLED');
-        }
+        ($this->access ?? new AccessPolicy($this->settings))->assertModelWrite();
     }
 }

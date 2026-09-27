@@ -48,7 +48,7 @@ repository and stores no patient data.
 
 ## Current extension boundaries
 
-Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human approval, provider-specific hosted review APIs, tenant RBAC and a visual editor are not implemented. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
+Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human approval, provider-specific hosted review APIs, full project/team RBAC and a visual editor are not implemented. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
 
 ## Modelling platform requirements
 

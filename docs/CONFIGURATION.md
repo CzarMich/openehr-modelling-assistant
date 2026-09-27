@@ -19,12 +19,22 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `MCP_PORT` | `8343` | Compose published port, 1–65535; internal ingress port remains 8343. |
 | `MCP_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Comma-separated literal hostnames without ports; no wildcard. |
 | `CORS_ALLOWED_ORIGINS` | empty | Comma-separated HTTPS browser origins, no path/trailing slash; empty denies browser origins. |
-| `AUTH_MODE` | `none` | none (local), api_key (implemented), oidc (reserved; startup fails). |
+| `AUTH_MODE` | `none` | Local, deployment API key, or native OIDC bearer verification; production HTTP requires authentication. |
 | `AUTH_API_KEY` | empty | Required secret for api_key, at least 32 characters. |
 | `AUTH_API_KEY_HEADER` | `X-API-Key` | Inbound MCP key header name. |
-| `OIDC_ISSUER` | empty | Reserved HTTPS issuer, no native verifier yet. |
-| `OIDC_AUDIENCE` | empty | Reserved audience; no native verifier yet. |
-| `OIDC_JWKS_URI` | empty | Reserved HTTPS JWKS URL; no native verifier yet. |
+| `OIDC_ISSUER` | empty | Exact trusted HTTPS issuer; required for OIDC. |
+| `OIDC_AUDIENCE` | empty | Expected API access-token audience; required for OIDC. |
+| `OIDC_JWKS_URI` | empty | Optional administrator-pinned HTTPS key URL; otherwise validated issuer discovery. |
+| `OIDC_CLOCK_SKEW` | `60` | Allowed clock skew in seconds, 0–120. |
+| `OIDC_MAX_TOKEN_AGE` | `7200` | Maximum age from issued-at in seconds, 60–86400. |
+| `OIDC_ALLOWED_CLIENT_IDS` | empty | Optional comma-separated accepted azp/appid values. |
+| `OIDC_REQUIRED_SCOPES` | `modelling.read` | Required scopes; accepts scope or Entra scp. |
+| `OIDC_ROLES_CLAIM` | `roles` | Signed role-array claim, with dotted paths such as realm_access.roles. |
+| `OIDC_REQUIRED_ROLES` | empty | Required signed roles, useful for application-only access. |
+| `OIDC_WRITE_ROLES` | `modeller,administrator` | Roles allowing draft writes; modelling.write scope also permits writes. |
+| `OIDC_TENANT_CLAIM` | empty | Signed tenant claim; empty treats the issuer as one tenant. |
+| `OIDC_ALLOWED_TENANTS` | empty | Optional explicit signed-tenant allowlist. |
+| `OIDC_TENANT_GIT_REMOTES` | `{}` | Tenant namespace hashes mapped to distinct Git remotes; see [OIDC migration](OIDC.md). |
 | `CKM_API_BASE_URL` | `https://ckm.openehr.org/ckm/rest/` | HTTPS REST base for source default. |
 | `CKM_TIMEOUT` | `15` | CKM timeout seconds, positive integer. |
 | `CKM_SOURCES` | `{}` | JSON object mapping additional names to HTTPS REST base URLs. |

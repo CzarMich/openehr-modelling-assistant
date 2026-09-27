@@ -11,3 +11,6 @@ Maintenance: [development](development.md), [testing](testing.md), [conventions]
 Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_LABEL_MIGRATION.md), [implementation report](IMPLEMENTATION_REPORT.md), [continuation handoff](NEXT_SESSION.md).
 
 - [Browser chat](BROWSER_CHAT.md): user workflow, sign-in, model/provider setup, deployment, privacy and verification.
+
+- [Native OIDC and tenant migration](OIDC.md)
+- [A–Z completion audit](COMPLETION_AUDIT.md) and [execution queue](COMPLETION_QUEUE.json)
