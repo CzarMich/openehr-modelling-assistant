@@ -118,7 +118,7 @@ def main():
         client.rpc("notifications/initialized", notify=True)
         record("initialize", init["serverInfo"])
         tools = client.listing("tools/list", "tools")
-        expected = {'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
+        expected = {'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
         assert expected <= {t['name'] for t in tools}, 'Required tool missing from discovery'
         assert len({t['name'] for t in tools}) == len(tools)
         assert all(t['inputSchema'].get('additionalProperties') is False for t in tools)
@@ -198,7 +198,10 @@ def main():
         if args.without_terminology:
             for name, arguments in [('terminology_capabilities', {}),
                                     ('terminology_lookup', {'system':'http://snomed.info/sct','code':'404684003'}),
-                                    ('terminology_validate_code', {'system':'http://snomed.info/sct','code':'404684003'})]:
+                                    ('terminology_validate_code', {'system':'http://snomed.info/sct','code':'404684003'}),
+                                    ('terminology_translate', {'conceptMap':'https://example.org/map','system':'https://example.org/cs','code':'x'}),
+                                    ('terminology_resource_search', {'resourceType':'ValueSet'}),
+                                    ('terminology_resource_get', {'resourceType':'ValueSet','canonical':'https://example.org/vs'})]:
                 result = client.tool(name, arguments)
                 assert result['status'] == 'NOT_EXECUTED', name
             manifest = client.tool('terminology_manifest', {'artifact':'templates/unbound.oet','bindings':[]})

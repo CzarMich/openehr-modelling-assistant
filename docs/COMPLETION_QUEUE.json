@@ -76,9 +76,9 @@
     {
       "id": "terminology",
       "status": "PARTIAL",
-      "scope": "Local valuesets and FHIR lookup/validation/expansion; ConceptMap and native binding work missing",
+      "scope": "Local snapshots plus FHIR lookup/validation/expansion/translation and canonical discovery; managed catalogue and native bindings remain",
       "implementation": "src/Domain/Terminology/TerminologyProvider.php",
-      "evidence": "tests/Enterprise/TerminologyProviderTest.php"
+      "evidence": "docs/evidence/terminology-contract-smoke.json"
     },
     {
       "id": "binding",

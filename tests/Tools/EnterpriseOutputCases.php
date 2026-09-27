@@ -65,6 +65,9 @@ trait EnterpriseOutputCases
     public function test_terminology_lookup_result_matches_output_schema(): void { $this->assertConforms($this->bindingsService(), 'lookup', ['https://example.org/local', 'mixed']); }
     public function test_terminology_validate_code_result_matches_output_schema(): void { $this->assertConforms($this->bindingsService(), 'validateCode', ['https://example.org/local', 'mixed']); }
     public function test_terminology_expand_result_matches_output_schema(): void { $this->assertConforms($this->bindingsService(), 'expand', ['https://example.org/valueset']); }
+    public function test_terminology_translate_result_matches_output_schema(): void { $this->assertConforms($this->bindingsService(), 'translate', ['https://example.org/map', 'https://example.org/system', 'x']); }
+    public function test_terminology_resource_search_result_matches_output_schema(): void { $this->assertConforms($this->bindingsService(), 'search', ['ValueSet']); }
+    public function test_terminology_resource_get_result_matches_output_schema(): void { $this->assertConforms($this->bindingsService(), 'resource', ['ValueSet', 'https://example.org/set']); }
     public function test_terminology_binding_validate_result_matches_output_schema(): void
     {
         $binding = ['id' => 'b', 'artifact' => 't', 'node' => '/data[at0001]', 'strength' => 'REQUIRED', 'value_set' => 'feeding', 'value_set_version' => '1', 'codes' => ['mixed']];

@@ -27,6 +27,9 @@ examples = {
  'terminology_capabilities':{},'terminology_lookup':{'system':'http://snomed.info/sct','code':'404684003'},
  'terminology_validate_code':{'system':'http://snomed.info/sct','code':'404684003'},
  'terminology_expand':{'valueSet':'http://snomed.info/sct?fhir_vs=isa/404684003','count':2},
+ 'terminology_translate':{'conceptMap':'https://example.org/ConceptMap/example','system':'https://example.org/CodeSystem/source','code':'example','version':'1'},
+ 'terminology_resource_search':{'resourceType':'ValueSet','name':'feeding','count':10},
+ 'terminology_resource_get':{'resourceType':'ValueSet','canonical':'https://example.org/ValueSet/feeding','version':'1'},
  'terminology_manifest':{'artifact':'templates/admission.oet','bindings':[]},
 }
 local={'id':'feeding','system':'https://example.org/local/feeding','version':'1','source':'local','concepts':[{'code':'mixed','display':'Mixed feeding'}]}

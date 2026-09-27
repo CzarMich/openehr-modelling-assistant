@@ -23,11 +23,29 @@ final readonly class ValueSet
         if ($source === 'external' && ($canonical === null || filter_var($canonical, FILTER_VALIDATE_URL) === false)) {
             throw new InvalidArgumentException('External value sets require a canonical URL.');
         }
+        if ($codeSystemVersion !== null && ($codeSystemVersion === '' || strlen($codeSystemVersion) > 2048)) {
+            throw new InvalidArgumentException('Code-system version must be a bounded non-empty string.');
+        }
         $codes = [];
         foreach ($concepts as $concept) {
             if (!is_string($concept['code'] ?? null) || $concept['code'] === '' || !is_string($concept['display'] ?? null)
                 || isset($codes[$concept['code']])) {
                 throw new InvalidArgumentException('Value set concepts require unique codes and displays.');
+            }
+            foreach (['inactive', 'abstract'] as $flag) {
+                if (isset($concept[$flag]) && !is_bool($concept[$flag])) {
+                    throw new InvalidArgumentException('Concept status flags must be booleans.');
+                }
+            }
+            $designations = $concept['designation'] ?? [];
+            if (!is_array($designations) || !array_is_list($designations) || count($designations) > 100) {
+                throw new InvalidArgumentException('Concept designations must be a bounded list.');
+            }
+            foreach ($designations as $designation) {
+                if (!is_array($designation) || !is_string($designation['language'] ?? null) || $designation['language'] === ''
+                    || !is_string($designation['value'] ?? null) || $designation['value'] === '') {
+                    throw new InvalidArgumentException('Designations require a language and display value.');
+                }
             }
             $codes[$concept['code']] = true;
         }

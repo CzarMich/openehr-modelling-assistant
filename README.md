@@ -28,7 +28,8 @@ CKM, or operate as a terminology server.
 - Persist projects, requirements, artefacts, decisions, metadata and immutable revisions
   using filesystem/SharePoint snapshots or Git, including GitHub/GitLab metadata and draft reviews, with revision conflict detection.
 - Represent local/external value sets and bindings, invoke FHIR terminology operations,
-  compare terminology changes, and produce declared terminology dependency manifests.
+  discover canonical resources, retain translation candidates for review, compare terminology
+  changes, and produce declared terminology dependency manifests.
 - Report explicit requirements traceability and a QA preflight that identifies unexecuted checks.
 
 There is **no OPT compiler, complete ADL/AQL validator, CDR execution adapter,
@@ -104,7 +105,7 @@ flowchart TD
     A[Archetype Designer: account connection unverified] -.-> H
     D --> T[Optional terminology checks and bindings]
     T --> L[Local value sets]
-    T --> E[Optional FHIR terminology server]
+    T --> E[Optional FHIR: CodeSystem, ValueSet and ConceptMap operations]
     D -. future extension .-> C[CDR adapter]
 ```
 
@@ -122,7 +123,8 @@ flowchart TD
     V --> T{Terminology binding needed?}
     T -->|No| S[Save DRAFT with expectedRevision]
     T -->|Yes| B[Use local value sets or an optional FHIR server]
-    B --> S
+    B --> TB[Inspect editions and codes; review mapping candidates]
+    TB --> S
     S --> C{Revision or push conflict?}
     C -->|Yes: reread and reconcile| R
     C -->|No| PR[Optional hosted draft review request]

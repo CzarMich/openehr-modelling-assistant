@@ -31,3 +31,5 @@ Research identified the Apache-licensed openEHR Archie library for ADL 2/AOM/RM 
 For each stage: implement, test, document, commit, push, run `scripts/watch-ci.sh <full-sha>` immediately, fix failures, verify deployment, and continue. Runtime credentials stay outside Git. Preserve both existing model volumes and the old local Git cache.
 
 Hosted repository code reuses generic Git storage and adds six MCP tools. GitHub live acceptance and cleanup are recorded in `evidence/hosted-github-acceptance.json`; GitLab contract tests pass, while live tenant acceptance needs credentials. The current execution queue points to terminology completion.
+
+The terminology protocol increment adds three MCP tools, independent edition evidence, preserved designations and review-only ConceptMap candidates. Continue with the managed local catalogue and deterministic binding decisions; native inherited-node semantics still require the qualified engine phase. Consult live evidence for provider-specific operation availability.

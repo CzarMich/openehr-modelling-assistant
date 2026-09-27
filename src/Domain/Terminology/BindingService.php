@@ -55,7 +55,7 @@ final readonly class BindingService
             if (!is_string($code) || $code === '') {
                 throw new \InvalidArgumentException('Binding codes must be non-empty strings.');
             }
-            $result = $provider->validateCode($valueSet->system, $code, $valueSet->canonical ?? $valueSet->id, $valueSet->version);
+            $result = $provider->validateCode($valueSet->system, $code, $valueSet->canonical ?? $valueSet->id, $valueSet->version, $valueSet->codeSystemVersion);
             $results[] = $result;
             if (($result['status'] ?? '') !== 'VALIDATED') {
                 $notExecuted = true;

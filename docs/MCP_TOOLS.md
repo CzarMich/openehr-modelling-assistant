@@ -2806,8 +2806,28 @@ Input schema:
     "count": {
       "type": "integer",
       "default": 50,
-      "minimum": 1,
+      "minimum": 0,
       "maximum": 500
+    },
+    "offset": {
+      "type": "integer",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "language": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "filter": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
     }
   },
   "required": [
@@ -2898,6 +2918,13 @@ Input schema:
       "type": "string"
     },
     "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "language": {
       "type": [
         "null",
         "string"
@@ -3144,6 +3171,356 @@ Output schema:
 }
 ```
 
+## `terminology_resource_get`
+
+Retrieve a uniquely resolved canonical and optional version. Never silently choose between multiple editions.
+
+External dependency: configured FHIR terminology provider when an external source is selected.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "resourceType": {
+      "type": "string",
+      "enum": [
+        "CodeSystem",
+        "ValueSet",
+        "ConceptMap"
+      ]
+    },
+    "canonical": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "resourceType",
+    "canonical"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_resource_get",
+  "arguments": {
+    "resourceType": "ValueSet",
+    "canonical": "https://example.org/ValueSet/feeding",
+    "version": "1"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_resource_search`
+
+Discover CodeSystem, ValueSet or ConceptMap resources on the configured server. A bounded page may be incomplete.
+
+External dependency: configured FHIR terminology provider when an external source is selected.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "resourceType": {
+      "type": "string",
+      "enum": [
+        "CodeSystem",
+        "ValueSet",
+        "ConceptMap"
+      ]
+    },
+    "canonical": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "name": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "count": {
+      "type": "integer",
+      "default": 50,
+      "minimum": 1,
+      "maximum": 100
+    }
+  },
+  "required": [
+    "resourceType"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_resource_search",
+  "arguments": {
+    "resourceType": "ValueSet",
+    "name": "feeding",
+    "count": 10
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_translate`
+
+Translate using an explicit ConceptMap. All candidate mappings require human review; no binding is changed.
+
+External dependency: configured FHIR terminology provider when an external source is selected.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "conceptMap": {
+      "type": "string"
+    },
+    "system": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "codeSystemVersion": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "sourceValueSet": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "targetValueSet": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "targetSystem": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "conceptMap",
+    "system",
+    "code"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_translate",
+  "arguments": {
+    "conceptMap": "https://example.org/ConceptMap/example",
+    "system": "https://example.org/CodeSystem/source",
+    "code": "example",
+    "version": "1"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
 ## `terminology_validate_code`
 
 Verify a code against a code system or value set; unavailable validation returns NOT_EXECUTED.
@@ -3172,6 +3549,27 @@ Input schema:
       "default": null
     },
     "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "codeSystemVersion": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "display": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "language": {
       "type": [
         "null",
         "string"

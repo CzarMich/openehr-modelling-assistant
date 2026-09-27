@@ -8,9 +8,11 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Branding and named CKM selection | WORKING | Administrator-configured HTTPS sources; same CKM REST contract |
 | Existing CKM, guide, examples, terminology and type tools | WORKING | Upstream features retained |
 | Persistent projects, artifacts, metadata and history | WORKING | Filesystem/SharePoint snapshots or plain files in Git; expected revisions and opt-in writes |
-| Local value sets, lookup and code membership | WORKING | Explicit codes and versions; inactive codes rejected |
+| Local value sets, lookup and code membership | WORKING | Explicit codes, independent value-set/system versions and language designations; inactive codes rejected |
 | Modelling without terminology server or bindings | WORKING | Authenticated Git persistence, local checks and empty terminology manifests verified over HTTPS |
-| External FHIR terminology (optional) | WORKING | Capabilities, lookup, validation, bounded expansion; provider-dependent datasets |
+| External FHIR terminology (optional) | WORKING | Capabilities, multilingual lookup, code/value-set validation, bounded expansion and version evidence; provider-dependent datasets |
+| FHIR ConceptMap translation | WORKING | Explicit map and source coding; repeated candidates retained, human review required, no automatic application |
+| FHIR terminology resource discovery | WORKING | Configured-server CodeSystem/ValueSet/ConceptMap search and exact canonical resolution; server search support required |
 | Draft OET generation | PARTIAL | Retrieved COMPOSITION plus direct ENTRY placements only |
 | OET/OPT validation | PARTIAL | XML and structural profile; no schema/dependency/semantic certification |
 | ADL validation | PARTIAL | Declaration/header preflight; no grammar or RM validator |
