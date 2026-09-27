@@ -109,3 +109,5 @@ See [SharePoint setup, permissions, migration and acceptance](SHAREPOINT_REPOSIT
 Terminology operation settings apply to lookup, validation, expansion, ConceptMap translation and canonical resource discovery. No server is required. Language, count/offset and independent resource editions are tool arguments, not environment variables. Live acceptance uses the `SMOKE_*` variables documented in [Terminology](TERMINOLOGY.md#repeatable-verification); they do not change production configuration.
 
 Local terminology catalogues need only the configured ModelRepository; they add no service credentials. Catalogue saves use `MODEL_REPOSITORY_WRITE_ENABLED` and native OIDC draft-write permissions. Explicit external records use existing terminology settings. The PHP `mbstring` extension is required for Unicode case rules and is included in the supplied images. See [catalogue schema and limits](TERMINOLOGY_CATALOGUE.md).
+
+Binding plans need no new environment variables. They use repository and write-access settings and remain available without a terminology server. Bounds and explicit per-request aliases are documented in [binding plans](TERMINOLOGY_BINDING_PLANS.md).

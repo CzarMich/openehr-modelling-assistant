@@ -219,9 +219,9 @@ requirements:
     canonical: docs/requirements.md
     status: draft
     implementation: partial
-    packages: [src/Domain/Terminology/*.php, src/Domain/Terminology/Catalogue/*.php, src/Application/TerminologyCatalogue.php, src/Integrations/Terminology/*.php, src/Tools/TerminologyBindingService.php, src/Tools/TerminologyCatalogueTools.php]
-    tests: [tests/Enterprise/TerminologyProviderTest.php, tests/Enterprise/FhirTerminologyContractTest.php, tests/Enterprise/TerminologyCatalogueTest.php]
-    adr: ["0008", "0012", "0013"]
+    packages: [src/Domain/Terminology/*.php, src/Domain/Terminology/Catalogue/*.php, src/Application/TerminologyCatalogue.php, src/Application/TerminologyBindingPlans.php, src/Validation/XmlLocations.php, src/Integrations/Terminology/*.php, src/Tools/TerminologyBindingService.php, src/Tools/TerminologyCatalogueTools.php, src/Tools/TerminologyBindingTools.php]
+    tests: [tests/Enterprise/TerminologyProviderTest.php, tests/Enterprise/FhirTerminologyContractTest.php, tests/Enterprise/TerminologyCatalogueTest.php, tests/Enterprise/TerminologyBindingPlanTest.php]
+    adr: ["0008", "0012", "0013", "0014"]
 
   - id: REQ-N11
     title: Authenticated bounded transport and redacted failures

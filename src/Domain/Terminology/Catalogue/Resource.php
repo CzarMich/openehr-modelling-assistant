@@ -76,6 +76,18 @@ final readonly class Resource
         return 'terminology/catalogue/' . $this->data['kind'] . '/' . self::identity($this->data['kind'], $this->data['canonical'], $this->data['version']) . '.json';
     }
 
+    /** Decode a repository record and verify its logical identity.
+     * @param array<string, mixed> $artifact */
+    public static function fromArtifact(array $artifact): self
+    {
+        if (!is_string($artifact['content'] ?? null) || strlen($artifact['content']) > 2097152) { throw new \InvalidArgumentException('INVALID_TERMINOLOGY_RECORD'); }
+        $data = json_decode($artifact['content'], true, 32, JSON_THROW_ON_ERROR);
+        if (!is_array($data)) { throw new \InvalidArgumentException('INVALID_TERMINOLOGY_RECORD'); }
+        $resource = new self($data);
+        if ($resource->path() !== $artifact['path']) { throw new \InvalidArgumentException('CATALOGUE_IDENTITY_MISMATCH'); }
+        return $resource;
+    }
+
     public static function identity(string $kind, string $canonical, string $version): string
     {
         return hash('sha256', json_encode([$kind, $canonical, $version], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));

@@ -30,13 +30,18 @@ final readonly class BindingService
             $errors[] = 'VALUE_SET_REFERENCE_OR_VERSION_MISMATCH';
         }
         $document = ModelValidator::xml($model);
-        $target = false;
-        foreach ($document->getElementsByTagName('*') as $element) {
-            if ($element->getAttribute('path') === $binding['node']) {
-                $target = true;
+        $targets = [];
+        $location = $binding['target_location'] ?? null;
+        if ($location !== null && (!is_string($location) || !preg_match('~^/1(?:/[1-9][0-9]*)*$~D', $location))) {
+            throw new \InvalidArgumentException('Invalid target element location.');
+        }
+        foreach (\OpenEHR\Assistant\Validation\XmlLocations::index($document) as $address => $element) {
+            if ($element->getAttribute('path') === $binding['node'] && ($location === null || $location === $address)) {
+                $targets[] = $address;
             }
         }
-        if (!$target) {
+        if (count($targets) > 1) { $errors[] = 'BINDING_TARGET_AMBIGUOUS'; }
+        if ($targets === []) {
             $errors[] = 'BINDING_TARGET_NOT_EXPLICIT_IN_TEMPLATE';
         }
         $provider = $valueSet->source === 'local' ? new LocalTerminologyProvider($valueSet) : $this->external;
@@ -65,7 +70,7 @@ final readonly class BindingService
         }
         return ['binding' => $binding['id'], 'status' => $notExecuted ? 'NOT_EXECUTED' : ($errors === [] ? 'PARTIAL' : 'INVALID'),
             'valid' => $errors === [] ? null : false, 'terminology_valid' => $notExecuted ? null : $errors === [],
-            'codes_checked' => count($codes), 'value_set_version' => $valueSet->version,
+            'target_locations' => $targets, 'codes_checked' => count($codes), 'value_set_version' => $valueSet->version,
             'content_sha256' => hash('sha256', $model), 'results' => $results, 'errors' => $errors,
             'warnings' => ['Binding strength is platform policy, not native openEHR syntax.',
                 'Explicit XML path presence does not resolve inherited archetype nodes. OET/OPT binding preservation is not verified.'],
