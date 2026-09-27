@@ -38,6 +38,7 @@ final class Settings
         'TERMINOLOGY_API_KEY' => '', 'TERMINOLOGY_API_KEY_HEADER' => 'X-API-Key',
         'TERMINOLOGY_CODESYSTEM_VALIDATE_PARAMETER' => 'url',
         'HTTP_TIMEOUT' => '15', 'HTTP_SSL_VERIFY' => 'true', 'HTTP_CA_BUNDLE' => '',
+        'OPENEHR_ENGINE_URL' => '', 'OPENEHR_ENGINE_KEY_FILE' => '', 'OPENEHR_ENGINE_TIMEOUT' => '50',
         'MAX_REQUEST_BYTES' => '2097152', 'MAX_UPSTREAM_BYTES' => '8388608',
         'LOG_LEVEL' => 'info', 'MODEL_REPOSITORY_PROVIDER' => 'filesystem',
         'MODEL_REPOSITORY_PATH' => '/tmp/openehr-models', 'MODEL_REPOSITORY_WRITE_ENABLED' => 'false',
@@ -62,6 +63,7 @@ final class Settings
     public function __construct(array $overrides = [])
     {
         $this->values = array_replace(self::DEFAULTS, $overrides);
+        EngineConfiguration::validate($this);
         foreach (['MCP_TRANSPORT' => ['stdio', 'streamable-http'], 'AUTH_MODE' => ['none', 'api_key', 'oidc'],
             'APP_ENV' => ['development', 'testing', 'production'],
             'GOVERNANCE_DATABASE_DRIVER' => ['sqlite', 'postgres'], 'MODEL_CACHE_DRIVER' => ['none', 'redis'],

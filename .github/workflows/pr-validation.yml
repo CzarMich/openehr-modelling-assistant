@@ -95,12 +95,20 @@ jobs:
       - name: Verify PostgreSQL migration, concurrency, durability and cache invalidation
         run: scripts/test-storage-container.sh
 
+      - name: Verify native openEHR engine, compilation and persisted build evidence
+        run: scripts/test-engine-container.sh
+
+      - name: Audit native engine runtime dependency SBOM
+        run: python3 scripts/audit-engine-dependencies.py
+
       - name: Preserve protocol evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: modelling-assistant-protocol-evidence
-          path: docs/evidence/ci-*-smoke.json
+          path: |
+            docs/evidence/ci-*-smoke.json
+            docs/evidence/engine-sbom.json
           if-no-files-found: warn
 
   browser-chat:

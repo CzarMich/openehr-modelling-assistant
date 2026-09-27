@@ -4,6 +4,9 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 
 | Variable | Code default | Meaning / requirement |
 |---|---|---|
+| `OPENEHR_ENGINE_URL` | empty | Optional fixed native-engine origin; local `http://127.0.0.1:8090` or trusted HTTPS. |
+| `OPENEHR_ENGINE_KEY_FILE` | empty | Absolute private engine service-key file; required when enabled. |
+| `OPENEHR_ENGINE_TIMEOUT` | `50` | Native operation timeout in seconds, 1–60. |
 | `APP_ENV` | `development` | development, testing or production; production HTTP requires authentication. |
 | `PRODUCT_NAME` | `openEHR Modelling Assistant` | Human product name in instructions. |
 | `PRODUCT_SHORT_NAME` | `openEHR Modelling Assistant` | Brand metadata reserved for client/UI presentation; not rendered by a server UI. |
@@ -125,3 +128,5 @@ Document validation and project QA add no mandatory settings. They use the confi
 MCP versions and capability advertising are product contracts rather than administrator overrides. Explicit HTTP loopback CORS origins are allowed only outside production; other origins require HTTPS. See [the MCP protocol profile](MCP_PROTOCOL.md).
 
 Browser chat and model governance share one verified human session. Review browsing and decision freshness have separate bounded lifetimes; the explicit platform-administrator role maps to all governance roles. See [review deployment](REVIEW_DEPLOYMENT.md#one-browser-identity-for-chat-and-governance).
+
+The optional compiler overlay also reads `MODELLING_ENGINE_KEY_FILE` and `MODELLING_ENGINE_IMAGE`; the Java process reads `ENGINE_KEY_FILE`. See [complete engine configuration](OPT_COMPILATION.md).

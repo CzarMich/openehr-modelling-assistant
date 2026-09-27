@@ -21,3 +21,5 @@ REQ-F19 binds optional service credentials to configured CKM sources and exposes
 REQ-F20: `src/Mcp` bounds the supported protocol profile and SDK integration; clients retain negotiation and correlate responses. Production HTTP/stdio acceptance is independent of clinical services. See [MCP protocol](MCP_PROTOCOL.md).
 
 REQ-N13 adds PostgreSQL governance and optional revision-bound Valkey retrieval caching. [ADR-0021](decisions/0021-postgres-governance-and-immutable-model-cache.md) keeps source, identity and audit authority independent of disposable caches.
+
+REQ-F21: `NativeModels` and `TemplateBuilds` use the provider-neutral `OpenEhrEngine` port. The authenticated private Java adapter runs Archie validation/OPT 2 compilation and native AQL parsing. Repository builds save native OPT content and exact-revision evidence atomically. [Compiler architecture and deployment](OPT_COMPILATION.md), [ADR-0020](decisions/0020-native-openehr-engine.md).

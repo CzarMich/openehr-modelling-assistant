@@ -91,3 +91,5 @@ inspector: ## Run modelcontextprotocol/inspector UI (prints the auth URL; seeded
 
 inspector-stop: ## Stop and remove the modelcontextprotocol/inspector UI container
 	$(DOCKER_COMPOSE_DEV) rm -sf inspector
+engine-check: ## Build native compiler and verify actual MCP validation/compilation
+	scripts/test-engine-container.sh

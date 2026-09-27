@@ -78,3 +78,5 @@ A [project requirements graph](REQUIREMENTS_TRACEABILITY.md) may reference autho
 The staged document validator and project QA distinguish authentic validation evidence from qualified validation. `model_project_qa` is read-only and cannot create audit events or approve a model. A failed or incomplete authentic event remains evidence of that result. See [Validation and QA](VALIDATION_AND_QA.md).
 
 Production deployments use the [PostgreSQL ledger](POSTGRES_AND_CACHE.md), separate database roles and atomic migration. Governance events and decisions are never served from the model cache.
+
+A saved compiler build is DRAFT repository evidence. `template_compile_project` cannot establish a human actor or perform an approval transition. Governance qualification still uses its configured validation provider and exact-revision audit chain; a successful OPT 2 compilation must not be treated as complete clinical release qualification.

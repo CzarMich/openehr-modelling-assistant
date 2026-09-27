@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "recorded_at": "2026-09-27T08:06:48Z",
+  "source": "https://api.osv.dev/v1/querybatch",
+  "bom_sha256": "b27222a9bd4c18f28029169ef119e51c7fe6b7245014b9b4c925dde74d1df484",
+  "runtime_packages": 53,
+  "findings": [],
+  "scope": "Known advisories for Maven runtime components; not proof of absence of vulnerabilities."
+}

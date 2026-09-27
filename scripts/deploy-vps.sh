@@ -20,8 +20,14 @@ if [[ -d "$state_dir/config/storage" ]]; then
   compose+=(-f deploy/compose.storage.yml)
   storage=true
 fi
+engine=false
+if [[ -r "$state_dir/config/engine-key" ]]; then
+  export MODELLING_ENGINE_KEY_FILE="$state_dir/config/engine-key"
+  compose+=(-f deploy/compose.engine.yml)
+  engine=true
+fi
 "${compose[@]}" config --quiet
-"${compose[@]}" build app ingress chat
+"${compose[@]}" build
 previous=""
 if [[ -r "$state_dir/current-revision" ]]; then previous=$(cat "$state_dir/current-revision"); fi
 rollback() {
@@ -34,6 +40,7 @@ rollback() {
     fi
     rollback_compose=(docker compose -p openehr-modelling-assistant --env-file .env -f docker-compose.yml)
     if [[ "$storage" == true ]]; then rollback_compose+=(-f deploy/compose.storage.yml); fi
+    if [[ "$engine" == true && -f deploy/compose.engine.yml ]]; then rollback_compose+=(-f deploy/compose.engine.yml); fi
     "${rollback_compose[@]}" up -d --build --wait || true
   fi
 }

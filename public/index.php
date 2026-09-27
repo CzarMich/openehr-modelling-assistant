@@ -125,6 +125,7 @@ try {
 
     // Initialize API clients, resources, etc.
     $container->set(Settings::class, $settings);
+    $container->set(\OpenEHR\Assistant\Domain\Modelling\OpenEhrEngine::class, new \OpenEHR\Assistant\Integrations\Engine\HttpOpenEhrEngine($settings));
     $access = new AccessPolicy($settings, $identity);
     $container->set(AccessPolicy::class, $access);
     $governanceRoles = [];
@@ -158,7 +159,7 @@ try {
     // rather than silently serving a mismatched, previously-cached capability set.
     // The namespace becomes a subdirectory under $cacheDir and old ones are never pruned
     // (no TTL), so releases accumulate directories there — see docs/development.md.
-    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-ckm-federation-1', 0, $cacheDir));
+    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-native-engine-1', 0, $cacheDir));
 
     // Load server instructions. Optional at the protocol level, but this server
     // ships a canonical resources/server-instructions.md — a missing/unreadable

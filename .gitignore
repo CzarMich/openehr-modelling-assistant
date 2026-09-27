@@ -61,3 +61,9 @@ chat/test-results/
 chat/playwright-report/
 
 .env.chat
+
+# Native validation engine build output
+/engine/target/
+
+# Local private deployment credentials
+/.secrets/

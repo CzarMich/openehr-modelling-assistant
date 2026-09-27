@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 2,
-  "active_capability": "openehr-engine",
+  "active_capability": "openehr-engine-and-opt-compilation",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -187,10 +187,24 @@
     },
     {
       "id": "openehr-engine",
+      "status": "PARTIAL",
+      "scope": "Native ADL 2/OPT 2 compilation and AQL parsing; project builds pin revisions and save native output/evidence atomically. Legacy OET/OPT 1.4 and broader qualification remain.",
+      "implementation": "src/Application/NativeModels.php",
+      "evidence": "docs/evidence/ci-engine-smoke.json"
+    },
+    {
+      "id": "native-human-identity",
       "status": "NOT IMPLEMENTED",
-      "scope": "Mature native ADL/AOM/RM, genuine OET/OPT compilation, deterministic dependencies and AQL grammar",
-      "implementation": "src/Domain/Modelling/TemplateCompiler.php",
+      "scope": "Production local users, secure owner bootstrap, invitations, password/reset, sessions, TOTP/passkeys, RBAC, service accounts, native review identity, audit and recovery; optional OIDC",
+      "implementation": null,
       "evidence": null
+    },
+    {
+      "id": "openehr-ui-theme",
+      "status": "PARTIAL",
+      "scope": "Unified responsive blue/white Chat/Models/Governance workspace delivered and live-verified; native identity administration and full visual modeller remain.",
+      "implementation": "public/chat/workspace.css",
+      "evidence": "docs/evidence/unified-workspace-live.json"
     }
   ],
   "phases": [
@@ -274,13 +288,6 @@
     {
       "phase": 10,
       "scope": "Model-aware AQL, path explorer, saved query engineering and tests",
-      "status": "NOT IMPLEMENTED",
-      "capabilities": [],
-      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
-    },
-    {
-      "phase": 11,
-      "scope": "Versioned FHIR, HL7 v2, CSV/JSON mappings and deterministic fixtures",
       "status": "NOT IMPLEMENTED",
       "capabilities": [],
       "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
@@ -417,6 +424,164 @@
       "status": "PARTIAL",
       "capabilities": [],
       "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 31,
+      "scope": "Developer Experience",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 32,
+      "scope": "openEHR Standards Compatibility",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 33,
+      "scope": "Archetype Engineering",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 34,
+      "scope": "Template Engineering",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 35,
+      "scope": "OPT Engineering",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 36,
+      "scope": "Simplified Data Template Support",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 37,
+      "scope": "openEHR-derived Web Template, simplified paths, data/form schemas and validated synthetic compositions",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 39,
+      "scope": "External Knowledge Sources",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 40,
+      "scope": "Offline and Restricted-Network Deployment",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 41,
+      "scope": "White-Labelling",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 42,
+      "scope": "Enterprise Microsoft Integration",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 43,
+      "scope": "Generic Agent Integration",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 44,
+      "scope": "API Stability and Versioning",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 45,
+      "scope": "Data and Schema Migration",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 46,
+      "scope": "Production Deployment",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 47,
+      "scope": "High Availability Readiness",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 48,
+      "scope": "Accessibility and Internationalisation Foundation",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 49,
+      "scope": "Compliance Evidence",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
+    },
+    {
+      "phase": 50,
+      "scope": "Reference End-to-End Demonstration",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "Repeatable tests, security, contract/container checks, documentation and deployed acceptance where configured"
     }
+  ],
+  "product_boundary": "openEHR modelling only; external FHIR terminology APIs allowed. CQL/CDS, FHIR/HL7 mapping and generic ETL excluded by updated mandate.",
+  "priority_followups": [
+    "Native ADL 2 / OPT 2 compiler delivery and preservation qualification",
+    "Legacy OET-to-OPT 1.4 compiler and governed external modelling exchange",
+    "Native production identity and owner administration"
+  ],
+  "final_gates": [
+    "Fresh scope/capability audit",
+    "Native identity workflow without external IAM",
+    "Representative and large openEHR model fixtures",
+    "Neonatal modelling-to-release demonstration",
+    "Independent AI approval prohibition checks",
+    "Optional test CDR round trips",
+    "Backup/restore and workspace portability",
+    "Dependency/SBOM/security/performance/concurrency checks",
+    "All tests and GitHub Actions successful",
+    "Deployment verification and clean published repository"
+  ],
+  "external_modelling_exchange_queue": "docs/EXTERNAL_MODELLING_REQUIREMENTS.json",
+  "immediate_queue": [
+    "Finish native engine delivery and live compiler acceptance",
+    "Legacy OET-to-OPT 1.4 and governed external-tool exchange",
+    "Native production identity and owner administration",
+    "Remaining original phase capabilities and evidence gates"
   ]
 }

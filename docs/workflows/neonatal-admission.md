@@ -13,3 +13,5 @@ This is a modelling demonstration, not a clinical specification. Clinical requir
 9. In `/chat/reviews`, an independent signed-in reviewer inspects the recorded source, validation and history, then confirms a review or request for changes. Clinical approval/publication requires qualified engine evidence and appropriate human roles. Current incomplete validation blocks those transitions; this demonstration is not deployable. See [governance](../GOVERNANCE.md).
 
 After linking exact validation evidence, run `model_project_qa` on the saved revision. Resolve provenance, stale-source and traceability findings before requesting review. Preserve unavailable engine/dependency checks explicitly; a document profile pass cannot qualify neonatal clinical content.
+
+For ADL 2 template sources, use `template_validate`, `template_compile` and `opt_validate`, or `template_compile_project` to save the native OPT with exact source/dependency/compiler evidence. This is separate from the draft OET workflow and does not establish clinical suitability. [Compilation guide](../OPT_COMPILATION.md).

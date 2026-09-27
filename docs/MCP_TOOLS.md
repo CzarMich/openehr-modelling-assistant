@@ -10,6 +10,199 @@ Legacy retrieval tools retain their original text/resource or structured search 
 
 `model_artifact_save` always creates a DRAFT revision. Project creation, artifact saving, branch creation and hosted review requests write persistent state and require deployment write enablement and, in OIDC mode, an authorized draft-write scope or role. No tool approves/releases a model. Read-only tools may contact configured external servers. See [capabilities](../CAPABILITIES.md) for partial or unavailable checks.
 
+## `aql_validate`
+
+Parse AQL with the native ANTLR engine and return its typed syntax tree and normalized query. Model compatibility, path validation and execution remain separate; no CDR is required.
+
+External dependency: configured native openEHR engine; no terminology server or CDR required.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2097152
+    }
+  },
+  "required": [
+    "content"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "aql_validate",
+  "arguments": {
+    "content": "SELECT e/ehr_id/value FROM EHR e"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+## `archetype_validate`
+
+Validate ADL 2 grammar, AOM constraints and the declared supported RM profile with the configured native engine. Dependencies are explicit exact versions; no network retrieval or approval.
+
+External dependency: configured native openEHR engine; no terminology server or CDR required.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2097152
+    },
+    "dependencies": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identifier",
+          "content"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 300
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2097152
+          }
+        }
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "content"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "archetype_validate",
+  "arguments": {
+    "content": "<ADL 2 source>"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
 ## `ckm_archetype_get`
 
 Retrieve the full definition of an Archetype from CKM, serialized in a specified format.
@@ -2155,6 +2348,126 @@ Output schema:
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
 
+## `model_inspect`
+
+Inspect validated native ADL 2 or OPT 2 paths, RM types, multiplicities and terminology. Returns findings when the model cannot be validated; no guessed paths.
+
+External dependency: configured native openEHR engine; no terminology server or CDR required.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2097152
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "adl2",
+        "opt2"
+      ]
+    },
+    "dependencies": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identifier",
+          "content"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 300
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2097152
+          }
+        }
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "content",
+    "format"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_inspect",
+  "arguments": {
+    "content": "<ADL 2 source>",
+    "format": "adl2"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
 ## `model_project_create`
 
 Create a persistent modelling workspace. Requires deployment write enablement and authorized draft-write scope or role in OIDC mode.
@@ -3749,9 +4062,93 @@ Output schema:
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
 
+## `opt_validate`
+
+Validate an OPT 2 ADL document using native flat AOM/RM checks. Legacy OPT XML requires its separate validation profile.
+
+External dependency: configured native openEHR engine; no terminology server or CDR required.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2097152
+    }
+  },
+  "required": [
+    "content"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "opt_validate",
+  "arguments": {
+    "content": "<OPT 2 ADL source>"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
 ## `template_build_oet`
 
-Generate a draft OET from a retrieved COMPOSITION and 1–30 direct ENTRY archetypes. No OPT compiler or semantic certification.
+Generate a draft OET from a retrieved COMPOSITION and 1–30 direct ENTRY archetypes. Does not compile legacy OET or certify semantics.
 
 External dependency: configured CKM REST API.
 
@@ -3859,6 +4256,367 @@ Output schema:
 ```
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `template_compile`
+
+Compile an ADL 2 template into OPT 2 ADL, validate the generated output and return exact input/output hashes. Computation only: no repository write, clinical approval or CDR deployment.
+
+External dependency: configured native openEHR engine; no terminology server or CDR required.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2097152
+    },
+    "dependencies": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identifier",
+          "content"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 300
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2097152
+          }
+        }
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "content"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "template_compile",
+  "arguments": {
+    "content": "<ADL 2 template>",
+    "dependencies": [
+      {
+        "identifier": "<exact archetype identifier>",
+        "content": "<ADL 2 dependency>"
+      }
+    ]
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+## `template_compile_project`
+
+Compile an exact ADL 2 template repository revision with explicit dependency revisions. Atomically save a new native OPT 2 DRAFT with source, compiler, dependency and validation evidence. Never overwrites a previous build or approves a clinical model.
+
+External dependency: configured native openEHR engine; no terminology server or CDR required.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dependencies": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identifier",
+          "path",
+          "revision"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 300
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "project",
+    "path",
+    "revision"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "template_compile_project",
+  "arguments": {
+    "project": "modelling-demo",
+    "path": "templates/fixture.adlt",
+    "revision": "<exact template revision>",
+    "dependencies": [
+      {
+        "identifier": "<exact archetype identifier>",
+        "path": "archetypes/composition.adls",
+        "revision": "<exact dependency revision>"
+      }
+    ]
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+## `template_validate`
+
+Validate an ADL 2 template and supplied dependencies using the native engine. Legacy OET XML is a separate format and is rejected here.
+
+External dependency: configured native openEHR engine; no terminology server or CDR required.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2097152
+    },
+    "dependencies": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identifier",
+          "content"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 300
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2097152
+          }
+        }
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "content"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "template_validate",
+  "arguments": {
+    "content": "<ADL 2 template>",
+    "dependencies": [
+      {
+        "identifier": "<exact archetype identifier>",
+        "content": "<ADL 2 dependency>"
+      }
+    ]
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
 
 ## `terminology_binding_plan`
 

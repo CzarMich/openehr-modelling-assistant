@@ -303,3 +303,12 @@ requirements:
     packages: [src/Integrations/Governance/*.php, src/Integrations/Cache/*.php, src/Configuration/StorageConfiguration.php, src/Integrations/Repository/*.php]
     tests: [tests/Enterprise/StorageConfigurationTest.php, tests/Enterprise/GovernanceAuditStoreTest.php, tests/fixtures/storage/probe.php]
     adr: ["0021"]
+
+  - id: REQ-F21
+    title: Native openEHR validation and reproducible OPT compilation
+    canonical: docs/requirements.md
+    status: draft
+    implementation: partial
+    packages: [src/Domain/Modelling/OpenEhrEngine.php, src/Application/NativeModels.php, src/Application/TemplateBuilds.php, src/Integrations/Engine/*.php, src/Configuration/EngineConfiguration.php, src/Tools/NativeEngineTools.php, src/Tools/TemplateBuildTools.php, engine/src/main/java]
+    tests: [tests/Enterprise/NativeEngineTest.php, tests/Enterprise/TemplateBuildsTest.php, tests/Tools/NativeEngineOutputCases.php, engine/src/test/java, scripts/test-engine-container.sh]
+    adr: ["0020"]

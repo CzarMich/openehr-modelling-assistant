@@ -1,0 +1,31 @@
+# External modelling tool integration
+
+External tools exchange native model files with the platform's provider-neutral repository. The current implementation preserves revisions, supports Git-hosted review workflows and can compile ADL 2 templates through the [native engine](OPT_COMPILATION.md). A complete import/handoff/semantic round-trip subsystem is being implemented against the [recorded exchange requirements](EXTERNAL_MODELLING_REQUIREMENTS.json); it must not be inferred from file storage alone.
+
+| State | Current scope |
+|---|---|
+| IMPLEMENTED | Filesystem/Git/SharePoint revision contracts, native Git files, expected-revision conflicts, model retrieval/history, bounded XML diff, source metadata, human governance, ADL 2/OPT 2 engine and saved build evidence |
+| VERIFIED | Isolated repository/compiler contracts; actual independent Git-client round trip; live shared browser workspace |
+| EXTERNAL_ACCEPTANCE_REQUIRED | Hosted Designer account linking, actual format import/export and round trips, account-specific automation capabilities |
+| NOT SUPPORTED | Designer `.t.json` semantic editing/conversion, automatic hosted Designer push/release, complete OET compilation, governed exchange bundles/receipts and full semantic reconciliation |
+
+```mermaid
+flowchart TB
+    Tool[External modelling tool] -->|Manual exported file or configured Git repository| Native[Native source and explicit provenance]
+    Native --> Repo[ModelRepository: filesystem, Git or SharePoint]
+    Repo --> Inspect[Available document profiles and native ADL 2 inspection]
+    Repo --> Build[ADL 2 template compilation: OPT 2 and build evidence]
+    Repo --> Review[Exact-revision human governance]
+    Repo --> Retrieve[Retrieve exact native revision and checksum]
+    Retrieve -->|Account-specific import must be verified| Tool
+    Native -.-> Import[Planned typed import and immutable baseline service]
+    Import -.-> Handoff[Planned governed handoff, receipts and semantic round-trip verification]
+```
+
+Solid edges represent implemented repository/compiler operations. Dotted edges remain execution work. The future `ModellingToolAdapter` contract will isolate provider-specific authentication, capability discovery and revision semantics from modelling services; no unimplemented hosted adapter is advertised as operational.
+
+Keep original source representation separate from generated output. In Git, a native file remains a native file; platform metadata is stored separately. Record source tool/version/revision, original filename, content hash, repository revision and provenance in metadata. Do not infer equivalence from filenames or rename `.t.json` to `.oet`/`.opt`. Generic `model_artifact_save` does not yet enforce the full typed-import provenance contract or accept arbitrary binary source encodings. The governed import pipeline remains a specific requirement.
+
+Use exact revisions for reads and `expectedRevision` for edits. A stale write is rejected; refresh the current source and inspect differences before preparing a resolution. Hosted pull-request review and clinical approval are separate. Compilation produces a DRAFT; an external tool's published status remains provenance and cannot grant internal approval.
+
+Compatibility levels require evidence. File preservation alone can demonstrate `FILE_EXCHANGE_VERIFIED`; structural, semantic and automated-workflow levels require their corresponding real tests. Missing/stale external evidence must remain unverified. The [Designer report](ARCHETYPE_DESIGNER_COMPATIBILITY.md) records this provider-specific boundary and the [workflow guide](workflows/archetype-designer.md) gives usable current steps.

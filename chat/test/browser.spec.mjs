@@ -223,3 +223,15 @@ test("workspace has no detected WCAG AA accessibility violations in its primary 
         ).toEqual([]);
     }
 });
+
+test("saved compilation confirms exact template and dependency revisions", async ({ page }) => {
+    await login(page);
+    await send(page, "compile");
+    await expect(page.getByRole("heading", { name: "Compile and save OPT draft" })).toBeVisible();
+    await expect(page.locator(".approval pre")).toContainText("template-revision");
+    await expect(page.locator(".approval pre")).toContainText("dependency-revision");
+    await expect(page.locator(".approval pre")).toContainText("openEHR-EHR-COMPOSITION.engine_fixture.v1.0.0");
+    await expect(page.locator(".message.assistant")).not.toContainText("saved after your confirmation");
+    await page.getByRole("button", { name: "Confirm save", exact: true }).click();
+    await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
+});

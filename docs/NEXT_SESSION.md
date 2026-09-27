@@ -10,9 +10,9 @@ The optional browser client offers chat, controlled draft writes and independent
 
 ## Next implementation
 
-Evaluate and integrate a mature openEHR engine behind a clean service boundary. Archie is the preferred ADL 2/AOM/RM candidate; verify its actual legacy OET/OPT support before selecting complementary components. Implement genuine ADL/AQL parsing, dependency resolution, template compilation, OPT validation and reproducible persistent evidence. Existing local checks are document profiles; do not relabel them as native conformance.
+The native Archie ADL 2/OPT 2 and AQL engine is integrated behind a domain port, with pinned dependencies and atomic project build evidence. Continue legacy OET-to-OPT 1.4 compilation, automatic source resolution, compiler-to-governance qualification and the external model-exchange requirements. ADL 2 OPT must never be relabelled as legacy XML OPT. Existing local checks are document profiles; do not relabel them as native conformance.
 
-Then follow the queue through shared domain/REST/OpenAPI/CLI, vendor-neutral workflows, semantic model trees, visual workspace, release/CDR/mapping/terminology governance, collaboration/RBAC, search/packages, policies, observability, performance and backup/restore. Preserve all phases in the supplied mandate.
+Then follow the queue through shared domain/REST/OpenAPI/CLI, vendor-neutral workflows, semantic model trees, visual workspace, release/CDR/terminology governance, collaboration/RBAC, search/packages, policies, observability, performance and backup/restore. Apply the updated openEHR-only boundary; FHIR/HL7 data mapping, CQL/CDS and generic ETL are excluded. Include the added native identity, UI and phases 31–50/final acceptance requirements.
 
 ## External acceptance boundaries
 
