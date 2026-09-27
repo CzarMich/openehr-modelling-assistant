@@ -34,6 +34,10 @@ examples = {
 }
 catalogue_record={'kind':'code_system','canonical':'https://example.org/local/feeding','version':'1','name':'Feeding','provenance':{'source':'Organisation-authored local draft'},'concepts':[{'code':'mixed','display':'Mixed feeding'}]}
 examples.update({
+ 'model_traceability_save':{'project':'neonatal-care','graph':{'schema':1,'nodes':[{'id':'R-023','type':'requirement','title':'Project requirement','description':'Record the actual user-supplied modelling requirement.','provenance':['Project requirements workshop notes'],'priority':'must','status':'ACTIVE'}],'edges':[]}},
+ 'model_traceability_get':{'project':'neonatal-care'},
+ 'model_traceability_explain':{'project':'neonatal-care','node':'C-1'},
+ 'model_traceability_requirement':{'project':'neonatal-care','requirement':'R-023'},
  'governance_prepare':{'project':'neonatal-care','path':'templates/admission.oet','modelRevision':'<observed-model-revision>','comment':'Prepare this exact draft for review.'},
  'governance_validate':{'subject':'<subject-from-prepare>','expectedSequence':1},
  'governance_request_review':{'subject':'<subject-from-prepare>','expectedSequence':2,'comment':'Review the exact revision and unresolved findings.'},

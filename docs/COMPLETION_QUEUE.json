@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 1,
-  "active_capability": "traceability",
+  "active_capability": "structural-validation",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -117,10 +117,10 @@
     },
     {
       "id": "traceability",
-      "status": "PARTIAL",
-      "scope": "Declared coverage only; persistent queryable decision/evidence graph missing",
-      "implementation": "src/Domain/Modelling/Traceability.php",
-      "evidence": "tests/Enterprise/RepositoryAndGovernanceTest.php"
+      "status": "IMPLEMENTED",
+      "scope": "Versioned typed requirement/decision/model graph, exact document/audit references and deterministic queries; declared clinical satisfaction stays distinct from reference verification and engine qualification",
+      "implementation": "src/Application/ProjectTraceability.php",
+      "evidence": "docs/evidence/traceability-verification.json"
     },
     {
       "id": "qa",

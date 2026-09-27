@@ -131,3 +131,13 @@ test("review workspace fits mobile and cancellation does not submit a decision",
     await expect(page.getByRole("region", { name: "Confirm model decision" })).toBeHidden();
     await expect(page.locator("#state")).toHaveText("REVIEW_REQUESTED");
 });
+
+test("requirements graph writes require exact graph and revision confirmation", async ({ page }) => {
+    await login(page);
+    await send(page, "traceability");
+    await expect(page.getByRole("heading", { name: "Save requirements traceability" })).toBeVisible();
+    await expect(page.locator(".approval pre")).toContainText("R-023");
+    await expect(page.locator(".approval pre")).toContainText("graph-revision");
+    await page.getByRole("button", { name: "Confirm save", exact: true }).click();
+    await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
+});

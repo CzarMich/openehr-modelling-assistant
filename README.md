@@ -31,7 +31,9 @@ CKM, or operate as a terminology server.
   discover canonical resources, retain translation candidates for review, compare terminology
   changes, and produce declared terminology dependency manifests. Inspect explicit OET/OPT coded
   constraints and save revision-bound binding plans with local catalogue candidates and QA findings.
-- Report explicit requirements traceability and a QA preflight that identifies unexecuted checks.
+- Persist a typed requirements/decision graph and query why an element exists or which elements
+  declare coverage of a requirement. Resolve exact source, anchor and audit references; identify stale
+  or unavailable evidence. QA preflight identifies unexecuted qualification checks.
 - Prepare exact model revisions for independent human review, record signed-in reviewer decisions,
   and retain validation and audit evidence in a separate protected ledger. The review workspace
   works without an LLM account; agents cannot approve models.
@@ -111,6 +113,9 @@ flowchart TD
     S --> B[Bundled specifications and guides]
     S --> D[Modelling services and structural checks]
     D --> R[Model Repository interface]
+    D --> TG[Requirements and decision graph: deterministic rationale and coverage queries]
+    TG --> R
+    TG -->|Exact validation and human review references| AU
     R --> F[Filesystem snapshots and revisions]
     R --> SP[SharePoint snapshots and conditional project index]
     R --> G[Git adapter: native model files and commit revisions]
@@ -145,8 +150,10 @@ flowchart TD
     T -->|Yes| B[Inspect saved source; preserve references; compare local catalogue]
     B --> TB[Save binding plan against source revision; review findings and freshness]
     TB --> PR
-    PR --> GP[Register exact revision and run installed validation]
-    GP --> RR[Request human review]
+    PR --> TG[Save requirements graph with source and decision links]
+    TG --> GP[Register exact revision and run installed validation]
+    GP --> EV[Link exact validation event; resolve traceability findings]
+    EV --> RR[Request human review]
     RR --> H[Signed-in independent reviewer: inspect source and evidence]
     H --> Q{Qualified validation available?}
     Q -->|No| F[Record findings or request changes; approval blocked]

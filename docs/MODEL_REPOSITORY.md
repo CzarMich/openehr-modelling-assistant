@@ -78,3 +78,7 @@ Select `sharepoint` for the Graph repository adapter. It shares the filesystem r
 The [terminology catalogue](TERMINOLOGY_CATALOGUE.md) stores versioned code systems, value sets and mapping drafts under `terminology/catalogue/`. It uses the same conditional writes and history on every provider. Exact canonical/edition identity is hashed into the path; malformed external edits are reported as QA findings rather than ignored.
 
 [Terminology binding plans](TERMINOLOGY_BINDING_PLANS.md) use `terminology/binding-plans/` for revision-bound DRAFT evidence across all repository providers. Save requires the observed source revision and, for updates, the plan revision. Reads recompute freshness against current source and catalogue; this does not provide a cross-artefact atomic transaction or clinical approval.
+
+## Requirements graph storage
+
+`requirements/traceability.json` stores the versioned [project requirements graph](REQUIREMENTS_TRACEABILITY.md). It uses the same artifact revision/history and conditional-write contract on filesystem, Git and SharePoint. Source nodes pin project-local artifacts; review/validation nodes refer to the separately protected governance ledger. Moving a model repository alone does not migrate its ledger. Graph reads revalidate direct file/Git edits and recompute source freshness; graph assertions never override authoritative lifecycle policy.

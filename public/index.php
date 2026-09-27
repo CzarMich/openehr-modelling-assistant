@@ -132,6 +132,7 @@ try {
     $container->set(\OpenEHR\Assistant\Domain\Governance\AuditStore::class, new \OpenEHR\Assistant\Integrations\Governance\ConfiguredAuditStore($settings));
     $container->set(\OpenEHR\Assistant\Domain\Governance\ValidationProvider::class,
         new \OpenEHR\Assistant\Integrations\Governance\PreflightValidation(new \OpenEHR\Assistant\Domain\Modelling\QualityPipeline(new \OpenEHR\Assistant\Validation\ModelValidator())));
+    $container->set(\OpenEHR\Assistant\Domain\Traceability\AnchorInspector::class, new \OpenEHR\Assistant\Integrations\Traceability\ModelAnchorInspector());
     $ckmClient = new CkmClient($logger, settings: $settings);
     $container->set(CkmClient::class, $ckmClient);
     $container->set(ArchetypeSource::class, new CkmArchetypeSource(new CkmService($ckmClient, $logger), $ckmClient));
@@ -154,7 +155,7 @@ try {
     // rather than silently serving a mismatched, previously-cached capability set.
     // The namespace becomes a subdirectory under $cacheDir and old ones are never pruned
     // (no TTL), so releases accumulate directories there — see docs/development.md.
-    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-governance-1', 0, $cacheDir));
+    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-enterprise-traceability-1', 0, $cacheDir));
 
     // Load server instructions. Optional at the protocol level, but this server
     // ships a canonical resources/server-instructions.md — a missing/unreadable

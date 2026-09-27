@@ -86,6 +86,26 @@ const provider = {
                 content: "A reviewed draft",
                 expectedRevision: "revision-one",
             });
+        else if (text === "traceability")
+            await callTool("model_traceability_save", {
+                project: "default",
+                expectedRevision: "graph-revision",
+                graph: {
+                    schema: 1,
+                    nodes: [
+                        {
+                            id: "R-023",
+                            type: "requirement",
+                            title: "Synthetic requirement",
+                            description: "Explicit project requirement.",
+                            provenance: ["Synthetic fixture."],
+                            priority: "must",
+                            status: "ACTIVE",
+                        },
+                    ],
+                    edges: [],
+                },
+            });
         else if (text === "bindings")
             await callTool("terminology_binding_plan_save", {
                 project: "default",
@@ -111,7 +131,7 @@ const provider = {
             await callTool("model_review_request", { branch: "draft/model", title: "Review model" });
         else await callTool("ckm_sources", {});
         const answer =
-            text === "save" || text === "terminology" || text === "bindings"
+            text === "save" || text === "terminology" || text === "bindings" || text === "traceability"
                 ? "The draft was saved after your confirmation."
                 : text === "review"
                   ? "The draft review was requested after your confirmation."
@@ -127,6 +147,7 @@ const provider = {
 const mcpFactory = () => ({
     tools: async () => [
         { name: "ckm_sources", inputSchema: { type: "object" } },
+        { name: "model_traceability_save", inputSchema: { type: "object" } },
         { name: "model_artifact_save", inputSchema: { type: "object" } },
         { name: "terminology_binding_plan_save", inputSchema: { type: "object" } },
         { name: "terminology_catalogue_save", inputSchema: { type: "object" } },

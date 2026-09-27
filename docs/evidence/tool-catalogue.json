@@ -1886,6 +1886,299 @@
     }
   },
   {
+    "name": "model_traceability_save",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "graph": {
+          "type": "object"
+        },
+        "expectedRevision": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "graph"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Save the project's explicit requirement/decision/model/evidence graph as a conditional DRAFT revision. Graph schema and pinned references are checked; this does not prove clinical satisfaction or approve a model.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "model_traceability_get",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "revision": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Read a versioned requirements graph, resolve pinned source/anchor/audit references and report declared coverage and unresolved/stale evidence. Native inherited openEHR paths require the qualified engine.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "model_traceability_explain",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "node": {
+          "type": "string"
+        },
+        "revision": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "node"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Answer why an element exists from the stored requirement and decision trail, including associated terminology, validation and review evidence. Node identifiers come from the persisted graph; no rationale is inferred.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "model_traceability_requirement",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "requirement": {
+          "type": "string"
+        },
+        "revision": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "requirement"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Return the exact model elements explicitly linked to a requirement, with full/partial/excluded/unresolved declarations and reference verification. An authentic validation or review event does not certify every graph assertion.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "model_terminology_inspect",
     "inputSchema": {
       "type": "object",
