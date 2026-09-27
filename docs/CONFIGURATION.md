@@ -123,3 +123,5 @@ The [requirements graph](REQUIREMENTS_TRACEABILITY.md) uses existing model repos
 Document validation and project QA add no mandatory settings. They use the configured repository and tenant; authentic validation/review links require governance storage. FLAT/STRUCTURED input files can select their format explicitly. See [Validation and QA](VALIDATION_AND_QA.md).
 
 MCP versions and capability advertising are product contracts rather than administrator overrides. Explicit HTTP loopback CORS origins are allowed only outside production; other origins require HTTPS. See [the MCP protocol profile](MCP_PROTOCOL.md).
+
+Browser chat and model governance share one verified human session. Review browsing and decision freshness have separate bounded lifetimes; the explicit platform-administrator role maps to all governance roles. See [review deployment](REVIEW_DEPLOYMENT.md#one-browser-identity-for-chat-and-governance).

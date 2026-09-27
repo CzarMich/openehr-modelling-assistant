@@ -172,6 +172,7 @@ $("signout").onclick = () =>
     });
 run(async () => {
     session = await api("/chat/api/session");
+    $("signed-in-user").textContent = session.authenticated ? "Signed in as " + session.user.name : "";
     $("signin").textContent = session.authenticated ? "Refresh sign-in" : "Sign in for model review";
     $("signout").hidden = !session.authenticated;
     if (!session.reviewEnabled) notice("Model review is not configured on this deployment.");
