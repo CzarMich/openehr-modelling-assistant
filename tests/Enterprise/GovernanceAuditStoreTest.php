@@ -108,10 +108,10 @@ final class GovernanceAuditStoreTest extends TestCase
     public function test_competing_processes_cannot_append_the_same_sequence(): void
     {
         new SqliteAuditStore($this->path);
-        $script = 'require "/app/vendor/autoload.php"; try { $s=new OpenEHR\\Assistant\\Integrations\\Governance\\SqliteAuditStore($argv[1]); $s->append("shared",str_repeat("a",64),0,["project"=>"project","new_state"=>"DRAFT"]); exit(0); } catch (RuntimeException $e) { exit($e->getMessage()==="GOVERNANCE_REVISION_CONFLICT"?2:3); }';
+        $script = 'require $argv[1]; try { $s=new OpenEHR\\Assistant\\Integrations\\Governance\\SqliteAuditStore($argv[2]); $s->append("shared",str_repeat("a",64),0,["project"=>"project","new_state"=>"DRAFT"]); exit(0); } catch (RuntimeException $e) { exit($e->getMessage()==="GOVERNANCE_REVISION_CONFLICT"?2:3); }';
         $processes = [];
         for ($i = 0; $i < 2; $i++) {
-            $process = proc_open([PHP_BINARY, '-r', $script, $this->path], [0 => ['file', '/dev/null', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
+            $process = proc_open([PHP_BINARY, '-r', $script, dirname(__DIR__, 2) . '/vendor/autoload.php', $this->path], [0 => ['file', '/dev/null', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
             self::assertIsResource($process); $processes[] = $process;
         }
         $exits = array_map('proc_close', $processes); sort($exits); self::assertSame([0, 2], $exits);
