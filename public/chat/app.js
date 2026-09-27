@@ -5,6 +5,12 @@ let session = null,
     running = false,
     controller = null;
 const toolLabels = {
+    governance_prepare: "Prepare model review",
+    governance_validate: "Record validation evidence",
+    governance_request_review: "Request human review",
+    governance_reopen_draft: "Reopen draft",
+    governance_get: "Model review and audit",
+    governance_list: "Project reviews",
     ckm_sources: "CKM sources",
     ckm_archetype_search: "Archetype search",
     ckm_archetype_get: "Archetype retrieval",
@@ -225,12 +231,11 @@ function approval(event, target) {
     const pre = document.createElement("pre");
     pre.textContent = JSON.stringify(event.arguments, null, 2);
     const yes = document.createElement("button");
-    yes.textContent =
-        event.tool === "model_review_request"
-            ? "Confirm review request"
-            : event.tool === "model_branch_create"
-              ? "Confirm branch creation"
-              : "Confirm save";
+    yes.textContent = ["model_review_request", "governance_request_review"].includes(event.tool)
+        ? "Confirm review request"
+        : event.tool === "model_branch_create"
+          ? "Confirm branch creation"
+          : "Confirm save";
     const no = document.createElement("button");
     no.className = "decline";
     no.textContent = "Cancel change";

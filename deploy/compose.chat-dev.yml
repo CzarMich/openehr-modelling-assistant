@@ -1,6 +1,8 @@
 # Development Codex account and private CA. Credentials stay outside Git.
 services:
   chat:
+    build:
+      target: chat
     env_file:
       - path: ${MODELLING_CHAT_ENV_FILE:?Set MODELLING_CHAT_ENV_FILE}
         required: true

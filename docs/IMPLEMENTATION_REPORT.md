@@ -4,7 +4,7 @@
 
 The standalone project is named **openEHR Modelling Assistant**, with repository `CzarMich/openehr-modelling-assistant` and directory `/home/hyq/workspace/openehr-modelling-assistant`. Original MIT copyright and attribution remain intact. The application is independent of the CDR checkout, upstream hosting, client plugins, model-provider SDKs and a CDR.
 
-The implementation exposes 51 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
+The implementation exposes 57 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
 
 ## Incremental changes
 
@@ -72,7 +72,7 @@ Evidence: [live checks](evidence/browser-chat-live.json), [security/protocol tes
 
 Three simultaneous live provider turns with actual MCP tool calls also pass; see [concurrency evidence](evidence/browser-chat-concurrency.json). This check exposed thread exhaustion under the original container allowance. Explicit provider worker-pool limits and a 512-task container allowance resolve the measured failure. The repeatable probe checks that all three turns finish without new task-limit denials.
 
-See [browser chat](BROWSER_CHAT.md) for the user workflow, environment variables, credential provisioning, persistence, privacy, limits and repeatable checks. The remaining compiler, CDR, visual-editor and operational-governance work remains in the continuation handoff.
+See [browser chat](BROWSER_CHAT.md) for the user workflow, environment variables, credential provisioning, persistence, privacy, limits and repeatable checks. The compiler, CDR and visual-editor gaps remain in the completion queue; the persisted human governance increment is documented below.
 
 ## Native identity completion
 
@@ -114,3 +114,13 @@ Repository contracts exercise filesystem, Git and stateful SharePoint storage. A
 The [binding-plan service](TERMINOLOGY_BINDING_PLANS.md) inspects explicit OET/OPT coded choices, preserves named queries and canonical references, proposes project ValueSets from exact membership, and validates codes against explicitly pinned local CodeSystem editions. Plans retain source/catalogue revisions and detect source changes, new catalogue editions and modified analysis. Filesystem, Git and isolated HTTPS SharePoint contract runs pass. Browser saves confirm both source and plan revisions. Existing ambiguous relative targets now fail unless an exact revision-specific location is supplied.
 
 The source model remains unchanged. Clinical suitability, binding strength, inherited ADL semantics, native application and compiler round trips are not inferred. These remain explicit review/qualified-engine gates. Tests and repeatable limits are documented in the binding guide; execution metadata is in `evidence/binding-verification.json`.
+
+## Persisted human governance
+
+The application now registers exact model revisions, executes the installed validator, requests independent review and records human review/approval/publication policy in a separate append-only ledger. Six MCP tools expose preparation and reads. A dedicated versioned REST adapter and OIDC browser workspace expose explicitly confirmed human decisions; ordinary bearer/API-key tools cannot approve. Audit sequences, source changes, assertion replay, tenant scope, roles and validation digests are enforced. Model metadata cannot supply authoritative approval or validation.
+
+Real preflight remains incomplete and cannot qualify approval/publication. Positive lifecycle tests use a clearly labelled qualified validator fixture; this is not evidence that the missing openEHR engine is implemented. Repository contracts cover filesystem, Git and isolated SharePoint, and the production-container HTTP fixture verifies source inspection, human review, rejected approval, replay/stale-input protections and restart persistence. [Governance verification](evidence/governance-verification.json) records execution results; [governance](GOVERNANCE.md), [review deployment](REVIEW_DEPLOYMENT.md) and [OpenAPI](openapi/reviews.json) document use and limits.
+
+Default browser builds contain the provider-neutral OIDC/review workspace. Conversational chat requires the explicit `chat` image target and separate provider credentials. The existing development chat deployment keeps that target.
+
+The actual development HTTPS browser path passes OIDC sign-in, signed role mapping, source/evidence inspection and an explicitly confirmed synthetic review; the temporary reviewer account is removed afterward. See [live browser evidence](evidence/governance-dev-browser.json). The server browser client remains unconfigured because its available identity-administration credential was rejected; this is distinct from the implemented adapter and tested core deployment. No real clinical model was approved.

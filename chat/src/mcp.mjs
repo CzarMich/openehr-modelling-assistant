@@ -1,4 +1,8 @@
 export const WRITE_TOOLS = new Set([
+    "governance_prepare",
+    "governance_validate",
+    "governance_request_review",
+    "governance_reopen_draft",
     "model_project_create",
     "model_artifact_save",
     "model_branch_create",
@@ -7,6 +11,8 @@ export const WRITE_TOOLS = new Set([
     "terminology_binding_plan_save",
 ]);
 export const READ_TOOLS = new Set([
+    "governance_get",
+    "governance_list",
     "ckm_sources",
     "ckm_archetype_search",
     "ckm_archetype_get",

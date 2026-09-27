@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEHR\Assistant\Domain\Governance;
+
+/** Supplied by the verified transport adapter, never deserialized from tool input. */
+final readonly class Actor
+{
+    /** @var list<string> */
+    public array $roles;
+
+    /** @param array<mixed> $roles */
+    public function __construct(public string $id, public string $tenant, array $roles,
+        public bool $human = false, public string $method = 'service')
+    {
+        if ($id === '' || strlen($id) > 200 || !preg_match('/^(?:shared|[a-f0-9]{64})$/D', $tenant)
+            || ($human && $method !== 'interactive_oidc') || !array_is_list($roles) || count($roles) > 100) {
+            throw new \InvalidArgumentException('INVALID_GOVERNANCE_ACTOR');
+        }
+        foreach ($roles as $role) {
+            if (!is_string($role) || !preg_match('/^[a-z][a-z0-9_-]{0,49}$/D', $role)) { throw new \InvalidArgumentException('INVALID_GOVERNANCE_ROLE'); }
+        }
+        $this->roles = $roles;
+    }
+
+    /** @return array<string, mixed> */
+    public function evidence(): array
+    {
+        return ['id' => $this->id, 'tenant' => $this->tenant, 'roles' => $this->roles, 'human' => $this->human, 'method' => $this->method];
+    }
+}

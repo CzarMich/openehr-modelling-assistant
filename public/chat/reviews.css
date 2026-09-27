@@ -1,0 +1,228 @@
+:root {
+    color-scheme: light;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    color: #153c37;
+    background: #f5f7f3;
+}
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+}
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.3rem 3vw;
+    border-bottom: 1px solid #d4dfd8;
+    background: #fff;
+}
+a {
+    color: #145d50;
+    text-underline-offset: 0.2em;
+}
+header > a {
+    text-decoration: none;
+}
+nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+main {
+    max-width: 1500px;
+    padding: 2rem 3vw;
+    margin: auto;
+}
+h1 {
+    font-size: clamp(1.8rem, 4vw, 2.7rem);
+    margin: 0.3rem 0 1rem;
+    letter-spacing: -0.03em;
+}
+h2 {
+    font-size: 1.2rem;
+}
+h3 {
+    font-size: 1.05rem;
+}
+p {
+    line-height: 1.6;
+}
+.intro {
+    max-width: 760px;
+}
+.eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    font-weight: 700;
+}
+button,
+input,
+textarea,
+select {
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid #b8cec2;
+    padding: 0.7rem 0.9rem;
+}
+button {
+    background: #155646;
+    color: white;
+    cursor: pointer;
+}
+button:hover {
+    background: #0d4437;
+}
+button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+button.secondary {
+    color: #155646;
+    background: white;
+}
+input,
+select,
+textarea {
+    background: white;
+    color: #153c37;
+    max-width: 100%;
+}
+label {
+    font-size: 0.85rem;
+    font-weight: 650;
+}
+#project-form {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 0 2rem;
+}
+.review-layout {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr);
+    gap: 1.5rem;
+}
+section {
+    min-width: 0;
+    background: white;
+    border: 1px solid #d4dfd8;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+#reviews {
+    display: grid;
+    gap: 0.7rem;
+}
+.review-item {
+    color: #153c37;
+    background: #f5f7f3;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+.review-item:hover {
+    background: #e7f0e9;
+}
+.detail-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    justify-content: space-between;
+}
+#title {
+    overflow-wrap: anywhere;
+}
+.badge {
+    font-size: 0.7rem;
+    background: #e8f1ea;
+    padding: 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+#identity {
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+    color: #527268;
+}
+.callout {
+    padding: 0.8rem 1rem;
+    background: #f1f4e6;
+    border-left: 3px solid #b4c666;
+}
+pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 420px;
+    overflow: auto;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    background: #f5f7f3;
+    padding: 1rem;
+    border-radius: 6px;
+}
+details {
+    border-bottom: 1px solid #d4dfd8;
+    padding: 1rem 0;
+}
+summary {
+    cursor: pointer;
+    font-weight: 650;
+}
+#decision-form {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 1rem;
+}
+#decision-form h3,
+#decision-form p {
+    margin: 0.3rem 0;
+}
+#decision-form button {
+    justify-self: start;
+}
+.confirmation {
+    background: #eef5ee;
+    border: 1px solid #b8cec2;
+    padding: 1.2rem;
+    margin-top: 1.5rem;
+    border-radius: 8px;
+}
+#notice:not(:empty) {
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    background: #fff0de;
+    color: #653c15;
+}
+li {
+    padding: 0.5rem 0;
+    overflow-wrap: anywhere;
+}
+[hidden] {
+    display: none !important;
+}
+@media (max-width: 800px) {
+    .review-layout {
+        grid-template-columns: 1fr;
+    }
+    header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    #project-form {
+        flex-wrap: wrap;
+    }
+    section {
+        padding: 1rem;
+    }
+    nav {
+        flex-wrap: wrap;
+    }
+}
+
+.pager {
+    display: flex;
+    gap: 0.7rem;
+    margin-top: 1rem;
+}

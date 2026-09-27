@@ -111,3 +111,7 @@ Terminology operation settings apply to lookup, validation, expansion, ConceptMa
 Local terminology catalogues need only the configured ModelRepository; they add no service credentials. Catalogue saves use `MODEL_REPOSITORY_WRITE_ENABLED` and native OIDC draft-write permissions. Explicit external records use existing terminology settings. The PHP `mbstring` extension is required for Unicode case rules and is included in the supplied images. See [catalogue schema and limits](TERMINOLOGY_CATALOGUE.md).
 
 Binding plans need no new environment variables. They use repository and write-access settings and remain available without a terminology server. Bounds and explicit per-request aliases are documented in [binding plans](TERMINOLOGY_BINDING_PLANS.md).
+
+## Human review and audit configuration
+
+Persisted governance is opt-in with `GOVERNANCE_ENABLED=true`; its SQLite file belongs in a separate persistent volume. The [review deployment variable tables](REVIEW_DEPLOYMENT.md#core-variables) document every `GOVERNANCE_*` and `CHAT_REVIEW_*` setting, role mapping, tenant alignment, signing-key rotation and upgrade requirements. Default Compose browser builds use `MODELLING_BROWSER_TARGET=reviews` and need no model-provider credential. Set `MODELLING_BROWSER_TARGET=chat` when enabling conversational chat; the development chat override already selects it. Clinical actions require repository writes, an authenticated interactive human, the corresponding role and qualified validation.

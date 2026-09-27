@@ -48,7 +48,7 @@ repository and stores no patient data.
 
 ## Current extension boundaries
 
-Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human approval, full project/team RBAC and a visual editor are not implemented. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
+Native OPT compilation, full ADL/AQL validation, CDR execution, full project/team RBAC and a visual editor are not implemented. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
 
 ## Modelling platform requirements
 
@@ -61,3 +61,5 @@ Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human 
 | **REQ-F15** | Authenticated browser chat with grounded tool calls, private conversation history, streaming and explicit confirmation of model writes. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N11** | Authenticated bounded transport and redacted failures. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N12** | Client-neutral deployment and truthful capability documentation. | landed; exact boundaries in CAPABILITIES.md |
+
+| **REQ-F16** | Persist exact-revision governance and immutable audit events; permit clinical approval only through an independent authenticated human session after qualified validation, never through an AI/MCP caller. | `Application/ModelGovernance`, `Domain/Governance`, `Rest/ReviewApi`, browser review workspace |

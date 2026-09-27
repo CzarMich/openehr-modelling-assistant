@@ -28,15 +28,8 @@ final readonly class HttpGuard
 
     public function check(ServerRequestInterface $request): ?ResponseInterface
     {
-        $host = strtolower($request->getHeaderLine('Host'));
-        $hostname = str_starts_with($host, '[') ? substr($host, 0, (int) strpos($host, ']') + 1) : explode(':', $host)[0];
-        if ($host === '' || str_contains($host, ',') || !in_array($hostname, array_map('strtolower', $this->settings->csv('MCP_ALLOWED_HOSTS')), true)) {
-            return $this->error(403, 'HOST_FORBIDDEN');
-        }
+        if (($rejection = $this->checkHostOrigin($request)) !== null) { return $rejection; }
         $origin = $request->getHeaderLine('Origin');
-        if ($origin !== '' && !in_array($origin, $this->settings->csv('CORS_ALLOWED_ORIGINS'), true)) {
-            return $this->error(403, 'ORIGIN_FORBIDDEN');
-        }
         if ($request->getMethod() === 'OPTIONS') {
             return new Response(204, [
                 'Access-Control-Allow-Origin' => $origin,
@@ -48,6 +41,31 @@ final readonly class HttpGuard
         if ($this->principal($request) === null) {
             return $this->error(401, 'AUTHENTICATION_REQUIRED')->withHeader('WWW-Authenticate', 'Bearer');
         }
+        return $this->checkBody($request);
+    }
+
+    /** Shared boundary for purpose-specific REST authentication. */
+    public function transportCheck(ServerRequestInterface $request): ?ResponseInterface
+    {
+        return $this->checkHostOrigin($request) ?? $this->checkBody($request);
+    }
+
+    private function checkHostOrigin(ServerRequestInterface $request): ?ResponseInterface
+    {
+        $host = strtolower($request->getHeaderLine('Host'));
+        $hostname = str_starts_with($host, '[') ? substr($host, 0, (int) strpos($host, ']') + 1) : explode(':', $host)[0];
+        if ($host === '' || str_contains($host, ',') || !in_array($hostname, array_map('strtolower', $this->settings->csv('MCP_ALLOWED_HOSTS')), true)) {
+            return $this->error(403, 'HOST_FORBIDDEN');
+        }
+        $origin = $request->getHeaderLine('Origin');
+        if ($origin !== '' && !in_array($origin, $this->settings->csv('CORS_ALLOWED_ORIGINS'), true)) {
+            return $this->error(403, 'ORIGIN_FORBIDDEN');
+        }
+        return null;
+    }
+
+    private function checkBody(ServerRequestInterface $request): ?ResponseInterface
+    {
         // php://input often has no reported size. Read a bounded prefix and rewind
         // so SDK decoding sees the same payload; never trust Content-Length alone.
         $body = $request->getBody();

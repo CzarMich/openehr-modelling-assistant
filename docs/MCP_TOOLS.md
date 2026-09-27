@@ -615,6 +615,553 @@ Output schema:
 }
 ```
 
+## `governance_get`
+
+Read authoritative lifecycle state, exact source identity, validation and append-only audit history. Approval of an old revision never approves the current model.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "subject"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "governance_get",
+  "arguments": {
+    "subject": "<subject-from-prepare>"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+## `governance_list`
+
+List governed model revisions in a project and the authenticated tenant namespace, with bounded paging.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "count": {
+      "type": "integer",
+      "default": 25,
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 10000
+    }
+  },
+  "required": [
+    "project"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "governance_list",
+  "arguments": {
+    "project": "neonatal-care"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+## `governance_prepare`
+
+Register an exact source revision for governed review. Trusted transport identity is recorded as preparer; caller-supplied author or approval metadata is not accepted.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "modelRevision": {
+      "type": "string"
+    },
+    "comment": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "project",
+    "path",
+    "modelRevision",
+    "comment"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "governance_prepare",
+  "arguments": {
+    "project": "neonatal-care",
+    "path": "templates/admission.oet",
+    "modelRevision": "<observed-model-revision>",
+    "comment": "Prepare this exact draft for review."
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+## `governance_reopen_draft`
+
+Reopen a CHANGES_REQUESTED subject as DRAFT. Changed model content must be registered as a new source revision; existing review history is retained.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "string"
+    },
+    "expectedSequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "comment": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "subject",
+    "expectedSequence",
+    "comment"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "governance_reopen_draft",
+  "arguments": {
+    "subject": "<subject-from-prepare>",
+    "expectedSequence": 4,
+    "comment": "Address the requested changes."
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+## `governance_request_review`
+
+Request independent human review of the registered revision. Unqualified draft reviews remain explicitly incomplete and cannot be approved or published.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "string"
+    },
+    "expectedSequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "comment": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "subject",
+    "expectedSequence",
+    "comment"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "governance_request_review",
+  "arguments": {
+    "subject": "<subject-from-prepare>",
+    "expectedSequence": 2,
+    "comment": "Review the exact revision and unresolved findings."
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+## `governance_validate`
+
+Execute the installed deterministic validation pipeline and append authoritative evidence. New validation evidence requires a new review. Missing/partial stages return the model to DRAFT and prevent approval; model JSON cannot supply validation results.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "string"
+    },
+    "expectedSequence": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "subject",
+    "expectedSequence"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "governance_validate",
+  "arguments": {
+    "subject": "<subject-from-prepare>",
+    "expectedSequence": 1
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
 ## `guide_adl_idiom_lookup`
 
 Lookup ADL idiom snippets for a symptom or pattern to prevent generic prompting.

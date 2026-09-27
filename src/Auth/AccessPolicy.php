@@ -21,4 +21,11 @@ final readonly class AccessPolicy
             throw new \RuntimeException('WRITE_PERMISSION_REQUIRED');
         }
     }
+
+    public function assertHumanGovernanceWrite(): void
+    {
+        if ($this->settings->get('MODEL_REPOSITORY_WRITE_ENABLED') !== 'true') { throw new \RuntimeException('WRITES_DISABLED'); }
+        if ($this->principal === null || !$this->principal->human || $this->principal->method !== 'interactive_oidc'
+            || !in_array('governance.write', $this->principal->scopes, true)) { throw new \RuntimeException('HUMAN_GOVERNANCE_PERMISSION_REQUIRED'); }
+    }
 }

@@ -34,6 +34,12 @@ examples = {
 }
 catalogue_record={'kind':'code_system','canonical':'https://example.org/local/feeding','version':'1','name':'Feeding','provenance':{'source':'Organisation-authored local draft'},'concepts':[{'code':'mixed','display':'Mixed feeding'}]}
 examples.update({
+ 'governance_prepare':{'project':'neonatal-care','path':'templates/admission.oet','modelRevision':'<observed-model-revision>','comment':'Prepare this exact draft for review.'},
+ 'governance_validate':{'subject':'<subject-from-prepare>','expectedSequence':1},
+ 'governance_request_review':{'subject':'<subject-from-prepare>','expectedSequence':2,'comment':'Review the exact revision and unresolved findings.'},
+ 'governance_reopen_draft':{'subject':'<subject-from-prepare>','expectedSequence':4,'comment':'Address the requested changes.'},
+ 'governance_get':{'subject':'<subject-from-prepare>'},
+ 'governance_list':{'project':'neonatal-care'},
  'model_terminology_inspect':{'project':'neonatal-care','path':'templates/admission.oet'},
  'terminology_binding_plan':{'project':'neonatal-care','path':'templates/admission.oet'},
  'terminology_binding_plan_get':{'project':'neonatal-care','path':'templates/admission.oet'},

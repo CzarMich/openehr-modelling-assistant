@@ -11,10 +11,57 @@ const config = {
     origin: "http://127.0.0.1:8359",
     port: 8359,
     allowWrites: true,
+    reviewEnabled: true,
     dataDir: mkdtempSync(join(tmpdir(), "chat-browser-test-")),
 };
 const auth = new Auth(config);
+const reviewId = "a".repeat(64);
+let reviewState = "REVIEW_REQUESTED",
+    reviewSequence = 3;
+const reviewSource = {
+    project: "default",
+    path: "templates/review.oet",
+    revision: "source-review-revision",
+    sha256: "b".repeat(64),
+};
+const reviews = {
+    request: async (session, method, target, input) => {
+        if (method === "GET" && target.includes("?"))
+            return {
+                items: [{ subject: reviewId, source: reviewSource, state: reviewState }],
+                has_more_possible: false,
+            };
+        if (method === "POST") {
+            if (input.expectedSequence !== reviewSequence || !["REVIEWED", "CHANGES_REQUESTED"].includes(input.state))
+                throw Object.assign(new Error("Review conflict"), { status: 409 });
+            reviewState = input.state;
+            reviewSequence++;
+        }
+        return {
+            subject: reviewId,
+            source: reviewSource,
+            sequence: reviewSequence,
+            state: reviewState,
+            current_source: true,
+            content: "<template><script>window.__reviewInjected=true</script></template>",
+            validation: { status: "INCOMPLETE", release_eligible: false },
+            validation_digest: "c".repeat(64),
+            available_transitions: reviewState === "REVIEW_REQUESTED" ? ["REVIEWED", "CHANGES_REQUESTED"] : [],
+            events: [
+                {
+                    timestamp: "Fixture",
+                    actor: { id: "service", human: false },
+                    previous_state: "DRAFT",
+                    new_state: "REVIEW_REQUESTED",
+                    comment: "Synthetic review fixture.",
+                },
+            ],
+        };
+    },
+};
 auth.login = async (req, res) => {
+    reviewState = "REVIEW_REQUESTED";
+    reviewSequence = 3;
     auth.sessions.set("browser-test", {
         identity: "fixture-user",
         name: "Test Modeller",
@@ -87,4 +134,4 @@ const mcpFactory = () => ({
     ],
     call: async () => ({ content: [{ type: "text", text: "Fixture data" }] }),
 });
-createApplication(config, { auth, provider, mcpFactory }).listen(config.port, "127.0.0.1");
+createApplication(config, { auth, provider, reviews, mcpFactory }).listen(config.port, "127.0.0.1");

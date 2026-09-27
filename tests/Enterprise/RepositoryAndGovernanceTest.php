@@ -7,7 +7,8 @@ namespace OpenEHR\Assistant\Tests\Enterprise;
 use OpenEHR\Assistant\Integrations\Repository\FileSystemRepository;
 use OpenEHR\Assistant\Integrations\Repository\RepositoryFactory;
 use OpenEHR\Assistant\Configuration\Settings;
-use OpenEHR\Assistant\Domain\Modelling\Governance;
+use OpenEHR\Assistant\Domain\Governance\ReviewPolicy;
+use OpenEHR\Assistant\Domain\Governance\Actor;
 use OpenEHR\Assistant\Domain\Modelling\Traceability;
 use OpenEHR\Assistant\Tools\ProjectService;
 use PHPUnit\Framework\Attributes\CoversNothing;
@@ -93,13 +94,13 @@ final class RepositoryAndGovernanceTest extends TestCase
 
     public function test_governance_requires_independent_human_and_current_release_validation(): void
     {
-        $governance = new Governance();
-        $report = ['status' => 'VALIDATED', 'valid' => true, 'release_eligible' => true, 'content_sha256' => 'hash'];
-        $governance->assertTransition('VALIDATED', 'APPROVED', 'author', 'reviewer', true, ['approver'], $report, 'hash');
+        $governance = new ReviewPolicy();
+        $report = ModelGovernanceTest::qualifiedReport('fixture'); $hash = $report['content_sha256'];
+        $governance->assertTransition('REVIEWED', 'APPROVED', 'author', new Actor('reviewer', 'shared', ['approver'], true, 'interactive_oidc'), $report, $hash);
         foreach ([['author', true, $report], ['agent', false, $report], ['reviewer', true, array_replace($report, ['release_eligible' => false])],
             ['reviewer', true, array_replace($report, ['content_sha256' => 'stale'])]] as [$actor, $human, $validation]) {
             try {
-                $governance->assertTransition('VALIDATED', 'APPROVED', 'author', $actor, $human, ['approver'], $validation, 'hash');
+                $governance->assertTransition('REVIEWED', 'APPROVED', 'author', new Actor($actor, 'shared', ['approver'], $human, $human ? 'interactive_oidc' : 'service'), $validation, $hash);
                 self::fail('Unsafe approval passed.');
             } catch (\DomainException $e) {
                 self::assertStringStartsWith('GOVERNANCE_', $e->getMessage());

@@ -57,7 +57,11 @@ export class Auth {
             state = oidc.randomState(),
             nonce = oidc.randomNonce(),
             verifier = oidc.randomPKCECodeVerifier();
-        this.transactions.set(id, { state, nonce, verifier, expires: Date.now() + 300000 });
+        const destination =
+            !this.config.enabled || new URL(req.url, this.config.origin).searchParams.get("review") === "1"
+                ? "/chat/reviews"
+                : "/chat/";
+        this.transactions.set(id, { state, nonce, verifier, destination, expires: Date.now() + 300000 });
         res.setHeader("Set-Cookie", this.cookie("ModellingLogin", id, 300));
         res.writeHead(302, {
             Location: oidc.buildAuthorizationUrl(client, {
@@ -91,18 +95,46 @@ export class Auth {
             !this.config.allowedGroups.some((group) => Array.isArray(claims.groups) && claims.groups.includes(group))
         )
             throw Object.assign(new Error("Access is not enabled for this account."), { status: 403 });
+        let reviewIdentity;
+        if (this.config.reviewEnabled) {
+            const claim = (path) =>
+                path
+                    .split(".")
+                    .reduce((value, key) => (value && Object.hasOwn(value, key) ? value[key] : undefined), claims);
+            const roles = claim(this.config.reviewRolesClaim) ?? [];
+            const tenant = this.config.reviewTenantClaim ? claim(this.config.reviewTenantClaim) : claims.iss;
+            if (
+                !Array.isArray(roles) ||
+                roles.length > 100 ||
+                roles.some((role) => typeof role !== "string" || role.length > 200) ||
+                typeof tenant !== "string" ||
+                !tenant ||
+                tenant.length > 300
+            )
+                throw Object.assign(new Error("Review identity claims are not configured correctly."), { status: 403 });
+            reviewIdentity = {
+                issuer: claims.iss,
+                subject: claims.sub,
+                tenant,
+                roles,
+                started: Math.floor(Date.now() / 1000),
+            };
+        }
         const sessionId = token();
         this.sessions.set(sessionId, {
             identity: claims.iss + "\n" + claims.sub,
             name: String(claims.name || claims.preferred_username || "User").slice(0, 160),
             csrf: token(),
+            reviewIdentity,
             expires: Date.now() + this.config.sessionSeconds * 1000,
         });
         res.setHeader("Set-Cookie", [
             this.cookie("ModellingSession", sessionId, this.config.sessionSeconds),
             this.cookie("ModellingLogin", "", 0),
         ]);
-        res.writeHead(302, { Location: "/chat/" });
+        res.writeHead(302, {
+            Location: transaction.destination === "/chat/reviews" || !this.config.enabled ? "/chat/reviews" : "/chat/",
+        });
         res.end();
     }
     session(req) {

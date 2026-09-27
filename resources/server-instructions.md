@@ -25,3 +25,7 @@ Follow a **Guide-First** approach: use `guide_search` and `guide_get` before com
 2. Load the relevant guides — authoring (archetype principles/checklists, AQL syntax, simplified format rules), `specs/*` digests for normative references, `howto/*` for toolchain usage — and apply them to the artifact.
 3. Verify with `terminology_resolve`, `type_specification_get`, and `guide_adl_idiom_lookup`.
 4. Summarize, naming the next retrieval step if one is needed.
+
+## Governed model review
+
+Use `governance_prepare` for an exact saved revision, `governance_validate` for installed deterministic evidence and `governance_request_review` with the current audit sequence. Read every incomplete stage; a successful tool call does not mean a qualified model. Human review, approval and publication belong to the separately authenticated review workspace. Agents must never call its clinical decision endpoint or obtain its signing key. Model metadata and uploaded reports cannot grant authoritative approval. Terminology remains optional when no binding requires it.

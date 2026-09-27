@@ -7,6 +7,7 @@ import { Auth } from "./auth.mjs";
 import { Store } from "./store.mjs";
 import { McpClient, WRITE_TOOLS } from "./mcp.mjs";
 import { CodexProvider } from "./codex.mjs";
+import { ReviewClient } from "./reviews.mjs";
 
 const publicDir = fileURLToPath(new URL("../../public/chat/", import.meta.url));
 const json = (res, status, data) => {
@@ -47,6 +48,7 @@ export function createApplication(
         store = new Store(config.dataDir + "/conversations", config.retentionDays),
         provider = new CodexProvider(config),
         mcpFactory = (signal) => new McpClient(config, signal),
+        reviews = new ReviewClient(config),
     } = {},
 ) {
     const active = new Map(),
@@ -72,13 +74,20 @@ export function createApplication(
         const path = new URL(req.url, "http://local").pathname;
         try {
             if (req.method === "GET" && path === "/health")
-                return json(res, 200, { status: "alive", enabled: config.enabled });
-            if (config.enabled && req.headers.host !== new URL(config.origin).host)
+                return json(res, 200, {
+                    status: "alive",
+                    enabled: config.enabled,
+                    review_enabled: config.reviewEnabled,
+                });
+            if ((config.enabled || config.reviewEnabled) && req.headers.host !== new URL(config.origin).host)
                 throw Object.assign(new Error("Unknown host"), { status: 421 });
             const assets = {
                 "/chat/": ["index.html", "text/html; charset=utf-8"],
                 "/chat/app.js": ["app.js", "text/javascript"],
                 "/chat/style.css": ["style.css", "text/css"],
+                "/chat/reviews": ["reviews.html", "text/html; charset=utf-8"],
+                "/chat/reviews.js": ["reviews.js", "text/javascript"],
+                "/chat/reviews.css": ["reviews.css", "text/css"],
             };
             if (req.method === "GET" && path === "/chat") {
                 res.writeHead(302, { Location: "/chat/" });
@@ -96,11 +105,14 @@ export function createApplication(
                     user: session ? { name: session.name } : null,
                     csrf: session?.csrf,
                     allowWrites: config.allowWrites,
+                    reviewEnabled: config.reviewEnabled,
                     retentionDays: config.retentionDays,
                 });
             }
-            if (!config.enabled)
-                throw Object.assign(new Error("Browser chat is not configured on this deployment."), { status: 503 });
+            if (!config.enabled && !config.reviewEnabled)
+                throw Object.assign(new Error("Browser workspace is not configured on this deployment."), {
+                    status: 503,
+                });
             if (req.method === "GET" && path === "/chat/auth/login") return await auth.login(req, res);
             if (req.method === "GET" && path === "/chat/auth/callback") return await auth.callback(req, res);
             const mutation = req.method !== "GET";
@@ -112,6 +124,59 @@ export function createApplication(
                 auth.logout(req, res);
                 return json(res, 200, { success: true });
             }
+            if (path === "/chat/api/reviews" || path.startsWith("/chat/api/reviews/")) {
+                if (!config.reviewEnabled)
+                    throw Object.assign(new Error("Model review is not configured."), { status: 503 });
+                const url = new URL(req.url, config.origin);
+                const suffix = path.slice("/chat/api/reviews".length);
+                if (req.method === "GET" && suffix === "") {
+                    const project = url.searchParams.get("project"),
+                        offset = url.searchParams.get("offset") || "0";
+                    if (
+                        !project ||
+                        !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(project) ||
+                        [...url.searchParams.keys()].some((key) => !["project", "offset"].includes(key)) ||
+                        url.searchParams.getAll("project").length !== 1 ||
+                        url.searchParams.getAll("offset").length > 1 ||
+                        !/^\d{1,5}$/.test(offset) ||
+                        Number(offset) > 10000
+                    )
+                        throw Object.assign(new Error("Choose a project."), { status: 400 });
+                    return json(
+                        res,
+                        200,
+                        await reviews.request(
+                            session,
+                            "GET",
+                            "/api/v1/reviews?project=" + encodeURIComponent(project) + "&offset=" + Number(offset),
+                        ),
+                    );
+                }
+                if (/^\/[a-f0-9]{64}$/.test(suffix) && req.method === "GET" && !url.search)
+                    return json(res, 200, await reviews.request(session, "GET", "/api/v1/reviews" + suffix));
+                if (/^\/[a-f0-9]{64}\/transitions$/.test(suffix) && req.method === "POST" && !url.search) {
+                    const input = await body(req);
+                    if (
+                        !input ||
+                        typeof input !== "object" ||
+                        Array.isArray(input) ||
+                        Object.keys(input).some(
+                            (key) => !["state", "expectedSequence", "comment", "validationDigest"].includes(key),
+                        ) ||
+                        typeof input.state !== "string" ||
+                        !Number.isSafeInteger(input.expectedSequence) ||
+                        input.expectedSequence < 1 ||
+                        typeof input.comment !== "string" ||
+                        !input.comment.trim() ||
+                        input.comment.length > 4000
+                    )
+                        throw Object.assign(new Error("Review the decision and enter a comment."), { status: 400 });
+                    return json(res, 200, await reviews.request(session, "POST", "/api/v1/reviews" + suffix, input));
+                }
+                throw Object.assign(new Error("Not found"), { status: 404 });
+            }
+            if (!config.enabled)
+                throw Object.assign(new Error("Browser chat is not configured on this deployment."), { status: 503 });
             if (path === "/chat/api/conversations") {
                 if (req.method === "GET") return json(res, 200, { conversations: store.list(identity) });
                 if (req.method === "POST") return json(res, 201, store.create(identity));

@@ -19,6 +19,6 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
 chmod 644 "$SHAREPOINT_TEST_ROOT/tls.crt"
 "${compose[@]}" up -d --build --wait
 address=$("${compose[@]}" port ingress 8343)
-python3 "$SHAREPOINT_TEST_REPO/scripts/mcp-smoke.py" --url "http://$address/mcp" --writes --without-terminology \
+python3 "$SHAREPOINT_TEST_REPO/scripts/mcp-smoke.py" --url "http://$address/mcp" --writes --governance --without-terminology \
   --evidence "${1:-$SHAREPOINT_TEST_REPO/docs/evidence/ci-sharepoint-smoke.json}"
 "${compose[@]}" exec -T app php scripts/sharepoint-smoke.php --allow-test-writes

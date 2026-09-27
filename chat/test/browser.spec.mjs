@@ -97,3 +97,37 @@ test("binding plan confirmation includes both source and plan revisions", async 
     await page.getByRole("button", { name: "Confirm save", exact: true }).click();
     await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
 });
+
+test("human review shows exact evidence, confirms the decision, and blocks incomplete approval", async ({ page }) => {
+    await login(page);
+    await page.goto("/chat/reviews");
+    await page.getByRole("button", { name: "templates/review.oet · REVIEW_REQUESTED" }).click();
+    await expect(page.locator("#identity")).toContainText("source-review-revision");
+    await expect(page.locator("#validation-status")).toContainText("approval and publication are blocked");
+    await expect(page.locator("#source")).toContainText("<script>");
+    expect(await page.evaluate(() => window.__reviewInjected)).toBeUndefined();
+    await expect(page.getByRole("option", { name: "Approve exact revision" })).toHaveCount(0);
+    await page.getByLabel("Review comment").fill("Reviewed the exact synthetic revision; technical gates remain open.");
+    await page.getByRole("button", { name: "Review decision", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Confirm model decision" })).toBeVisible();
+    await expect(page.locator("#confirmation-details")).toContainText("source-review-revision");
+    await expect(page.locator("#confirmation-details")).toContainText('"expectedSequence": 3');
+    await expect(page.locator("#state")).toHaveText("REVIEW_REQUESTED");
+    await page.getByRole("button", { name: "Confirm decision", exact: true }).click();
+    await expect(page.locator("#state")).toHaveText("REVIEWED");
+    await expect(page.locator("#notice")).toContainText("recorded for the displayed revision");
+    await expect(page.getByRole("button", { name: "Review decision", exact: true })).toBeDisabled();
+});
+
+test("review workspace fits mobile and cancellation does not submit a decision", async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/chat/reviews");
+    await page.getByRole("button", { name: "templates/review.oet · REVIEW_REQUESTED" }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByLabel("Review comment").fill("Do not submit this decision.");
+    await page.getByRole("button", { name: "Review decision", exact: true }).click();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Confirm model decision" })).toBeHidden();
+    await expect(page.locator("#state")).toHaveText("REVIEW_REQUESTED");
+});

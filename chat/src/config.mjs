@@ -27,6 +27,13 @@ export function loadConfig(env = process.env) {
         mcpKey: env.CHAT_MCP_API_KEY || "",
         mcpKeyHeader: env.CHAT_MCP_API_KEY_HEADER || "X-API-Key",
         allowWrites: env.CHAT_ALLOW_WRITES === "true",
+        reviewEnabled: env.CHAT_REVIEW_ENABLED === "true",
+        reviewSigningKey: env.CHAT_REVIEW_SIGNING_KEY || "",
+        reviewKeyId: env.CHAT_REVIEW_KEY_ID || "active",
+        reviewRolesClaim: env.CHAT_REVIEW_ROLES_CLAIM || "roles",
+        reviewTenantClaim: env.CHAT_REVIEW_TENANT_CLAIM || "",
+        reviewSessionSeconds: Number(env.CHAT_REVIEW_SESSION_MAX_AGE || 900),
+        reviewApiOrigin: new URL(env.CHAT_MCP_URL || "http://ingress:8343/mcp").origin,
         model: env.CHAT_MODEL || "gpt-6-sol",
         codexBinary: env.CHAT_CODEX_BINARY || "codex",
         codexWorkDir: resolve(env.CHAT_CODEX_WORK_DIR || "/workspace"),
@@ -35,12 +42,29 @@ export function loadConfig(env = process.env) {
         retentionDays: 30,
         maxConcurrentTurns: 3,
     };
-    if (enabled && (!config.issuer.startsWith("https://") || !config.clientId || !config.clientSecret))
+    if (
+        (enabled || config.reviewEnabled) &&
+        (!config.issuer.startsWith("https://") || !config.clientId || !config.clientSecret)
+    )
         throw new Error("Chat requires an OIDC client");
     const mcp = new URL(config.mcpUrl);
     if (!["http:", "https:"].includes(mcp.protocol) || mcp.username || mcp.password || mcp.search || mcp.hash)
         throw new Error("Invalid CHAT_MCP_URL");
     if (!Number.isInteger(config.port) || !Number.isFinite(config.turnTimeoutMs))
         throw new Error("Invalid chat limits");
+    if (
+        config.reviewEnabled &&
+        (!/^[a-f0-9]{64,128}$/.test(config.reviewSigningKey) ||
+            !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(config.reviewKeyId))
+    )
+        throw new Error("Model review requires browser OIDC and a dedicated signing key");
+    if (
+        !Number.isInteger(config.reviewSessionSeconds) ||
+        config.reviewSessionSeconds < 60 ||
+        config.reviewSessionSeconds > 3600
+    )
+        throw new Error("Invalid review session maximum age");
+    for (const claim of [config.reviewRolesClaim, config.reviewTenantClaim])
+        if (claim && !/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/.test(claim)) throw new Error("Invalid review claim path");
     return Object.freeze(config);
 }

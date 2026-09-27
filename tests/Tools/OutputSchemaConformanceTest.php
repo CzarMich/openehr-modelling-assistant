@@ -31,6 +31,7 @@ final class OutputSchemaConformanceTest extends TestCase
     use HostedOutputCases;
     use CatalogueOutputCases;
     use BindingPlanOutputCases;
+    use GovernanceOutputCases;
     private const string TOOLS_NAMESPACE = 'OpenEHR\\Assistant\\Tools\\';
 
     public function test_guide_search_result_matches_output_schema(): void

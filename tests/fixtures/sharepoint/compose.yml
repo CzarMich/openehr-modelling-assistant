@@ -25,6 +25,8 @@ services:
       APP_ENV: testing
       MODEL_REPOSITORY_PROVIDER: sharepoint
       MODEL_REPOSITORY_WRITE_ENABLED: 'true'
+      GOVERNANCE_ENABLED: 'true'
+      GOVERNANCE_DATABASE_PATH: /tmp/governance/audit.sqlite
       SHAREPOINT_GRAPH_URL: https://sharepoint-fixture/v1.0/
       SHAREPOINT_SITE_ID: site
       SHAREPOINT_LIST_ID: list

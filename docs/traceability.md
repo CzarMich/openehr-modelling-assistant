@@ -78,3 +78,5 @@ the Implementation column is either dead code or an undocumented requirement.
 | REQ | Capability | Implementation | Verification |
 |---|---|---|---|
 | **REQ-F15** | Authenticated browser modelling chat | `chat/src/`, `public/chat/`, `chat/Dockerfile` | `chat/test/security.test.mjs`, `chat/test/codex.test.mjs`, `chat/test/browser.spec.mjs` |
+
+| REQ-F16 | Persisted governance and interactive human review | `Application/ModelGovernance`, `Domain/Governance`, `Rest/ReviewApi` | `GovernanceAuditStoreTest`, `ModelGovernanceTest`, `InteractiveReviewAuthenticatorTest`, `ReviewApiTest`, browser review tests | ADR-0015 |

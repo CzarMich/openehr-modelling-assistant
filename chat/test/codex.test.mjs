@@ -11,6 +11,7 @@ const config = {
 const tools = [{ name: "ckm_sources", description: "List sources", inputSchema: { type: "object" } }];
 test("Codex protocol isolates secrets, declines native approvals and forwards only declared tool calls", async () => {
     process.env.CHAT_MCP_API_KEY = "fixture-secret-must-not-reach-codex";
+    process.env.CHAT_REVIEW_SIGNING_KEY = "fixture-governance-key-must-not-reach-codex";
     const events = [],
         calls = [];
     try {
@@ -29,6 +30,7 @@ test("Codex protocol isolates secrets, declines native approvals and forwards on
         assert.equal(events.filter((e) => e.type === "delta").length, 2);
     } finally {
         delete process.env.CHAT_MCP_API_KEY;
+        delete process.env.CHAT_REVIEW_SIGNING_KEY;
     }
 });
 test("cancellation terminates an active Codex turn", async () => {
