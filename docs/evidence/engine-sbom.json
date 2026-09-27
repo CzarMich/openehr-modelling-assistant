@@ -1,10 +1,10 @@
 {
   "bomFormat" : "CycloneDX",
   "specVersion" : "1.6",
-  "serialNumber" : "urn:uuid:6c7534a0-c0fd-3c51-83e8-59cfe323f886",
+  "serialNumber" : "urn:uuid:27f606e4-df96-34f2-8906-22d6b0c16f49",
   "version" : 1,
   "metadata" : {
-    "timestamp" : "2026-09-27T08:03:19Z",
+    "timestamp" : "2026-09-27T09:15:08Z",
     "lifecycles" : [
       {
         "phase" : "build"
@@ -58,11 +58,11 @@
     },
     "component" : {
       "type" : "library",
-      "bom-ref" : "pkg:maven/org.openehr.modelling/engine@1.0.0?type=jar",
+      "bom-ref" : "pkg:maven/org.openehr.modelling/engine@1.1.0?type=jar",
       "group" : "org.openehr.modelling",
       "name" : "engine",
-      "version" : "1.0.0",
-      "purl" : "pkg:maven/org.openehr.modelling/engine@1.0.0?type=jar"
+      "version" : "1.1.0",
+      "purl" : "pkg:maven/org.openehr.modelling/engine@1.1.0?type=jar"
     },
     "properties" : [
       {
@@ -3694,6 +3694,212 @@
     },
     {
       "type" : "library",
+      "bom-ref" : "pkg:maven/org.ehrbase.openehr.sdk/opt-1.4@2.35.0?type=jar",
+      "group" : "org.ehrbase.openehr.sdk",
+      "name" : "opt-1.4",
+      "version" : "2.35.0",
+      "description" : "EHRbase openEHR SDK",
+      "scope" : "required",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "1fb3cfc1a246a8e19f141fb06e622ba8"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "40c30fbb59993dd0ace9607d122d5bf9a978bad7"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "2430420ba4775e46efeb8eab7de4abded0e951c73e7de269f7e55f0b84e9b68f"
+        },
+        {
+          "alg" : "SHA-512",
+          "content" : "675099463540eaf191ea3661e70492bd94ee47946a971181d6adbec731131a05c1ca2fc8827d787335ef5d3d9e58a598c93bafc2c475a6b05b7aae43b3bd679f"
+        },
+        {
+          "alg" : "SHA-384",
+          "content" : "809e377786a2a9f823df7f728886dec3c94ff92b30b6e826c28beb40eb55a4ebe913558ed3cfdb469755e1a32f0d2c3d"
+        },
+        {
+          "alg" : "SHA3-384",
+          "content" : "584a77a9cf3fbb463f08a8154b66e32aebe2f2593cd828ab5c9552d5a58f9cb40847390c3d8eb6c3811591b4cd74f45e"
+        },
+        {
+          "alg" : "SHA3-256",
+          "content" : "a485d2a665ae262db94208c799a95a657698710ecfca2c851705123505b378fc"
+        },
+        {
+          "alg" : "SHA3-512",
+          "content" : "8391d1694dfcd9ee476c848c96e7499b5ab6c1b2547bad6b86b49e547bbb82c1b12b678b03d54a18a6904e76dc99416bdf3c7d5222f928bcd614d3e53bc3a327"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.ehrbase.openehr.sdk/opt-1.4@2.35.0?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://github.com/ehrbase/openEHR_SDK/sdk-parent/opt-1.4"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/ehrbase/openEHR_SDK/sdk-parent/opt-1.4"
+        }
+      ]
+    },
+    {
+      "type" : "library",
+      "bom-ref" : "pkg:maven/org.apache.xmlbeans/xmlbeans@5.3.0?type=jar",
+      "publisher" : "XmlBeans",
+      "group" : "org.apache.xmlbeans",
+      "name" : "xmlbeans",
+      "version" : "5.3.0",
+      "description" : "XmlBeans main jar",
+      "scope" : "required",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "8d5b1d80cafc2d3feae8526ce1f45cb0"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "f93c3ba820d7240b7fec4ec5bc35e7223cc6fc1f"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "6cc69da3b4d35b83c5e477cd4daba204e44109833e34af2b9a8a2c8788289917"
+        },
+        {
+          "alg" : "SHA-512",
+          "content" : "ad0c7db7876316a1415f122cc7377c423e3a75c3adacd6aecdd70f2f529f959638896dc95c91adf354de7b1b97afaf06afd0d422153d694f66f32c560d1b0821"
+        },
+        {
+          "alg" : "SHA-384",
+          "content" : "2a9bee8928be4c7f88bbeedac2d081f821c2e08307fbb90210235b70acc4d13b47f610e2470a9891f30fce0c71fb3c34"
+        },
+        {
+          "alg" : "SHA3-384",
+          "content" : "bcf1580cdbb147eae3c4471ba9de4b678de864f1b1fb7af2670e31ef67d5e1ca5e6b74c03eb7bbd47be21f3994da659f"
+        },
+        {
+          "alg" : "SHA3-256",
+          "content" : "1771c05fd2f400f0de1ebf184392b1e64c71cc4efb675f44a781f1cb7d4fa567"
+        },
+        {
+          "alg" : "SHA3-512",
+          "content" : "e95547316aa6038bef7adf4d2abdc94251be46ede76f5b7ea36fcc55557638200cc4fd20a5adc9afdda9fd7bf14080c74a949b3a1a9bddad2b06d50499d48264"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.apache.xmlbeans/xmlbeans@5.3.0?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://xmlbeans.apache.org/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.apache.org/jira/browse/XMLBEANS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://lists.apache.org/list.html?user@poi.apache.org"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://svn.apache.org/repos/asf/xmlbeans/"
+        }
+      ]
+    },
+    {
+      "type" : "library",
+      "bom-ref" : "pkg:maven/org.apache.logging.log4j/log4j-api@2.25.5?type=jar",
+      "publisher" : "The Apache Software Foundation",
+      "group" : "org.apache.logging.log4j",
+      "name" : "log4j-api",
+      "version" : "2.25.5",
+      "description" : "The logging API of the Log4j project. Library and application code can log through this API. It contains a simple built-in implementation (`SimpleLogger`) for trivial use cases. Production applications are recommended to use Log4j API in combination with a fully-fledged implementation, such as Log4j Core.",
+      "scope" : "required",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "6da507c0ef11c49576534c1db69e1b99"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "6c80ea65e41f7858f7e15cb390c98c36167c7b3a"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "64777f73ea0b3104c04eb82befbdccc30a425a19e83ad06cb2f93aa303511863"
+        },
+        {
+          "alg" : "SHA-512",
+          "content" : "68c21b4af4770f18c27794448c335a236eb906326ffe51b7a2634c988d443da760a6057cd94ff5e44363f4b209489091225a48916f327d11ce690bb45d334318"
+        },
+        {
+          "alg" : "SHA-384",
+          "content" : "822c01f1bab171f9e8d8738ea565affb0a3d7a0469d2aca239bc3f05073d7f7a7f6e9cc621c6407cd60e7a5fbb301df4"
+        },
+        {
+          "alg" : "SHA3-384",
+          "content" : "c0ec07e06db924837ee4a55211d6a2a1f53dc60b7dbcfca01a13636e8af25201fd99d5010c9ab9484be7308078e98125"
+        },
+        {
+          "alg" : "SHA3-256",
+          "content" : "73418d86d441a821fd8abc6658058e0cf47bd289d31facc7c52fe4c85f00a258"
+        },
+        {
+          "alg" : "SHA3-512",
+          "content" : "69d1ef7061426e264f475c47a72b4d4962e4dfca0a21db8df751ac9423b1227fd9352da4627509aa3e01e2df9c7b2cc2257c21e1f83d3dec9e14ec6466946312"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0",
+            "url" : "https://www.apache.org/licenses/LICENSE-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.apache.logging.log4j/log4j-api@2.25.5?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://logging.apache.org/log4j/2.x/"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://github.com/apache/logging-log4j2/actions"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://github.com/apache/logging-log4j2/issues"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://lists.apache.org/list.html?log4j-user@logging.apache.org"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/apache/logging-log4j2"
+        }
+      ]
+    },
+    {
+      "type" : "library",
       "bom-ref" : "pkg:maven/org.slf4j/slf4j-nop@1.7.36?type=jar",
       "publisher" : "QOS.ch",
       "group" : "org.slf4j",
@@ -3762,11 +3968,13 @@
   ],
   "dependencies" : [
     {
-      "ref" : "pkg:maven/org.openehr.modelling/engine@1.0.0?type=jar",
+      "ref" : "pkg:maven/org.openehr.modelling/engine@1.1.0?type=jar",
       "dependsOn" : [
         "pkg:maven/com.nedap.healthcare.archie/tools@3.20.0?type=jar",
         "pkg:maven/com.nedap.healthcare.archie/referencemodels@3.20.0?type=jar",
         "pkg:maven/org.ehrbase.openehr.sdk/aql@2.35.0?type=jar",
+        "pkg:maven/org.ehrbase.openehr.sdk/opt-1.4@2.35.0?type=jar",
+        "pkg:maven/org.apache.xmlbeans/xmlbeans@5.3.0?type=jar",
         "pkg:maven/org.slf4j/slf4j-nop@1.7.36?type=jar"
       ]
     },
@@ -4267,6 +4475,22 @@
         "pkg:maven/org.apache.commons/commons-lang3@3.20.0?type=jar",
         "pkg:maven/com.sun.xml.bind/jaxb-impl@2.3.9?type=jar"
       ]
+    },
+    {
+      "ref" : "pkg:maven/org.ehrbase.openehr.sdk/opt-1.4@2.35.0?type=jar",
+      "dependsOn" : [
+        "pkg:maven/org.apache.xmlbeans/xmlbeans@5.3.0?type=jar"
+      ]
+    },
+    {
+      "ref" : "pkg:maven/org.apache.xmlbeans/xmlbeans@5.3.0?type=jar",
+      "dependsOn" : [
+        "pkg:maven/org.apache.logging.log4j/log4j-api@2.25.5?type=jar"
+      ]
+    },
+    {
+      "ref" : "pkg:maven/org.apache.logging.log4j/log4j-api@2.25.5?type=jar",
+      "dependsOn" : [ ]
     },
     {
       "ref" : "pkg:maven/org.slf4j/slf4j-nop@1.7.36?type=jar",

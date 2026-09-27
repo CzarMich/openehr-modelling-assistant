@@ -16,9 +16,9 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | FHIR ConceptMap translation | WORKING | Explicit map and source coding; repeated candidates retained, human review required, no automatic application |
 | FHIR terminology resource discovery | WORKING | Configured-server CodeSystem/ValueSet/ConceptMap search and exact canonical resolution; server search support required |
 | Draft OET generation | PARTIAL | Retrieved COMPOSITION plus direct ENTRY placements only |
-| OET/OPT validation | PARTIAL | Separate parse/structure stages, identity/reference syntax and overflow-safe intervals; full schema/dependency/semantic qualification requires the engine |
+| OET/OPT validation | PARTIAL | Separate parse/structure stages, identity/reference syntax and overflow-safe intervals; engine adds OPT 1.4 XML schema/RM structure and supported OET dependency compilation; full legacy semantic qualification remains incomplete |
 | FLAT/STRUCTURED document profiles | WORKING | Unambiguous JSON, field/array/raw-value shapes and explicit stage findings; OPT/RM/terminology conformance remains unexecuted |
-| ADL validation | WORKING for ADL 2 | Native Archie grammar/AOM/BMM/RM checks with explicit dependencies; ADL 1.4 retains header preflight |
+| ADL validation | WORKING for ADL 2 | Native Archie grammar/AOM/BMM/RM checks with explicit dependencies; legacy compiler additionally parses ADL 1.4 and checks its documented RM structure profile |
 | Model diff | PARTIAL | XML structure, attributes and leaf values; not full semantic equivalence |
 | Binding validation | PARTIAL | Explicit records, path presence, selected-code validation; no native application |
 | Explicit XML terminology inspection | WORKING | Bounded OET/OPT coded choices, named queries and native reference preservation; revision-specific locations, without inherited ADL semantics |
@@ -45,7 +45,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | SharePoint storage | WORKING | Graph-backed immutable snapshots, conditional index updates, revisions/history/metadata and tenant mappings; OAuth and production-container contracts verified |
 | SharePoint live tenant acceptance | NOT TESTED | Implementation and integration harness complete; requires external tenant credentials, identifiers and permissions |
 | ADL 2 template compilation and OPT 2 validation | WORKING | Archie 3.20.0, pinned dependencies, nested archetypes, revalidated serialization, deterministic output and atomic native-file/build evidence persistence; [profile](docs/OPT_COMPILATION.md) |
-| Legacy OET-to-OPT 1.4 compilation, native template editing/terminology application | NOT IMPLEMENTED | Separate format/engine work; Designer authoring JSON is never relabelled as OPT |
+| Legacy OET-to-OPT 1.4 compilation | PARTIAL | Working explicit OET/ADL 1.4 compatibility profile: nested slots, narrowing rules, original terms, schema/RM output checks and saved DRAFT evidence; complete legacy AOM/OET semantics remain incomplete; [limits](docs/LEGACY_OPT_COMPILATION.md) |
+| Full native template editing/terminology application | NOT IMPLEMENTED | Separate editor/binding work; Designer authoring JSON is never relabelled as OPT |
 | AQL syntax parser | WORKING | Native openEHR SDK 2.35.0 grammar/AST, independent of a CDR; path/model compatibility remains unexecuted |
 | AQL execution, composition validation, CDR deployment | NOT IMPLEMENTED | Separate domain adapter/acceptance work |
 | Copilot Studio tenant connection | NOT TESTED | Current official deployment guide; no tenant available |

@@ -38,7 +38,7 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
     {
         $operation = match ($format) {
             'adl2' => 'validate/archetype', 'adlt2' => 'validate/template',
-            'opt2' => 'validate/opt', 'aql' => 'validate/aql',
+            'opt2', 'opt14' => 'validate/opt', 'aql' => 'validate/aql',
             default => throw new \InvalidArgumentException('ENGINE_FORMAT_UNSUPPORTED'),
         };
         return $this->request($operation, $content, $dependencies);
@@ -52,9 +52,12 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
     public function inspect(string $content, string $format, array $dependencies = []): array
     {
         $operation = match ($format) {
-            'adl2' => 'inspect/archetype', 'opt2' => 'inspect/opt',
+            'adl2' => 'inspect/archetype', 'opt2', 'opt14' => 'inspect/opt',
             default => throw new \InvalidArgumentException('ENGINE_FORMAT_UNSUPPORTED'),
         };
+        if (($format === 'opt14') !== self::legacyXml($content)) {
+            throw new \InvalidArgumentException('ENGINE_FORMAT_MISMATCH');
+        }
         return $this->request($operation, $content, $dependencies);
     }
 
@@ -62,6 +65,7 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
      * @return array<string, mixed> */
     private function request(string $operation, string $content, array $dependencies): array
     {
+        $legacy = self::legacyXml($content) && (str_ends_with($operation, '/template') || str_ends_with($operation, '/opt'));
         if ($this->settings->get('OPENEHR_ENGINE_URL') === '') {
             throw new \RuntimeException('ENGINE_NOT_CONFIGURED');
         }
@@ -99,7 +103,7 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
         }
         if (!$decoded['ok']) {
             $code = is_array($decoded['error'] ?? null) ? ($decoded['error']['code'] ?? null) : null;
-            throw new \RuntimeException(is_string($code) && preg_match('/^ENGINE_[A-Z_]{1,70}$/D', $code) ? $code : 'ENGINE_RESPONSE_INVALID');
+            throw new \RuntimeException(is_string($code) && preg_match('/^ENGINE_[A-Z0-9_]{1,70}$/D', $code) ? $code : 'ENGINE_RESPONSE_INVALID');
         }
         $data = $decoded['data'] ?? null;
         if (!is_array($data) || ($data['schema_version'] ?? null) !== 1 || ($data['operation'] ?? null) !== $operation
@@ -110,7 +114,7 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
         }
         if (isset($data['output'])) {
             $output = $data['output'];
-            if (!is_array($output) || !is_string($output['content'] ?? null) || ($output['format'] ?? null) !== 'opt2_adl'
+            if (!is_array($output) || !is_string($output['content'] ?? null) || ($output['format'] ?? null) !== ($legacy ? 'opt14_xml' : 'opt2_adl')
                 || ($output['sha256'] ?? null) !== hash('sha256', $output['content'])) {
                 throw new \RuntimeException('ENGINE_OUTPUT_HASH_MISMATCH');
             }
@@ -132,6 +136,15 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
             }
         }
         $profile = $operation === 'validate/aql' ? 'AQL_SYNTAX' : (str_ends_with($operation, '/opt') ? 'OPT2_FLAT_AOM_BMM' : 'ADL2_AOM2_BMM');
+        if ($legacy) {
+            $profile = str_ends_with($operation, '/opt') ? 'OPT14_XML_RM_STRUCTURE' : 'OET14_COMPILATION_RM_STRUCTURE';
+            if (($data['checks']['full_aom_semantics'] ?? null) !== 'NOT_EXECUTED'
+                || ($data['checks']['clinical_review'] ?? null) !== 'NOT_EXECUTED'
+                || ($data['rm_release_basis'] ?? null) !== 'explicit_legacy_compatibility_profile'
+                || !is_array($data['limitations'] ?? null)) {
+                throw new \RuntimeException('ENGINE_RESPONSE_INVALID');
+            }
+        }
         if (($data['profile'] ?? null) !== $profile || !is_string($data['completed_stage'] ?? null)) {
             throw new \RuntimeException('ENGINE_RESPONSE_INVALID');
         }
@@ -153,5 +166,10 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
             throw new \RuntimeException('ENGINE_OUTPUT_MISSING');
         }
         return $data;
+    }
+
+    private static function legacyXml(string $content): bool
+    {
+        return str_starts_with(ltrim(str_starts_with($content, "\xEF\xBB\xBF") ? substr($content, 3) : $content), '<');
     }
 }

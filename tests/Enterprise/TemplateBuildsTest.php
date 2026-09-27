@@ -34,11 +34,11 @@ final class TemplateBuildsTest extends TestCase
     }
     public static function providers(): array
     {
-        return [['filesystem'], ['git']];
+        return [['filesystem', 'opt2_adl'], ['git', 'opt2_adl'], ['filesystem', 'opt14_xml'], ['git', 'opt14_xml']];
     }
 
     #[DataProvider('providers')]
-    public function test_build_preserves_exact_sources_and_atomically_saves_native_opt_and_evidence(string $provider): void
+    public function test_build_preserves_exact_sources_and_atomically_saves_native_opt_and_evidence(string $provider, string $format): void
     {
         $settings = new Settings(['MODEL_REPOSITORY_PROVIDER' => $provider, 'MODEL_REPOSITORY_PATH' => $this->root,
             'MODEL_REPOSITORY_WRITE_ENABLED' => 'true']);
@@ -49,7 +49,10 @@ final class TemplateBuildsTest extends TestCase
         $dependency = $repository->saveArtifact('default', 'archetypes/root.adls', 'dependency', [], null);
         $port = $this->createMock(OpenEhrEngine::class);
         $report = NativeEngineTest::report('old source', 'compile/template');
-        $report['output'] = ['content' => 'operational_template fixture', 'format' => 'opt2_adl', 'sha256' => hash('sha256', 'operational_template fixture')];
+        $output = $format === 'opt14_xml' ? '<template xmlns="http://schemas.openehr.org/v1"/>' : 'operational_template fixture';
+        $report['output'] = ['content' => $output, 'format' => $format, 'sha256' => hash('sha256', $output)];
+        $report['compilation_actions'] = [['code' => 'SOURCE_ID', 'value' => 'synthetic']];
+        $report['limitations'] = ['Clinical review is independent.'];
         $port->method('compile')->with('old source', [['identifier' => 'model.v1.0.0', 'content' => 'dependency', 'sha256' => hash('sha256', 'dependency')]])->willReturn($report);
         $service = new TemplateBuilds(new NativeModels($port), $repository, new AccessPolicy($settings), new Actor('fixture-service', 'shared', ['modeller']));
         $deps = [['identifier' => 'model.v1.0.0', 'path' => $dependency['path'], 'revision' => $dependency['revision']]];
@@ -57,7 +60,10 @@ final class TemplateBuildsTest extends TestCase
         self::assertTrue($first['saved']);
         self::assertFalse($first['clinical_approval']);
         $artifact = $repository->getArtifact('default', $first['artifact']['path'], $first['artifact']['revision']);
-        self::assertSame('operational_template fixture', $artifact['content']);
+        self::assertSame($output, $artifact['content']);
+        self::assertSame($format === 'opt14_xml' ? 'compiled_opt14' : 'compiled_opt2', $artifact['metadata']['kind']);
+        self::assertSame($report['compilation_actions'], $artifact['metadata']['build']['report']['compilation_actions']);
+        self::assertSame($report['limitations'], $artifact['metadata']['build']['report']['limitations']);
         self::assertSame('DRAFT', $artifact['status']);
         self::assertSame($source['sha256'], $artifact['metadata']['build']['source']['sha256']);
         self::assertSame($dependency['revision'], $artifact['metadata']['build']['dependencies'][0]['revision']);

@@ -15,21 +15,42 @@ final class JsonDocument
         $value = json_decode($content, false, 64, JSON_THROW_ON_ERROR);
         // Native parsing validates the grammar first. This scan tracks object keys only;
         // strings are decoded with the native parser so escaped aliases compare equally.
-        if (preg_match_all('/"(?:[^"\\\\]|\\\\.)*"|[{}\\[\\]:,]/su', $content, $tokens) === false || count($tokens[0]) > $maxTokens) {
-            throw new \InvalidArgumentException('JSON_DOCUMENT_TOKEN_LIMIT');
-        }
         $stack = [];
-        foreach ($tokens[0] as $i => $token) {
+        $tokens = 0;
+        $length = strlen($content);
+        for ($offset = 0; $offset < $length; ++$offset) {
+            $token = $content[$offset];
+            if (!str_contains('"{}[]:,', $token)) {
+                continue;
+            }
+            if (++$tokens > $maxTokens) {
+                throw new \InvalidArgumentException('JSON_DOCUMENT_TOKEN_LIMIT');
+            }
             if ($token === '{' || $token === '[') {
                 $stack[] = ['object' => $token === '{', 'keys' => []];
             } elseif ($token === '}' || $token === ']') {
                 array_pop($stack);
-            } elseif (str_starts_with($token, '"') && ($tokens[0][$i + 1] ?? '') === ':') {
+            } elseif ($token === '"') {
+                $start = $offset++;
+                // Native decoding above guarantees a closing quote and valid escapes.
+                // Scan complete string runs without regex recursion/JIT stack limits.
+                while ($offset < $length) {
+                    $offset += strcspn($content, "\"\\", $offset);
+                    if ($content[$offset] === '"') {
+                        break;
+                    }
+                    $offset += 2;
+                }
+                $next = $offset + 1;
+                $next += strspn($content, " \t\r\n", $next);
+                if (($content[$next] ?? '') !== ':') {
+                    continue;
+                }
                 $at = count($stack) - 1;
                 if ($at < 0 || !$stack[$at]['object']) {
                     throw new \InvalidArgumentException('INVALID_JSON_OBJECT');
                 }
-                $key = json_decode($token, true, 2, JSON_THROW_ON_ERROR);
+                $key = json_decode(substr($content, $start, $offset - $start + 1), true, 2, JSON_THROW_ON_ERROR);
                 if (isset($stack[$at]['keys'][$key])) {
                     throw new \InvalidArgumentException('DUPLICATE_JSON_KEY');
                 }

@@ -21,11 +21,12 @@ final class NativeEngine {
         result.put("schema_version", 1);
         result.put("operation", request.operation());
         result.put("content_sha256", sha256(request.content()));
-        result.put("engine", Map.of("adapter", "1.0.0", "archie", ARCHIE_VERSION, "aql", SDK_VERSION));
+        result.put("engine", Map.of("adapter", "1.1.0", "archie", ARCHIE_VERSION, "aql", SDK_VERSION));
         result.put("clinical_approval", false);
         List<Map<String, Object>> findings = new ArrayList<>();
         result.put("findings", findings);
         if (request.operation().equals("validate/aql")) return aql(request, result, findings);
+        if (LegacyEngine.xml(request.content())) return LegacyEngine.execute(request, result);
         result.put("profile", request.operation().endsWith("/opt") ? "OPT2_FLAT_AOM_BMM" : "ADL2_AOM2_BMM");
         PinnedRepository repository = new PinnedRepository();
         List<Map<String, Object>> manifest = new ArrayList<>();

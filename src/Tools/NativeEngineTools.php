@@ -34,7 +34,7 @@ final readonly class NativeEngineTools
         return ToolResult::run(fn (): array => $this->models->validate($content, 'adl2', $dependencies));
     }
 
-    /** Validate an ADL 2 template and supplied dependencies using the native engine. Legacy OET XML is a separate format and is rejected here.
+    /** Validate an ADL 2 template or compile-check the explicit legacy OET compatibility profile with exact supplied archetypes. OET requires ADL 1.4 dependencies and uses RM 1.0.2; unsupported constructs fail. Read profile, checks and limitations; legacy checks are not full AOM conformance.
      * @param list<array{identifier: string, content: string}> $dependencies
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
@@ -46,7 +46,7 @@ final readonly class NativeEngineTools
         return ToolResult::run(fn (): array => $this->models->validate($content, 'adlt2', $dependencies));
     }
 
-    /** Compile an ADL 2 template into OPT 2 ADL, validate the generated output and return exact input/output hashes. Computation only: no repository write, clinical approval or CDR deployment.
+    /** Compile ADL 2 into OPT 2 ADL, or supported OET XML plus exact ADL 1.4 dependencies into OPT 1.4 XML. Returns native output, hashes, dependency evidence and explicit validation profile. Legacy nested placements, bounded rules and original terms are preserved; unsupported constructs fail closed. No repository write, clinical approval or CDR deployment.
      * @param list<array{identifier: string, content: string}> $dependencies
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
@@ -58,7 +58,7 @@ final readonly class NativeEngineTools
         return ToolResult::run(fn (): array => $this->models->compile($content, $dependencies));
     }
 
-    /** Validate an OPT 2 ADL document using native flat AOM/RM checks. Legacy OPT XML requires its separate validation profile.
+    /** Validate OPT 2 ADL using native flat AOM/RM checks, or OPT 1.4 XML using its independent schema and explicit RM structure profile. Inspect checks and limitations: legacy profile is not full AOM semantic conformance or clinical approval.
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'opt_validate', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
@@ -67,14 +67,14 @@ final readonly class NativeEngineTools
         return ToolResult::run(fn (): array => $this->models->validate($content, 'opt2'));
     }
 
-    /** Inspect validated native ADL 2 or OPT 2 paths, RM types, multiplicities and terminology. Returns findings when the model cannot be validated; no guessed paths.
+    /** Inspect native ADL 2, OPT 2 ADL or OPT 1.4 XML paths, RM types, multiplicities and original terminology. Explicit format and validation profile; no guessed paths or clinical approval.
      * @param list<array{identifier: string, content: string}> $dependencies
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'model_inspect', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
     public function inspect(
         #[Schema(minLength: 1, maxLength: 2097152)] string $content,
-        #[Schema(enum: ['adl2', 'opt2'])] string $format,
+        #[Schema(enum: ['adl2', 'opt2', 'opt14'])] string $format,
         #[Schema(items: self::DEPENDENCY, maxItems: 64)] array $dependencies = []
     ): array {
         return ToolResult::run(fn (): array => $this->models->inspect($content, $format, $dependencies));

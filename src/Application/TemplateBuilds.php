@@ -57,10 +57,12 @@ final readonly class TemplateBuilds
         // inspected tree is reproducible from the native OPT, so is not duplicated in metadata.
         $report = array_intersect_key($result, array_flip(['schema_version', 'operation', 'content_sha256',
             'engine', 'clinical_approval', 'findings', 'profile', 'dependencies', 'identifier', 'rm_release',
-            'valid', 'status', 'completed_stage', 'checks', 'terminology_dependencies']));
-        $metadata = ['kind' => 'compiled_opt2', 'build' => $identity + ['id' => $buildId,
+            'valid', 'status', 'completed_stage', 'checks', 'terminology_dependencies',
+            'compilation_actions', 'limitations', 'rm_release_basis']));
+        $legacy = $output['format'] === 'opt14_xml';
+        $metadata = ['kind' => $legacy ? 'compiled_opt14' : 'compiled_opt2', 'build' => $identity + ['id' => $buildId,
             'generated_at' => gmdate(DATE_ATOM), 'actor' => $this->actor->evidence(),
-            'compiler' => 'Archie', 'format' => $output['format'], 'report' => $report,
+            'compiler' => $legacy ? 'OET compatibility adapter / Archie parser / openEHR SDK XML schema' : 'Archie', 'format' => $output['format'], 'report' => $report,
             'terminology_validation' => 'NOT_EXECUTED', 'clinical_approval' => false,
             'evidence_trust' => 'Repository build evidence; not a signed attestation or a clinical approval.']];
         ArtifactMetadata::validate($metadata);

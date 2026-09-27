@@ -1,6 +1,6 @@
 {
   "status": "PASS",
-  "timestamp": "2026-09-27T08:05:59Z",
+  "timestamp": "2026-09-27T09:15:58Z",
   "checks": [
     "Native operation schemas discovered through actual MCP",
     "Native ADL 2 AOM/RM validation and exact source hash",
@@ -8,9 +8,11 @@
     "Pinned ADL 2 template compilation, output validation and byte-identical rebuild",
     "Native OPT and exact-revision source/dependency/compiler evidence saved atomically as DRAFT; retry preserves build revision",
     "Actual model paths, RM types and terminology inspected",
+    "Legacy OET/ADL 1.4 nested compilation, exact terms/bindings, independent OPT XML schema/RM profile and byte-identical rebuild; missing dependencies and widening rejected",
+    "OPT 1.4 XML saved as a separate DRAFT build with exact source revisions, compilation actions and explicit qualification limits",
     "Native AQL grammar accepts valid queries and rejects malformed/trailing tokens without a CDR"
   ],
   "clinical_approval": false,
   "external_services": [],
-  "scope": "ADL 2/OPT 2 and AQL native engine; legacy OET/OPT remains separate"
+  "scope": "ADL 2/OPT 2, explicit OET/OPT 1.4 compatibility profile and AQL syntax; no clinical approval or Designer round-trip claim"
 }

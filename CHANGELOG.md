@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add bounded legacy OET-to-OPT 1.4 compilation with preserved constraints and reproducible draft build evidence.
+- Handle large escaped model payloads without JSON scanner regex limits.
+
 - Add native ADL 2 validation, OPT 2 compilation and AQL parsing with exact-revision repository build evidence.
 
 - Integrate chat, model browsing and governance in one accessible blue-and-white browser workspace.

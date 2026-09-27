@@ -22,4 +22,4 @@ REQ-F20: `src/Mcp` bounds the supported protocol profile and SDK integration; cl
 
 REQ-N13 adds PostgreSQL governance and optional revision-bound Valkey retrieval caching. [ADR-0021](decisions/0021-postgres-governance-and-immutable-model-cache.md) keeps source, identity and audit authority independent of disposable caches.
 
-REQ-F21: `NativeModels` and `TemplateBuilds` use the provider-neutral `OpenEhrEngine` port. The authenticated private Java adapter runs Archie validation/OPT 2 compilation and native AQL parsing. Repository builds save native OPT content and exact-revision evidence atomically. [Compiler architecture and deployment](OPT_COMPILATION.md), [ADR-0020](decisions/0020-native-openehr-engine.md).
+REQ-F21: `NativeModels` and `TemplateBuilds` use the provider-neutral `OpenEhrEngine` port. The authenticated private Java adapter runs Archie validation/OPT 2 compilation, the bounded OET/OPT 1.4 compatibility adapter and native AQL parsing. Repository builds save native OPT content and exact-revision evidence atomically. [Compiler architecture and deployment](OPT_COMPILATION.md), [ADR-0020](decisions/0020-native-openehr-engine.md).

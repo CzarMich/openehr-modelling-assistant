@@ -1,10 +1,10 @@
 # External modelling tool integration
 
-External tools exchange native model files with the platform's provider-neutral repository. The current implementation preserves revisions, supports Git-hosted review workflows and can compile ADL 2 templates through the [native engine](OPT_COMPILATION.md). A complete import/handoff/semantic round-trip subsystem is being implemented against the [recorded exchange requirements](EXTERNAL_MODELLING_REQUIREMENTS.json); it must not be inferred from file storage alone.
+External tools exchange native model files with the platform's provider-neutral repository. The current implementation preserves revisions, supports Git-hosted review workflows and can compile ADL 2 and supported OET templates through the [native engine](OPT_COMPILATION.md). A complete import/handoff/semantic round-trip subsystem is being implemented against the [recorded exchange requirements](EXTERNAL_MODELLING_REQUIREMENTS.json); it must not be inferred from file storage alone.
 
 | State | Current scope |
 |---|---|
-| IMPLEMENTED | Filesystem/Git/SharePoint revision contracts, native Git files, expected-revision conflicts, model retrieval/history, bounded XML diff, source metadata, human governance, ADL 2/OPT 2 engine and saved build evidence |
+| IMPLEMENTED | Filesystem/Git/SharePoint revision contracts, native Git files, expected-revision conflicts, model retrieval/history, bounded XML diff, source metadata, human governance, ADL 2/OPT 2 and bounded OET/OPT 1.4 compiler profiles with saved build evidence |
 | VERIFIED | Isolated repository/compiler contracts; actual independent Git-client round trip; live shared browser workspace |
 | EXTERNAL_ACCEPTANCE_REQUIRED | Hosted Designer account linking, actual format import/export and round trips, account-specific automation capabilities |
 | NOT SUPPORTED | Designer `.t.json` semantic editing/conversion, automatic hosted Designer push/release, complete OET compilation, governed exchange bundles/receipts and full semantic reconciliation |
@@ -14,7 +14,7 @@ flowchart TB
     Tool[External modelling tool] -->|Manual exported file or configured Git repository| Native[Native source and explicit provenance]
     Native --> Repo[ModelRepository: filesystem, Git or SharePoint]
     Repo --> Inspect[Available document profiles and native ADL 2 inspection]
-    Repo --> Build[ADL 2 template compilation: OPT 2 and build evidence]
+    Repo --> Build[Format-specific compilation: OPT 2 ADL or supported OPT 1.4 XML and evidence]
     Repo --> Review[Exact-revision human governance]
     Repo --> Retrieve[Retrieve exact native revision and checksum]
     Retrieve -->|Account-specific import must be verified| Tool

@@ -34,5 +34,6 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 
 - [MCP protocol profile and acceptance](MCP_PROTOCOL.md)
 
+- [Legacy OET/OPT 1.4 compatibility profile](LEGACY_OPT_COMPILATION.md): supported constructs, limits and preservation checks.
 - [OPT compilation and native validation](OPT_COMPILATION.md): engine deployment, supported formats, exact-revision builds and repeatable acceptance.
 - [External modelling tool integration](MODELLING_TOOL_INTEGRATION.md) and [Designer compatibility](ARCHETYPE_DESIGNER_COMPATIBILITY.md): verified boundaries and remaining exchange work.

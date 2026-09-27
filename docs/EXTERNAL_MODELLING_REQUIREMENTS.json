@@ -97,16 +97,24 @@
       "title": "Proper OPT Compilation",
       "requirement": "After the Archie/openEHR compiler integration is complete, support:\n\nOET\n +\nArchetype dependencies\n        ↓\ndependency resolution\n        ↓\nopenEHR validation\n        ↓\ntemplate compilation\n        ↓\nOPT\n        ↓\nOPT validation\n\nTherefore the long-term documentation must no longer state simply:\n\nThe assistant cannot compile an OPT.\n\nInstead the implementation must make OPT compilation a first-class deterministic capability.",
       "status": "PARTIAL",
-      "evidence": [],
-      "note": "Existing repository, native engine or document-profile behaviour supplies part of this requirement; full external-tool exchange acceptance is not established."
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-014",
       "title": "Compilation Provenance",
       "requirement": "Record:\n\nsource OET\nsource OET revision\narchetype dependencies\ndependency versions\ndependency hashes\ncompiler\ncompiler version\nopenEHR specification versions\nterminology dependencies\ncompilation timestamp\nOPT hash\nvalidation result\n\nThe resulting OPT is a generated build artefact.",
       "status": "PARTIAL",
-      "evidence": [],
-      "note": "Existing repository, native engine or document-profile behaviour supplies part of this requirement; full external-tool exchange acceptance is not established."
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-015",
@@ -655,8 +663,12 @@
       "title": "Terminology Preservation",
       "requirement": "External modelling-tool exchange must preserve terminology information wherever the source format supports it.\n\nPreserve:\n\nterminology system\ncanonical URI\nterminology version\ncode\ndisplay\nValueSet\nValueSet version\nbinding\nbinding strength where represented\nlocal terminology\nnode terminology\nlanguage-specific terminology\ndescriptions\ndesignations\n\nDo not silently remove terminology information during:\n\nimport\nparse\nedit\nserialization\nexport\nhandoff\nround trip",
       "status": "PARTIAL",
-      "evidence": [],
-      "note": "Existing repository, native engine or document-profile behaviour supplies part of this requirement; full external-tool exchange acceptance is not established."
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-089",
@@ -715,8 +727,12 @@
       "title": "Constraint Preservation",
       "requirement": "Preserve supported constraints including:\n\ntext constraints\ncoded-text constraints\nquantity constraints\nunit constraints\nnumeric ranges\nordinal constraints\ndate constraints\ntime constraints\ndatetime constraints\nduration constraints\nboolean constraints\nURI constraints\nidentifier constraints\n\nUse the openEHR validation engine as the authoritative interpretation where supported.",
       "status": "PARTIAL",
-      "evidence": [],
-      "note": "Existing repository, native engine or document-profile behaviour supplies part of this requirement; full external-tool exchange acceptance is not established."
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-097",
@@ -1904,8 +1920,13 @@
       "id": "EXCHANGE-256",
       "title": "Offline OPT Compilation",
       "requirement": "OPT compilation must work without Designer.\n\nTarget:\n\nLocal OET\n   +\nLocal/resolved archetypes\n       ↓\nLocal openEHR compiler\n       ↓\nOPT\n\nDesigner export must not be required to obtain an OPT.",
-      "status": "NOT IMPLEMENTED",
-      "evidence": []
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-257",
@@ -1925,8 +1946,13 @@
       "id": "EXCHANGE-259",
       "title": "Compiler Provenance",
       "requirement": "For every OPT record:\n\ncompiler\ncompiler version\nsource template\nsource revision\ndependency manifest\ncompilation timestamp\ncontent hash\n\nExample:\n\nCompiler:\nAssistant openEHR Engine / Archie\nCompiler:\nArchetype Designer\n\nwhere appropriate.",
-      "status": "NOT IMPLEMENTED",
-      "evidence": []
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-260",
@@ -1939,15 +1965,25 @@
       "id": "EXCHANGE-261",
       "title": "Compiler Conformance Fixtures",
       "requirement": "Maintain reference templates that compile through the assistant’s engine.\n\nWhere Designer compilation is available, use selected fixtures for cross-tool comparison.\n\nDo not make external compiler access mandatory for ordinary CI.",
-      "status": "NOT IMPLEMENTED",
-      "evidence": []
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-262",
       "title": "Compiler Regression Tests",
       "requirement": "Changes to:\n\ntemplate parser\ncanonical template model\nOET serializer\ndependency resolver\ncompiler integration\n\nmust trigger compiler regression tests.",
-      "status": "NOT IMPLEMENTED",
-      "evidence": []
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-263",
@@ -2744,15 +2780,25 @@
       "id": "EXCHANGE-376",
       "title": "Agent Must Compile Rather Than Assume",
       "requirement": "For template changes:\n\nOET\n ↓\nvalidate\n ↓\nresolve dependencies\n ↓\ncompile\n ↓\nvalidate OPT\n\nA successful OET serialization is not proof of successful template compilation.",
-      "status": "NOT IMPLEMENTED",
-      "evidence": []
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-377",
       "title": "Agent Must Inspect Compilation Errors",
       "requirement": "If compilation fails:\n\ninspect structured compiler errors\n      ↓\nidentify source problem\n      ↓\ncorrect model\n      ↓\nvalidate\n      ↓\ncompile again\n\nDo not suppress compiler failures.",
-      "status": "NOT IMPLEMENTED",
-      "evidence": []
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-378",
@@ -2926,8 +2972,13 @@
       "id": "EXCHANGE-402",
       "title": "OPT Compilation Tests",
       "requirement": "Verify:\n\nvalid OET + dependencies → valid OPT\ninvalid OET → compilation failure\nmissing dependency → compilation failure\ninvalid archetype → compilation failure",
-      "status": "NOT IMPLEMENTED",
-      "evidence": []
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/OPT_COMPILATION.md",
+        "docs/LEGACY_OPT_COMPILATION.md",
+        "docs/evidence/legacy-compiler-verification.json"
+      ],
+      "note": "Implemented native ADL 2 and bounded legacy OET compilation profiles with exact-revision build evidence. Full OET/AOM semantics, external tool interchange and the complete exchange governance contract remain open."
     },
     {
       "id": "EXCHANGE-403",

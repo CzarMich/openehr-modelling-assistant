@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 2,
-  "active_capability": "openehr-engine-and-opt-compilation",
+  "active_capability": "Legacy OET/OPT 1.4 and governed model exchange",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -205,6 +205,20 @@
       "scope": "Unified responsive blue/white Chat/Models/Governance workspace delivered and live-verified; native identity administration and full visual modeller remain.",
       "implementation": "public/chat/workspace.css",
       "evidence": "docs/evidence/unified-workspace-live.json"
+    },
+    {
+      "id": "native-opt2",
+      "status": "IMPLEMENTED",
+      "scope": "ADL 2-to-OPT 2 native compilation, exact-revision saved DRAFT builds and native AQL syntax; live development/server and browser chat accepted; legacy OET and release qualification excluded",
+      "implementation": "src/Application/TemplateBuilds.php",
+      "evidence": "docs/evidence/engine-delivery.json"
+    },
+    {
+      "id": "legacy-opt14",
+      "status": "PARTIAL",
+      "scope": "Explicit nested OET/ADL 1.4 compilation to OPT 1.4 XML, narrowing rules, original typed bindings, output schema/RM structure and exact-revision DRAFT build evidence; full OET/AOM semantics remain incomplete",
+      "implementation": "engine/src/main/java/org/openehr/modelling/engine/LegacyTemplateCompiler.java",
+      "evidence": "docs/evidence/legacy-compiler-verification.json"
     }
   ],
   "phases": [
@@ -561,8 +575,8 @@
   ],
   "product_boundary": "openEHR modelling only; external FHIR terminology APIs allowed. CQL/CDS, FHIR/HL7 mapping and generic ETL excluded by updated mandate.",
   "priority_followups": [
-    "Native ADL 2 / OPT 2 compiler delivery and preservation qualification",
-    "Legacy OET-to-OPT 1.4 compiler and governed external modelling exchange",
+    "Complete legacy OET/AOM coverage beyond the qualified compatibility profile",
+    "Governed external modelling-tool exchange and provenance",
     "Native production identity and owner administration"
   ],
   "final_gates": [
@@ -579,8 +593,8 @@
   ],
   "external_modelling_exchange_queue": "docs/EXTERNAL_MODELLING_REQUIREMENTS.json",
   "immediate_queue": [
-    "Finish native engine delivery and live compiler acceptance",
-    "Legacy OET-to-OPT 1.4 and governed external-tool exchange",
+    "Complete legacy OET/AOM coverage beyond the qualified compatibility profile",
+    "Governed external modelling-tool exchange and provenance",
     "Native production identity and owner administration",
     "Remaining original phase capabilities and evidence gates"
   ]
