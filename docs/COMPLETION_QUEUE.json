@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 2,
-  "active_capability": "Legacy OET/OPT 1.4 and governed model exchange",
+  "active_capability": "Governed external model originals and exchange",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -219,6 +219,13 @@
       "scope": "Explicit nested OET/ADL 1.4 compilation, original internal references, RM attribute narrowing, typed bindings, output schema/RM structure and exact-revision DRAFT build evidence; full OET/AOM semantics remain incomplete",
       "implementation": "engine/src/main/java/org/openehr/modelling/engine/LegacyTemplateCompiler.java",
       "evidence": "docs/evidence/legacy-compiler-verification.json"
+    },
+    {
+      "id": "manual-original-import",
+      "status": "IMPLEMENTED",
+      "scope": "Exact immutable originals, bounded type inspection, protected idempotent platform receipts and verified browser download; external-tool origin remains unverified, full exchange/migration pending",
+      "implementation": "src/Application/ModelImports.php",
+      "evidence": "docs/evidence/ci-import-smoke.json"
     }
   ],
   "phases": [

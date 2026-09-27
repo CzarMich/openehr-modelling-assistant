@@ -84,6 +84,12 @@ check($migration['events'] === 2 && $store->events('shared', $subject) === [$fir
 rejects(fn () => SqlitePostgresMigration::migrate('/tmp/migration.sqlite', $owner), 'MIGRATION_TARGET_MUST_BE_EMPTY');
 check($store->subjects('shared', 'fixture')[0]['latest']['hash'] === $second['hash'], 'Indexed subject lookup');
 check($store->events(hash('sha256', 'tenant-b'), $subject) === [], 'Tenant isolation');
+foreach (['a' => 'MODEL_IMPORT_REQUESTED', 'b' => 'REGISTER', 'c' => 'MODEL_IMPORT_REQUESTED', 'd' => 'REGISTER'] as $id => $type) {
+    $store->append('shared', str_repeat($id, 64), 0, ['type' => $type, 'project' => 'streamfilter']);
+}
+check($store->subjects('shared', 'streamfilter', 1, 0, 'REGISTER')[0]['subject'] === str_repeat('b', 64), 'Stream filter before pagination');
+check($store->subjects('shared', 'streamfilter', 1, 1, 'REGISTER')[0]['subject'] === str_repeat('d', 64), 'Filtered second page');
+
 rejects(fn () => $store->append('shared', $subject, 1, ['project' => 'fixture']), 'GOVERNANCE_REVISION_CONFLICT');
 rejects(fn () => $store->append('shared', $subject, 2, ['project' => 'other']), 'GOVERNANCE_SUBJECT_IDENTITY_CONFLICT');
 foreach (['UPDATE governance_events SET project=project', 'DELETE FROM governance_events', 'TRUNCATE governance_events', 'ALTER TABLE governance_events ADD COLUMN injected text'] as $sql) {
@@ -148,5 +154,5 @@ $uncached->deleteArtifact('fixture', 'templates/synthetic.oet', $next['revision'
 rejects(fn () => $repository->getArtifact('fixture', 'templates/synthetic.oet'), 'ARTIFACT_NOT_FOUND');
 check($repository->getArtifact('fixture', 'templates/synthetic.oet', $artifact['revision'])['content'] === '<template>first</template>', 'Immutable historic revision');
 echo json_encode(['status' => 'PASS', 'recorded_at' => gmdate(DATE_ATOM), 'migration' => $migration,
-    'checks' => ['exact event migration', 'immutable rows and restricted application role', 'concurrent append conflict', 'tenant isolation', 'durable replay prevention', 'cache hit, poison, eviction and revision isolation', 'external Git write and deletion invalidation'],
+    'checks' => ['exact event migration', 'immutable rows and restricted application role', 'concurrent append conflict', 'tenant isolation', 'audit stream filtering before pagination', 'durable replay prevention', 'cache hit, poison, eviction and revision isolation', 'external Git write and deletion invalidation'],
     'synthetic_git_retrieval' => ['iterations' => $iterations, 'timings' => $latencies, 'scope' => 'Single small synthetic template in local Git; not a production throughput claim']], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n";

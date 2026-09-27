@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Immutable external model originals with protected import provenance and exact source downloads.
+
 - Expand legacy template compilation with reused nodes, RM attribute refinement and existing-model regression fixtures.
 
 - Add bounded legacy OET-to-OPT 1.4 compilation with preserved constraints and reproducible draft build evidence.

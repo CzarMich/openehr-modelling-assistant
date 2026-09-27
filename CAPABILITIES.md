@@ -46,6 +46,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | SharePoint live tenant acceptance | NOT TESTED | Implementation and integration harness complete; requires external tenant credentials, identifiers and permissions |
 | ADL 2 template compilation and OPT 2 validation | WORKING | Archie 3.20.0, pinned dependencies, nested archetypes, revalidated serialization, deterministic output and atomic native-file/build evidence persistence; [profile](docs/OPT_COMPILATION.md) |
 | Legacy OET-to-OPT 1.4 compilation | PARTIAL | Working explicit OET/ADL 1.4 compatibility profile: nested slots, reused nodes, RM attribute narrowing, original terms, schema/RM output checks and saved DRAFT evidence; complete legacy AOM/OET semantics remain incomplete; [limits](docs/LEGACY_OPT_COMPILATION.md) |
+| Manual source import and platform provenance | WORKING | Exact text/binary originals in filesystem/Git/SharePoint, protected intent/receipt ledger, idempotence, format assurance and verified source download; [boundaries](docs/MODEL_IMPORTS.md) |
+| External-tool semantic exchange and release synchronisation | PARTIAL | Original preservation and supported compilation work; proprietary conversion, derivation, semantic round trip, retrospective migration and release sync remain pending |
 | Full native template editing/terminology application | NOT IMPLEMENTED | Separate editor/binding work; Designer authoring JSON is never relabelled as OPT |
 | AQL syntax parser | WORKING | Native openEHR SDK 2.35.0 grammar/AST, independent of a CDR; path/model compatibility remains unexecuted |
 | AQL execution, composition validation, CDR deployment | NOT IMPLEMENTED | Separate domain adapter/acceptance work |

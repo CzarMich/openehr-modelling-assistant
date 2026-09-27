@@ -40,6 +40,7 @@ final readonly class ModelGovernance
         $this->write(); $this->modeller(); $view = $this->get($subject); $this->sequence($view, $expectedSequence);
         if (in_array($view['state'], ['APPROVED', 'PUBLISHED', 'DEPRECATED'], true)) { throw new \DomainException('GOVERNANCE_VALIDATION_STATE_FORBIDDEN'); }
         $source = $this->currentSource($view);
+        if (!is_string($source['content'] ?? null)) { throw new \RuntimeException('MODEL_TEXT_FORMAT_REQUIRED'); }
         $report = $this->validator->evaluate($source['content'], strtolower(pathinfo($source['path'], PATHINFO_EXTENSION)));
         if (($report['content_sha256'] ?? null) !== $source['sha256']) { throw new \RuntimeException('GOVERNANCE_VALIDATOR_IDENTITY_MISMATCH'); }
         $digest = hash('sha256', json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
@@ -72,7 +73,7 @@ final readonly class ModelGovernance
     public function get(string $subject, bool $includeContent = false): array
     {
         $events = $this->audit->events($this->actor->tenant, $subject);
-        if ($events === []) { throw new \RuntimeException('GOVERNANCE_SUBJECT_NOT_FOUND'); }
+        if ($events === [] || ($events[0]['type'] ?? null) !== 'REGISTER') { throw new \RuntimeException('GOVERNANCE_SUBJECT_NOT_FOUND'); }
         $first = $events[0]; $last = $events[count($events) - 1]; $validation = null; $digest = null;
         foreach ($events as $event) {
             if ($event['type'] === 'VALIDATION') { $validation = $event['validation']; $digest = $event['validation_digest']; }
@@ -105,7 +106,7 @@ final readonly class ModelGovernance
     public function list(string $project, int $count = 25, int $offset = 0): array
     {
         $this->repository->getProject($project); $items = [];
-        foreach ($this->audit->subjects($this->actor->tenant, $project, $count, $offset) as $record) {
+        foreach ($this->audit->subjects($this->actor->tenant, $project, $count, $offset, 'REGISTER') as $record) {
             $items[] = ['subject' => $record['subject'], 'sequence' => $record['sequence'], 'state' => $record['latest']['new_state'],
                 'source' => $record['first']['source'], 'author' => $record['first']['author'], 'updated_at' => $record['latest']['timestamp']];
         }

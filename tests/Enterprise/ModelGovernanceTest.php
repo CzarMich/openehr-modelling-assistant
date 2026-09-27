@@ -62,6 +62,15 @@ final class ModelGovernanceTest extends TestCase
     private function human(string $id = 'reviewer'): Actor { return new Actor($id, 'shared', ['reviewer', 'approver', 'publisher'], true, 'interactive_oidc'); }
     private function prepare(ModelGovernance $service): array { return $service->prepare('project', 'templates/test.oet', $this->source['revision'], 'Synthetic request; not a clinical model.'); }
 
+    public function test_import_events_cannot_be_read_or_transitioned_as_model_governance(): void
+    {
+        $id = str_repeat('f', 64);
+        $this->audit->append('shared', $id, 0, ['type' => 'MODEL_IMPORT_REQUESTED', 'project' => 'project']);
+        self::assertSame([], $this->service()->list('project')['items']);
+        $this->expectExceptionMessage('GOVERNANCE_SUBJECT_NOT_FOUND');
+        $this->service()->get($id);
+    }
+
     public function test_incomplete_real_validation_allows_review_but_never_clinical_approval(): void
     {
         $agent = $this->service(); $view = $this->prepare($agent);

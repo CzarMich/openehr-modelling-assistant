@@ -2098,6 +2098,297 @@
     }
   },
   {
+    "name": "model_import_inspect",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "contentBase64": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 2796204
+        },
+        "declaredType": {
+          "type": "string",
+          "default": "UNKNOWN",
+          "enum": [
+            "ADL_ARCHETYPE",
+            "ADL_TEMPLATE",
+            "OET_TEMPLATE",
+            "OPT",
+            "WEB_TEMPLATE",
+            "DESIGNER_AUTHORING_JSON",
+            "CANONICAL_COMPOSITION",
+            "FLAT_COMPOSITION",
+            "STRUCTURED_COMPOSITION",
+            "TERMINOLOGY_ARTEFACT",
+            "MODEL_PACKAGE",
+            "OTHER",
+            "UNKNOWN"
+          ]
+        }
+      },
+      "required": [
+        "filename",
+        "contentBase64"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Inspect exact base64-encoded source bytes without writes. Content markers and declarations are separate; Designer .t.json is never assumed to be OET, OPT or Web Template. Does not perform conformance validation or contact an external tool.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "model_artifact_import",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourceClaims": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "additionalProperties": false,
+          "properties": {
+            "source_system": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "tool_version": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "external_identifier": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "external_revision": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "exported_at": {
+              "type": "string",
+              "maxLength": 30
+            },
+            "licence": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "copyright": {
+              "type": "string",
+              "maxLength": 1000
+            }
+          }
+        },
+        "project": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "contentBase64": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 2796204
+        },
+        "declaredType": {
+          "type": "string",
+          "default": "UNKNOWN",
+          "enum": [
+            "ADL_ARCHETYPE",
+            "ADL_TEMPLATE",
+            "OET_TEMPLATE",
+            "OPT",
+            "WEB_TEMPLATE",
+            "DESIGNER_AUTHORING_JSON",
+            "CANONICAL_COMPOSITION",
+            "FLAT_COMPOSITION",
+            "STRUCTURED_COMPOSITION",
+            "TERMINOLOGY_ARTEFACT",
+            "MODEL_PACKAGE",
+            "OTHER",
+            "UNKNOWN"
+          ]
+        }
+      },
+      "required": [
+        "project",
+        "filename",
+        "contentBase64"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Preserve an external file's exact bytes as a create-only original with protected platform provenance. Requires model write access and a configured audit ledger. Idempotent per caller, project, filename, bytes and source claims. External origin remains caller-declared. Never approves, publishes, converts or extracts the source.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "model_artifact_provenance",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "importId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "project",
+        "importId"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Verify imported bytes against the exact repository revision and protected audit receipt. Reports real transport identity separately from unverified source claims; this is not clinical approval.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "model_project_qa",
     "inputSchema": {
       "type": "object",

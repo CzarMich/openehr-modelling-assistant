@@ -2056,6 +2056,252 @@ Output schema:
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
 
+## `model_artifact_import`
+
+Preserve an external file's exact bytes as a create-only original with protected platform provenance. Requires model write access and a configured audit ledger. Idempotent per caller, project, filename, bytes and source claims. External origin remains caller-declared. Never approves, publishes, converts or extracts the source.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "sourceClaims": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "default": null,
+      "additionalProperties": false,
+      "properties": {
+        "source_system": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "tool_version": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "external_identifier": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "external_revision": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "exported_at": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "licence": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "copyright": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "project": {
+      "type": "string"
+    },
+    "filename": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "contentBase64": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 2796204
+    },
+    "declaredType": {
+      "type": "string",
+      "default": "UNKNOWN",
+      "enum": [
+        "ADL_ARCHETYPE",
+        "ADL_TEMPLATE",
+        "OET_TEMPLATE",
+        "OPT",
+        "WEB_TEMPLATE",
+        "DESIGNER_AUTHORING_JSON",
+        "CANONICAL_COMPOSITION",
+        "FLAT_COMPOSITION",
+        "STRUCTURED_COMPOSITION",
+        "TERMINOLOGY_ARTEFACT",
+        "MODEL_PACKAGE",
+        "OTHER",
+        "UNKNOWN"
+      ]
+    }
+  },
+  "required": [
+    "project",
+    "filename",
+    "contentBase64"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_artifact_import",
+  "arguments": {
+    "project": "modelling-demo",
+    "filename": "example.xml",
+    "contentBase64": "PHgvPg==",
+    "declaredType": "UNKNOWN"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_artifact_provenance`
+
+Verify imported bytes against the exact repository revision and protected audit receipt. Reports real transport identity separately from unverified source claims; this is not clinical approval.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "importId": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "project",
+    "importId"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_artifact_provenance",
+  "arguments": {
+    "project": "modelling-demo",
+    "importId": "<import-id-from-receipt>"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
 ## `model_artifact_save`
 
 Save a DRAFT artefact with optimistic concurrency and authorized write access. Pass the previous revision when replacing an artefact; null only creates.
@@ -2294,6 +2540,118 @@ Example `tools/call` parameters:
   "arguments": {
     "before": "<a min=\"0\"/>",
     "after": "<a min=\"1\"/>"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_import_inspect`
+
+Inspect exact base64-encoded source bytes without writes. Content markers and declarations are separate; Designer .t.json is never assumed to be OET, OPT or Web Template. Does not perform conformance validation or contact an external tool.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "filename": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "contentBase64": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 2796204
+    },
+    "declaredType": {
+      "type": "string",
+      "default": "UNKNOWN",
+      "enum": [
+        "ADL_ARCHETYPE",
+        "ADL_TEMPLATE",
+        "OET_TEMPLATE",
+        "OPT",
+        "WEB_TEMPLATE",
+        "DESIGNER_AUTHORING_JSON",
+        "CANONICAL_COMPOSITION",
+        "FLAT_COMPOSITION",
+        "STRUCTURED_COMPOSITION",
+        "TERMINOLOGY_ARTEFACT",
+        "MODEL_PACKAGE",
+        "OTHER",
+        "UNKNOWN"
+      ]
+    }
+  },
+  "required": [
+    "filename",
+    "contentBase64"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_import_inspect",
+  "arguments": {
+    "filename": "example.xml",
+    "contentBase64": "PHgvPg=="
   }
 }
 ```

@@ -289,6 +289,7 @@ test("MCP tool filtering fails closed for new or disabled write tools", async ()
                       { name: "ckm_sources" },
                       { name: "model_artifact_save" },
                       { name: "template_compile_project" },
+                      { name: "model_artifact_import" },
                       { name: "delete_all_models" },
                   ],
               }
@@ -300,6 +301,7 @@ test("MCP tool filtering fails closed for new or disabled write tools", async ()
     await assert.rejects(() => client.call("model_artifact_save", {}));
     await assert.rejects(() => client.call("delete_all_models", {}));
     await assert.rejects(() => client.call("template_compile_project", {}));
+    await assert.rejects(() => client.call("model_artifact_import", {}));
 });
 
 function oidcFixture(claimOverride = {}, badSignature = false) {

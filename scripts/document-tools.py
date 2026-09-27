@@ -6,6 +6,9 @@ from pathlib import Path
 catalogue = Path('docs/evidence/tool-catalogue.json')
 tools = json.loads(catalogue.read_text())
 examples = {
+ 'model_import_inspect':{'filename':'example.xml','contentBase64':'PHgvPg=='},
+ 'model_artifact_import':{'project':'modelling-demo','filename':'example.xml','contentBase64':'PHgvPg==','declaredType':'UNKNOWN'},
+ 'model_artifact_provenance':{'project':'modelling-demo','importId':'<import-id-from-receipt>'},
  'archetype_validate':{'content':'<ADL 2 source>'},
  'template_validate':{'content':'<ADL 2 template>', 'dependencies':[{'identifier':'<exact archetype identifier>','content':'<ADL 2 dependency>'}]},
  'template_compile':{'content':'<ADL 2 template>', 'dependencies':[{'identifier':'<exact archetype identifier>','content':'<ADL 2 dependency>'}]},

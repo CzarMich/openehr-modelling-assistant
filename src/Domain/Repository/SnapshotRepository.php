@@ -8,7 +8,7 @@ use RuntimeException;
 use InvalidArgumentException;
 
 /** Shared revision, history and governance semantics over atomic snapshot storage. */
-class SnapshotRepository implements ModelRepository
+class SnapshotRepository implements ModelRepository, OriginalRepository
 {
     public function __construct(private readonly SnapshotStore $store, private readonly string $provider, private readonly bool $offline) {}
 
@@ -77,6 +77,7 @@ class SnapshotRepository implements ModelRepository
     public function saveArtifact(string $project, string $path, string $content, array $metadata, ?string $expectedRevision): array
     {
         $this->artifactPath($path);
+        if (OriginalContent::isOriginal($path)) { throw new RuntimeException('IMPORT_ORIGINAL_IMMUTABLE'); }
         if (strlen($content) > 2097152) {
             throw new InvalidArgumentException('ARTIFACT_TOO_LARGE');
         }
@@ -96,9 +97,28 @@ class SnapshotRepository implements ModelRepository
         });
     }
 
+    public function storeOriginal(string $project, string $path, string $bytes, array $metadata): array
+    {
+        OriginalContent::assertPath($path);
+        $payload = OriginalContent::envelope($bytes);
+        ArtifactMetadata::validate($metadata);
+        return $this->transaction($project, function (array $state) use ($path, $payload, $metadata): array {
+            $this->assertActive($state);
+            if (isset($state['artifacts'][$path]) || isset($state['history'][$path])) {
+                throw new RuntimeException('IMPORT_ORIGINAL_EXISTS');
+            }
+            $artifact = ['path' => $path, 'metadata' => $metadata, 'status' => 'DRAFT',
+                'revision' => bin2hex(random_bytes(16)), 'updated_at' => gmdate(DATE_ATOM), 'provider' => $this->provider] + $payload;
+            $state['artifacts'][$path] = $artifact;
+            $state['history'][$path][] = $artifact;
+            return [$state, $artifact];
+        });
+    }
+
     public function deleteArtifact(string $project, string $path, string $expectedRevision): void
     {
         $this->artifactPath($path);
+        if (OriginalContent::isOriginal($path)) { throw new RuntimeException('IMPORT_ORIGINAL_IMMUTABLE'); }
         $this->transaction($project, function (array $state) use ($path, $expectedRevision): array {
             $this->assertActive($state);
             $current = $state['artifacts'][$path] ?? throw new RuntimeException('ARTIFACT_NOT_FOUND');
@@ -122,6 +142,7 @@ class SnapshotRepository implements ModelRepository
 
     private function artifactPath(string $path): void
     {
+        if (OriginalContent::isOriginal($path)) { OriginalContent::assertPath($path); return; }
         if (strlen($path) > 240 || !preg_match('~^(requirements|archetypes|templates|terminology|aql|tests|validation|decisions|documentation)/[A-Za-z0-9_./-]+$~D', $path)
             || str_contains($path, '..') || str_contains($path, '//') || str_ends_with($path, '/')) {
             throw new InvalidArgumentException('INVALID_ARTIFACT_PATH');

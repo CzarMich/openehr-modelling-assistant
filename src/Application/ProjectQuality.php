@@ -26,6 +26,7 @@ final readonly class ProjectQuality
     {
         $projectRecord = $this->repository->getProject($project);
         $source = $this->repository->getArtifact($project, $path, $revision);
+        if (!is_string($source['content'] ?? null)) { throw new \RuntimeException('MODEL_TEXT_FORMAT_REQUIRED'); }
         $format ??= strtolower(pathinfo($path, PATHINFO_EXTENSION));
         $report = $this->pipeline->run($source['content'], $format);
         $findings = new Findings();

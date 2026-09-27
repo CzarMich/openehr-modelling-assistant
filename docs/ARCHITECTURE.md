@@ -21,6 +21,10 @@ flowchart TB
     MCP --> Auth[Transport identity: local, API key or OIDC]
     Auth --> Scope[Signed tenant namespace and draft-write permissions]
     Scope --> Core
+    Core --> Imports[ModelImports: type inspection and idempotent receipt workflow]
+    Imports --> Originals[OriginalRepository: create-only native source bytes]
+    Originals --> Repository
+    Imports --> Ledger
     Core --> EnginePort[OpenEhrEngine domain port]
     EnginePort --> Engine[Private native engine: Archie and AQL grammar]
     Engine --> Builds[OPT 2 ADL / supported OPT 1.4 XML and exact-revision build evidence]
@@ -88,3 +92,5 @@ PostgreSQL is the recommended governance backend. Optional Valkey accelerates re
 The main browser URL now opens one [tabbed modelling workspace](BROWSER_WORKSPACE.md). Chat, repository browsing and governance share navigation and sign-in; switching tabs preserves the conversation and selected revision.
 
 The legacy engine pairs Archie-calculated original model paths with original ADL constraint syntax. It expands supported internal references without modifying source archetypes and narrows omitted/open RM attributes using bundled RM metadata. Each transformation is recorded in build actions; cycles, type mismatches and explicit slot restrictions remain enforced. Existing-model compilation is exercised by `scripts/engine-example-smoke.py`.
+
+[Manual imports](MODEL_IMPORTS.md) separate byte-preserving originals from editable models and compiler outputs. Protected intent/receipt streams bind the transport principal to exact stored hashes and revisions. Governance filters registration streams before pagination; ordinary model writes cannot mutate the original namespace. External source claims and detected types never certify external-tool origin or clinical validity.

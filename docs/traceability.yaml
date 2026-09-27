@@ -312,3 +312,12 @@ requirements:
     packages: [src/Domain/Modelling/OpenEhrEngine.php, src/Application/NativeModels.php, src/Application/TemplateBuilds.php, src/Integrations/Engine/*.php, src/Configuration/EngineConfiguration.php, src/Tools/NativeEngineTools.php, src/Tools/TemplateBuildTools.php, engine/src/main/java]
     tests: [tests/Enterprise/NativeEngineTest.php, tests/Enterprise/TemplateBuildsTest.php, tests/Enterprise/JsonDocumentTest.php, tests/Tools/NativeEngineOutputCases.php, engine/src/test/java, scripts/test-engine-container.sh, scripts/engine-example-smoke.py]
     adr: ["0020", "0022"]
+
+  - id: REQ-F22
+    title: Exact source preservation and protected platform import provenance
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Application/ModelImports.php, src/Domain/Modelling/ArtifactTypes.php, src/Domain/Repository/Original*.php, src/Validation/ArtifactTypeInspector.php, src/Tools/ModelImportTools.php]
+    tests: [tests/Enterprise/OriginalRepositoryTest.php, tests/Enterprise/ArtifactTypeInspectorTest.php, tests/Enterprise/ModelImportsTest.php, tests/Tools/ImportOutputCases.php, chat/test/models.test.mjs, chat/test/browser.spec.mjs]
+    adr: ["0023"]

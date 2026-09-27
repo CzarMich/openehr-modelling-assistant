@@ -130,3 +130,5 @@ MCP versions and capability advertising are product contracts rather than admini
 Browser chat and model governance share one verified human session. Review browsing and decision freshness have separate bounded lifetimes; the explicit platform-administrator role maps to all governance roles. See [review deployment](REVIEW_DEPLOYMENT.md#one-browser-identity-for-chat-and-governance).
 
 The optional compiler overlay also reads `MODELLING_ENGINE_KEY_FILE` and `MODELLING_ENGINE_IMAGE`; the Java process reads `ENGINE_KEY_FILE`. See [complete engine configuration](OPT_COMPILATION.md).
+
+Manual imports use existing `MODEL_REPOSITORY_WRITE_ENABLED`, OIDC write permissions and `GOVERNANCE_ENABLED`/audit database settings. No import secret is added. The decoded limit is 2 MiB; base64 increases request size. Set `MAX_REQUEST_BYTES=4194304` consistently at ingress and application if a full 2 MiB source must pass HTTP; the default 2 MiB request limit admits a smaller source. Project snapshot/client limits still apply. Read-only inspection needs no audit backend. See [manual imports](MODEL_IMPORTS.md).

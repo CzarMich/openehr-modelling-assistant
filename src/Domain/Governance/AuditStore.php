@@ -8,7 +8,7 @@ namespace OpenEHR\Assistant\Domain\Governance;
 interface AuditStore
 {
     /** @return list<array<string, mixed>> */
-    public function subjects(string $tenant, string $project, int $limit = 100, int $offset = 0): array;
+    public function subjects(string $tenant, string $project, int $limit = 100, int $offset = 0, ?string $firstType = null): array;
     /** @return list<array<string, mixed>> */
     public function events(string $tenant, string $subject): array;
     /** Atomic append against the observed sequence. The store assigns sequence/time/hash.
