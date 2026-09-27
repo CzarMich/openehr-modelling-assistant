@@ -23,8 +23,9 @@ CKM, or operate as a terminology server.
 - Guide archetype, template, ADL, AQL and simplified-format design/review through MCP prompts.
 - Generate a **draft OET** containing a retrieved COMPOSITION and direct ENTRY archetypes,
   retaining actual CKM source identifiers and content hashes.
-- Parse XML securely; check an OET/OPT structural profile and ADL headers; compare XML
-  structure, constraints and leaf values. These checks do not certify openEHR conformance.
+- Parse XML/JSON securely; check OET/OPT and FLAT/STRUCTURED document profiles and ADL headers.
+  Separate parse, structure and conformance stages; compare XML structure, constraints and leaf values.
+  [Validation and project QA](docs/VALIDATION_AND_QA.md) explain the implemented checks and boundaries.
 - Persist projects, requirements, artefacts, decisions, metadata and immutable revisions
   using filesystem/SharePoint snapshots or Git, including GitHub/GitLab metadata and draft reviews, with revision conflict detection.
 - Represent local/external value sets and bindings, invoke FHIR terminology operations,
@@ -33,7 +34,8 @@ CKM, or operate as a terminology server.
   constraints and save revision-bound binding plans with local catalogue candidates and QA findings.
 - Persist a typed requirements/decision graph and query why an element exists or which elements
   declare coverage of a requirement. Resolve exact source, anchor and audit references; identify stale
-  or unavailable evidence. QA preflight identifies unexecuted qualification checks.
+  or unavailable evidence. Project QA checks exact revisions, provenance, requirement trails and
+  authentic validation/review events, with unavailable qualification checks explicit.
 - Prepare exact model revisions for independent human review, record signed-in reviewer decisions,
   and retain validation and audit evidence in a separate protected ledger. The review workspace
   works without an LLM account; agents cannot approve models.
@@ -112,7 +114,9 @@ flowchart TD
     S --> K[Multiple named CKM sources]
     S --> B[Bundled specifications and guides]
     S --> D[Modelling services and structural checks]
-    D --> R[Model Repository interface]
+    D --> VQ[Separate validation stages and exact-revision project QA]
+    VQ --> R[Model Repository interface]
+    VQ --> TG
     D --> TG[Requirements and decision graph: deterministic rationale and coverage queries]
     TG --> R
     TG -->|Exact validation and human review references| AU
@@ -153,7 +157,8 @@ flowchart TD
     PR --> TG[Save requirements graph with source and decision links]
     TG --> GP[Register exact revision and run installed validation]
     GP --> EV[Link exact validation event; resolve traceability findings]
-    EV --> RR[Request human review]
+    EV --> QA[Run project QA: provenance, source freshness and recorded evidence]
+    QA --> RR[Request human review]
     RR --> H[Signed-in independent reviewer: inspect source and evidence]
     H --> Q{Qualified validation available?}
     Q -->|No| F[Record findings or request changes; approval blocked]

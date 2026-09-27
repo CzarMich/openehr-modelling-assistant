@@ -69,3 +69,5 @@ Native OPT compilation, full ADL/AQL validation, CDR execution, full project/tea
 | ID | Requirement | Primary capability surface |
 |---|---|---|
 | **REQ-F17** | Persist typed requirements, decisions and exact model/evidence links; answer element rationale and requirement coverage deterministically, with stale/missing/unexecuted evidence and declared clinical satisfaction kept distinct. | `model_traceability_*`, shared application/domain services and repository/audit contracts |
+
+| **REQ-F18** | Separate deterministic document validation stages and formal QA findings; connect exact repository revisions to recorded provenance, requirements and authentic validation/review evidence without inferring release qualification. | `model_validate`, `model_qa`, `model_project_qa` and shared services |

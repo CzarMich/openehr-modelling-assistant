@@ -2109,6 +2109,119 @@ Output schema:
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
 
+## `model_project_qa`
+
+Inspect an exact repository model revision, document profile, recorded provenance, requirement trail, authentic validation/review events and explicit terminology findings. Missing engine/dependency checks remain unexecuted; no approval or model write occurs.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "revision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "format": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "enum": [
+        "xml",
+        "oet",
+        "opt",
+        "adl",
+        "aql",
+        "flat",
+        "structured",
+        null
+      ]
+    }
+  },
+  "required": [
+    "project",
+    "path"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_project_qa",
+  "arguments": {
+    "project": "neonatal-care",
+    "path": "templates/admission.oet"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
 ## `model_projects`
 
 List persistent projects and actual repository capabilities.
@@ -2207,7 +2320,9 @@ Input schema:
         "oet",
         "opt",
         "adl",
-        "aql"
+        "aql",
+        "flat",
+        "structured"
       ]
     }
   },
@@ -3332,7 +3447,9 @@ Input schema:
         "oet",
         "opt",
         "adl",
-        "aql"
+        "aql",
+        "flat",
+        "structured"
       ]
     }
   },

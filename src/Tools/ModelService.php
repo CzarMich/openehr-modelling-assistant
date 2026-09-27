@@ -22,7 +22,7 @@ final readonly class ModelService
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'model_validate', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
-    public function validate(#[Schema(maxLength: 2097152)] string $content, #[Schema(enum: ['xml', 'oet', 'opt', 'adl', 'aql'])] string $format): array
+    public function validate(#[Schema(maxLength: 2097152)] string $content, #[Schema(enum: ['xml', 'oet', 'opt', 'adl', 'aql', 'flat', 'structured'])] string $format): array
     {
         return ToolResult::run(fn (): array => $this->validator->validate($content, $format));
     }
@@ -55,7 +55,7 @@ final readonly class ModelService
      */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'model_qa', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
-    public function qa(#[Schema(maxLength: 2097152)] string $content, #[Schema(enum: ['xml', 'oet', 'opt', 'adl', 'aql'])] string $format): array
+    public function qa(#[Schema(maxLength: 2097152)] string $content, #[Schema(enum: ['xml', 'oet', 'opt', 'adl', 'aql', 'flat', 'structured'])] string $format): array
     {
         return ToolResult::run(fn (): array => $this->qa->run($content, $format));
     }

@@ -267,3 +267,12 @@ requirements:
     packages: [src/Domain/Traceability/*.php, src/Application/ProjectTraceability.php, src/Application/TraceabilityEvidence.php, src/Integrations/Traceability/*.php, src/Validation/JsonDocument.php, src/Tools/TraceabilityTools.php]
     tests: [tests/Enterprise/TraceabilityGraphTest.php, tests/Enterprise/ProjectTraceabilityTest.php, tests/Tools/TraceabilityOutputCases.php]
     adr: ["0016"]
+
+  - id: REQ-F18
+    title: Separate validation stages and exact-revision project quality evidence
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Validation/*.php, src/Domain/Modelling/QualityPipeline.php, src/Application/ProjectQuality.php, src/Tools/QualityTools.php, src/Tools/ModelService.php]
+    tests: [tests/Enterprise/StagedValidationTest.php, tests/Enterprise/ProjectQualityTest.php, tests/Enterprise/ModelValidationTest.php, tests/Tools/EnterpriseOutputCases.php]
+    adr: ["0017"]

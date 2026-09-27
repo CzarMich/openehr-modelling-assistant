@@ -1,11 +1,12 @@
 # FLAT `|raw` Escape Hatch — Example Payload
 
 **Pattern:** embed a canonical-JSON RM fragment under `|raw` to carry attributes that have no pure-FLAT path
-**Demonstrates:** the `|raw` suffix as the last-resort mechanism for attributes not expressible via `|magnitude|unit|code|...` + underscore prefixes — in particular `DV_QUANTITY.magnitude_status`, `DV_QUANTITY.normal_status`, `DV_QUANTITY.other_reference_ranges`, `DV_CODED_TEXT.preferred_term`, multi-entry `PARTY_IDENTIFIED.identifiers`, `PARTY_REF.external_ref`. The `|raw` string is a stringified canonical-JSON object; the server parses it as-is into the RM tree.
+**Demonstrates:** the `|raw` suffix as the last-resort mechanism for attributes not expressible via `|magnitude|unit|code|...` + underscore prefixes — in particular `DV_QUANTITY.magnitude_status`, `DV_QUANTITY.normal_status`, `DV_QUANTITY.other_reference_ranges`, `DV_CODED_TEXT.preferred_term`, multi-entry `PARTY_IDENTIFIED.identifiers`, `PARTY_REF.external_ref`. The `|raw` value is a canonical-JSON object, following the development Simplified Formats specification. A stringified object is a provider compatibility form, not the default shown here.
 **MIME type:** `application/openehr.wt.flat+json`
 **Template:** assumes a laboratory-result template with a DV_QUANTITY leaf needing reference-range plus status metadata
 **Related:** `openehr://guides/specs/its-rest-simplified_formats`, `openehr://guides/simplified_formats/principles`
-**Source:** GitHub — [Using the raw attribute in Ehrscape FLAT JSON](https://github.com/inidus/openehr_guides/blob/master/Using%20the%20raw%20attribute%20in%20Ehrscape%20FLAT%20JSON.adoc) (Ian McNicoll / inidus)
+**Specification:** [openEHR development Simplified Formats](https://specifications.openehr.org/releases/ITS-REST/development/simplified_formats.html)
+**Original example source:** GitHub — [Using the raw attribute in Ehrscape FLAT JSON](https://github.com/inidus/openehr_guides/blob/master/Using%20the%20raw%20attribute%20in%20Ehrscape%20FLAT%20JSON.adoc) (Ian McNicoll / inidus)
 
 ---
 
@@ -14,12 +15,62 @@
   "ctx/language": "en",
   "ctx/territory": "US",
   "ctx/composer_name": "Lab System",
-
   "laboratory_report/laboratory_result:0/analyte_name|code": "14646-4",
   "laboratory_report/laboratory_result:0/analyte_name|value": "Cholesterol",
   "laboratory_report/laboratory_result:0/analyte_name|terminology": "LOINC",
-
-  "laboratory_report/laboratory_result:0/result_value/quantity_value|raw": "{\"_type\":\"DV_QUANTITY\",\"magnitude\":7.4,\"units\":\"mmol/l\",\"magnitude_status\":\">=\",\"normal_status\":{\"_type\":\"CODE_PHRASE\",\"terminology_id\":{\"_type\":\"TERMINOLOGY_ID\",\"value\":\"openehr\"},\"code_string\":\"HH\"},\"normal_range\":{\"_type\":\"DV_INTERVAL\",\"lower\":{\"_type\":\"DV_QUANTITY\",\"magnitude\":3.0,\"units\":\"mmol/l\"},\"upper\":{\"_type\":\"DV_QUANTITY\",\"magnitude\":5.0,\"units\":\"mmol/l\"},\"lower_unbounded\":false,\"upper_unbounded\":false},\"other_reference_ranges\":[{\"_type\":\"REFERENCE_RANGE\",\"meaning\":{\"_type\":\"DV_TEXT\",\"value\":\"Age-sex appropriate range\"},\"range\":{\"_type\":\"DV_INTERVAL\",\"lower\":{\"_type\":\"DV_QUANTITY\",\"magnitude\":3.2,\"units\":\"mmol/l\"},\"upper\":{\"_type\":\"DV_QUANTITY\",\"magnitude\":5.2,\"units\":\"mmol/l\"},\"lower_unbounded\":false,\"upper_unbounded\":false}}]}"
+  "laboratory_report/laboratory_result:0/result_value/quantity_value|raw": {
+    "_type": "DV_QUANTITY",
+    "magnitude": 7.4,
+    "units": "mmol/l",
+    "magnitude_status": ">=",
+    "normal_status": {
+      "_type": "CODE_PHRASE",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr"
+      },
+      "code_string": "HH"
+    },
+    "normal_range": {
+      "_type": "DV_INTERVAL",
+      "lower": {
+        "_type": "DV_QUANTITY",
+        "magnitude": 3.0,
+        "units": "mmol/l"
+      },
+      "upper": {
+        "_type": "DV_QUANTITY",
+        "magnitude": 5.0,
+        "units": "mmol/l"
+      },
+      "lower_unbounded": false,
+      "upper_unbounded": false
+    },
+    "other_reference_ranges": [
+      {
+        "_type": "REFERENCE_RANGE",
+        "meaning": {
+          "_type": "DV_TEXT",
+          "value": "Age-sex appropriate range"
+        },
+        "range": {
+          "_type": "DV_INTERVAL",
+          "lower": {
+            "_type": "DV_QUANTITY",
+            "magnitude": 3.2,
+            "units": "mmol/l"
+          },
+          "upper": {
+            "_type": "DV_QUANTITY",
+            "magnitude": 5.2,
+            "units": "mmol/l"
+          },
+          "lower_unbounded": false,
+          "upper_unbounded": false
+        }
+      }
+    ]
+  }
 }
 ```
 

@@ -38,6 +38,15 @@ trait EnterpriseOutputCases
         return new ProjectService($repository, new Settings(['MODEL_REPOSITORY_WRITE_ENABLED' => 'true']), new Traceability());
     }
 
+    public function test_model_project_qa_result_matches_output_schema(): void
+    {
+        $repository = new FileSystemRepository(sys_get_temp_dir() . '/qa-tools-' . bin2hex(random_bytes(6)));
+        $repository->createProject('qa', 'Synthetic fixture', '');
+        $repository->saveArtifact('qa', 'templates/fixture.oet', \OpenEHR\Assistant\Tests\Enterprise\ModelValidationTest::OET, [], null);
+        $service = \OpenEHR\Assistant\Tests\Enterprise\ProjectQualityTest::service($repository);
+        $this->assertConforms(new \OpenEHR\Assistant\Tools\QualityTools($service), 'evaluate', ['qa', 'templates/fixture.oet']);
+    }
+
     private function bindingsService(): TerminologyBindingService
     {
         $provider = new FhirTerminologyProvider(new Settings());

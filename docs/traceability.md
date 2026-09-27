@@ -82,3 +82,5 @@ the Implementation column is either dead code or an undocumented requirement.
 | REQ-F16 | Persisted governance and interactive human review | `Application/ModelGovernance`, `Domain/Governance`, `Rest/ReviewApi` | `GovernanceAuditStoreTest`, `ModelGovernanceTest`, `InteractiveReviewAuthenticatorTest`, `ReviewApiTest`, browser review tests | ADR-0015 |
 
 REQ-F17 connects the persistent project requirement graph to its domain/application/anchor adapters and repository/security contracts; see [requirements traceability](REQUIREMENTS_TRACEABILITY.md) and [ADR-0016](decisions/0016-versioned-requirements-graph-and-evidence-boundaries.md).
+
+REQ-F18 maps staged document checks and exact-revision project QA to their shared services, storage/security contracts and negative tests; see [Validation and QA](VALIDATION_AND_QA.md) and [ADR-0017](decisions/0017-staged-document-validation-and-project-evidence-qa.md).

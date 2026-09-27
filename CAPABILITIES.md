@@ -15,7 +15,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | FHIR ConceptMap translation | WORKING | Explicit map and source coding; repeated candidates retained, human review required, no automatic application |
 | FHIR terminology resource discovery | WORKING | Configured-server CodeSystem/ValueSet/ConceptMap search and exact canonical resolution; server search support required |
 | Draft OET generation | PARTIAL | Retrieved COMPOSITION plus direct ENTRY placements only |
-| OET/OPT validation | PARTIAL | XML and structural profile; no schema/dependency/semantic certification |
+| OET/OPT validation | PARTIAL | Separate parse/structure stages, identity/reference syntax and overflow-safe intervals; full schema/dependency/semantic qualification requires the engine |
+| FLAT/STRUCTURED document profiles | WORKING | Unambiguous JSON, field/array/raw-value shapes and explicit stage findings; OPT/RM/terminology conformance remains unexecuted |
 | ADL validation | PARTIAL | Declaration/header preflight; no grammar or RM validator |
 | Model diff | PARTIAL | XML structure, attributes and leaf values; not full semantic equivalence |
 | Binding validation | PARTIAL | Explicit records, path presence, selected-code validation; no native application |
@@ -25,7 +26,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Requirements traceability | WORKING | Versioned typed graph, deterministic element/requirement queries, exact XML/JSON anchors, authoritative audit references, stale-evidence findings and repository conflicts; coverage remains a modeller assertion, with native inherited paths awaiting the engine |
 | Persisted model governance | WORKING | Exact-revision lifecycle, server-produced validation evidence, append-only audit chain, sequence conflicts and independent human decisions; real approval remains blocked until qualified validation is available |
 | Browser human review and versioned review REST API | WORKING | Source/evidence inspection, role-based decisions, explicit confirmation and single-use request-bound assertions; ordinary MCP credentials cannot approve |
-| QA and release qualification | PARTIAL | Preflight truthfully records unavailable stages; complete deterministic clinical-model qualification requires the engine and formal QA work |
+| Project QA and evidence checks | WORKING | Exact revisions, hash/freshness, recorded provenance, requirement trails, authoritative validation/review links and explicit terminology findings across storage providers |
+| Full model QA and release qualification | PARTIAL | Formal findings name missing engine/dependency checks; document or evidence presence cannot certify clinical-model conformance |
 | API-key authentication and hardened containers | WORKING | One deployment principal, single tenant; enterprise gateway required |
 | Native inbound OIDC | WORKING | Pinned issuer/API audience, discovery/JWKS, RS256 verification, bounded rotation and signed scopes/roles; live identity-provider acceptance, Entra-style fixture coverage |
 | Tenant storage and draft-write authorization | WORKING | Issuer/tenant namespaces, principal-bound sessions, scoped writes and distinct mapped Git remotes; API-key mode remains one service principal |

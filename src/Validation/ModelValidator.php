@@ -6,7 +6,6 @@ namespace OpenEHR\Assistant\Validation;
 
 use DOMDocument;
 use DOMElement;
-use DOMXPath;
 use InvalidArgumentException;
 
 /** Bounded structural validation. This is not an ADL parser or an OPT compiler. */
@@ -39,80 +38,87 @@ final class ModelValidator
     }
 
     /**
-     * @return array<string, mixed> */
+     * @return array<string, mixed>
+     */
     public function validate(string $content, string $format): array
     {
-        $errors = [];
-        $warnings = [];
-        $executed = [];
-        $full = $format === 'xml';
-        if (in_array($format, ['xml', 'oet', 'opt'], true)) {
-            try {
-                $document = self::xml($content);
-                $executed[] = 'secure_xml_parse';
-                if ($format !== 'xml') {
-                    $root = $document->documentElement;
-                    $namespace = $format === 'oet' ? 'openEHR/v1/Template' : 'http://schemas.openehr.org/v1';
-                    if (!$root || $root->localName !== 'template' || $root->namespaceURI !== $namespace) {
-                        $errors[] = 'Unexpected template root or namespace for ' . $format . '.';
-                    } else {
-                        $xpath = new DOMXPath($document);
-                        $xpath->registerNamespace('t', $namespace);
-                        foreach ($format === 'oet' ? ['id', 'name', 'definition'] : ['template_id', 'definition', 'language', 'description'] as $name) {
-                            $nodes = $xpath->query('/t:template/t:' . $name);
-                            if ($nodes === false || $nodes->length !== 1) {
-                                $errors[] = 'Exactly one ' . $name . ' element is required by this structural profile.';
-                            }
-                        }
-                        foreach ($document->getElementsByTagName('*') as $node) {
-                            if ($node->hasAttribute('archetype_id') && !preg_match(self::ARCHETYPE_ID, $node->getAttribute('archetype_id'))) {
-                                $errors[] = 'Invalid archetype identifier.';
-                            }
-                            foreach (['min', 'max'] as $bound) {
-                                if ($node->hasAttribute($bound) && !preg_match($bound === 'min' ? '/^\d+$/D' : '/^(\d+|\*)$/D', $node->getAttribute($bound))) {
-                                    $errors[] = 'Invalid occurrence bound.';
-                                }
-                            }
-                            if ($node->hasAttribute('min') && $node->hasAttribute('max') && $node->getAttribute('max') !== '*'
-                                && (int) $node->getAttribute('min') > (int) $node->getAttribute('max')) {
-                                $errors[] = 'Minimum occurrence exceeds maximum.';
-                            }
-                            if ($node->localName === 'Rule' && !str_starts_with($node->getAttribute('path'), '/')) {
-                                $errors[] = 'Rule requires an absolute path relative to its archetype.';
-                            }
-                        }
-                        $executed[] = $format . '_structural_profile';
-                    }
-                    $warnings[] = 'No schema, RM conformance, archetype dependency, node-path or clinical validation was performed.';
-                    $warnings[] = 'OPT compilation is not configured. Structural checks do not establish deployability.';
-                }
-            } catch (InvalidArgumentException $e) {
-                $errors[] = $e->getMessage();
-            }
-        } elseif ($format === 'adl') {
-            $executed[] = 'adl_header_preflight';
-            if (strlen($content) > 2097152 || !preg_match('/\barchetype\b[\s\S]*?\b(openEHR-[^\s]+)\s/', $content, $matches)
-                || !preg_match(self::ARCHETYPE_ID, $matches[1])) {
-                $errors[] = 'No supported ADL archetype declaration and identifier found.';
-            }
-            foreach (['language', 'description', 'definition', 'ontology'] as $section) {
-                if (!preg_match('/^\s*' . $section . '\b/m', $content)) {
-                    $warnings[] = 'ADL 1.4 preflight did not find section: ' . $section;
-                }
-            }
-            $warnings[] = 'No ADL grammar, RM, slots, terminology or semantic validation was executed.';
-        } elseif ($format === 'aql') {
-            $warnings[] = 'AQL parser and execution adapter are not configured. Use the AQL design/review prompts.';
-        } else {
+        if (!in_array($format, ['xml', 'oet', 'opt', 'adl', 'aql', 'flat', 'structured'], true)) {
             throw new InvalidArgumentException('Unsupported validation format.');
         }
-        return ['valid' => $errors !== [] ? false : ($full ? true : null),
-            'status' => $errors !== [] ? 'INVALID' : ($full ? 'VALIDATED' : ($executed === [] ? 'NOT_EXECUTED' : 'PARTIAL')),
-            'structurally_valid' => $executed === [] ? null : $errors === [], 'deterministic' => true,
+        $findings = new Findings();
+        $executed = [];
+        $parse = null;
+        $structure = null;
+        $stages = [];
+        $reasons = [
+            'parse' => 'A qualified language parser is not configured.',
+            'structure' => 'No structural profile was executed.',
+            'semantics' => 'Semantic compatibility requires model-aware engine validation.',
+            'terminology' => 'No pinned terminology context was supplied to this document check.',
+            'openehr_conformance' => 'Complete openEHR conformance requires the qualified engine and resolved dependencies.',
+            'repository_policy' => 'No repository revision or policy context was supplied.',
+        ];
+        foreach ($reasons as $name => $reason) {
+            $stages[$name] = ['name' => $name, 'status' => 'NOT_EXECUTED', 'reason' => $reason, 'qualified' => false];
+        }
+        try {
+            if ($content === '' || strlen($content) > 2097152 || str_contains($content, "\0") || !mb_check_encoding($content, 'UTF-8')) {
+                throw new InvalidArgumentException('DOCUMENT_EMPTY_OVERSIZED_OR_INVALID_ENCODING');
+            }
+            if (in_array($format, ['xml', 'oet', 'opt'], true)) {
+                $document = self::xml($content);
+                $parse = true;
+                $executed[] = 'secure_xml_parse';
+                $stages['parse'] = ['name' => 'parse', 'status' => 'PASS', 'scope' => 'XML well-formedness with external entities and DTDs prohibited', 'qualified' => false];
+                if ($format === 'xml') {
+                    $structure = true; // Legacy XML field means well-formedness only.
+                    foreach (['structure', 'semantics', 'terminology', 'openehr_conformance'] as $name) {
+                        $stages[$name] = ['name' => $name, 'status' => 'NOT_APPLICABLE', 'reason' => 'The generic XML operation requests well-formedness only.', 'qualified' => false];
+                    }
+                } else {
+                    (new TemplateXmlProfile())->inspect($document, $format, $findings);
+                    $structure = !$findings->failed();
+                    $executed[] = $format . '_structural_profile';
+                }
+            } elseif (in_array($format, ['flat', 'structured'], true)) {
+                $document = JsonDocument::parse($content);
+                $parse = true;
+                $executed[] = 'unambiguous_json_parse';
+                $stages['parse'] = ['name' => 'parse', 'status' => 'PASS', 'scope' => 'Bounded JSON grammar and duplicate-key rejection', 'qualified' => false];
+                (new SimplifiedDataProfile())->inspect($document, $format, $findings);
+                $structure = !$findings->failed();
+                $executed[] = $format . '_document_shape';
+            } elseif ($format === 'adl') {
+                $executed[] = 'adl_header_preflight';
+                // Recognize a leading declaration only. Comments/body strings cannot stand in for it.
+                if (!preg_match('/\A(?:\xEF\xBB\xBF)?(?:\s|--[^\r\n]*(?:\r?\n|$))*archetype\b(?:[ \t]*\([^\r\n()]{0,1000}\))?\s+(openEHR-[^\s;]+)(?:\s|$)/', $content, $matches)
+                    || !preg_match(self::ARCHETYPE_ID, $matches[1])) {
+                    $findings->add('error', 'ADL_DECLARATION_PREFLIGHT', '/', 'No supported leading ADL archetype declaration and identifier was found.', [], 'Provide a supported ADL source; grammar and specialised identifiers require the qualified engine.');
+                }
+                $findings->add('warning', 'ADL_GRAMMAR_NOT_EXECUTED', '/', 'A recognized header is not an ADL parse or model validation.', [], 'Run the qualified ADL/AOM/RM engine with dependencies.');
+            }
+        } catch (InvalidArgumentException|\JsonException $error) {
+            $parse = false;
+            $code = $error instanceof \JsonException ? 'JSON_MALFORMED' : explode(':', $error->getMessage(), 2)[0];
+            $findings->add('error', $code, '/', 'The submitted document could not be safely parsed within the input profile.', [], 'Correct the syntax, encoding or size and remove unsafe or ambiguous constructs.');
+            $stages['parse'] = ['name' => 'parse', 'status' => 'FAIL', 'scope' => 'Input safety and syntax', 'qualified' => false];
+        }
+        if ($structure !== null && $format !== 'xml') {
+            $stages['structure'] = ['name' => 'structure', 'status' => $structure ? 'PASS' : 'FAIL', 'scope' => $format . '_bounded_document_profile', 'qualified' => false];
+        }
+        $items = $findings->all();
+        $errors = array_values(array_map(static fn (array $finding): string => $finding['code'] . ': ' . $finding['message'], array_filter($items, static fn (array $finding): bool => $finding['severity'] === 'error')));
+        $warnings = array_values(array_map(static fn (array $finding): string => $finding['message'], array_filter($items, static fn (array $finding): bool => $finding['severity'] === 'warning')));
+        if ($format !== 'xml') {
+            $warnings[] = 'Document profile checks do not establish semantic validity, terminology suitability, openEHR conformance or deployability.';
+        }
+        return ['valid' => $findings->failed() ? false : ($format === 'xml' ? true : null),
+            'status' => $findings->failed() ? 'INVALID' : ($format === 'xml' ? 'VALIDATED' : ($executed === [] ? 'NOT_EXECUTED' : 'PARTIAL')),
+            'parse_valid' => $parse, 'structurally_valid' => $structure, 'deterministic' => true,
             'scope' => $format === 'xml' ? 'xml_well_formedness' : $format . '_preflight',
-            'validator' => 'openehr-assistant-structural/1', 'executed_checks' => $executed,
-            'errors' => array_values(array_unique($errors)), 'warnings' => $warnings,
-            'content_sha256' => hash('sha256', $content), 'validated_at' => gmdate(DATE_ATOM)];
+            'validator' => 'openehr-modelling-document-profiles/2', 'executed_checks' => $executed,
+            'stages' => array_values($stages), 'findings' => $items, 'errors' => $errors, 'warnings' => $warnings,
+            'release_eligible' => false, 'content_sha256' => hash('sha256', $content), 'validated_at' => gmdate(DATE_ATOM)];
     }
 
     /** Semantic structural projection; addresses use parent placement + path + archetype, never XML order.

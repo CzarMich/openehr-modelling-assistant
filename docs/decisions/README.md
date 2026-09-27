@@ -46,3 +46,5 @@ referenced from [requirements.md](../requirements.md),
 - [ADR-0015: Persisted governance and interactive human approval](0015-persisted-governance-and-interactive-human-approval.md)
 
 - [0016: Versioned requirements graph and evidence boundaries](0016-versioned-requirements-graph-and-evidence-boundaries.md)
+
+- [0017: Staged document validation and project evidence QA](0017-staged-document-validation-and-project-evidence-qa.md)

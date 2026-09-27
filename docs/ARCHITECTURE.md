@@ -21,7 +21,10 @@ flowchart TB
     MCP --> Auth[Transport identity: local, API key or OIDC]
     Auth --> Scope[Signed tenant namespace and draft-write permissions]
     Scope --> Core
-    Core --> Validation[Structural validator and QA stages]
+    Core --> Validation[Separate parse, structure and conformance stages]
+    Validation --> Quality[Exact-revision project QA and formal findings]
+    Quality --> Trace
+    Quality --> Repository
     Core --> Repository[ModelRepository interface]
     Core --> Trace[ProjectTraceability: typed graph and deterministic queries]
     Trace --> Repository
@@ -56,7 +59,7 @@ Terminology operations preserve repeated multilingual values and separate value-
 
 Model files, local value sets, binding records, requirements and decisions share one repository. Select `filesystem` for atomic JSON project snapshots, or `git`/`github`/`gitlab` for ordinary model files, Git commits and optional remote synchronization. Both use expected revisions to reject stale updates. Git fetches before writes and accepts a commit locally only after its remote push succeeds; a rejected push leaves the accepted local branch unchanged. Each instance needs its own Git cache. Native OIDC partitions local storage by issuer/tenant and maps separate Git remotes per tenant. API-key mode remains a shared service principal. Automatic conflict merge, distributed locking and a search index are separate work.
 
-XML parsing is deterministic. OET/OPT checks cover a documented structural subset; ADL checks inspect its header; AQL parsing/execution and OPT compilation are unavailable. QA records those stages as NOT_EXECUTED and keeps release eligibility false. The installed validation executor records authoritative evidence in the governance ledger. Its incomplete stages prevent approval/publication. An AI-supplied report or approval field cannot bypass that gate.
+XML/JSON parsing is deterministic and separate from document structure. OET/OPT and FLAT/STRUCTURED profiles, exact-revision project QA and formal findings are implemented; ADL checks inspect its header. AQL parsing/execution and OPT compilation require the qualified engine. [Validation and QA](VALIDATION_AND_QA.md) records each boundary. QA records those stages as NOT_EXECUTED and keeps release eligibility false. The installed validation executor records authoritative evidence in the governance ledger. Its incomplete stages prevent approval/publication. An AI-supplied report or approval field cannot bypass that gate.
 
 Source selection is deployment-controlled. Each CKM tool accepts a configured source name; it cannot accept an arbitrary destination URL. See [configuration](CONFIGURATION.md), [repository](MODEL_REPOSITORY.md), [terminology](TERMINOLOGY.md), [governance](GOVERNANCE.md), and the [capability matrix](../CAPABILITIES.md).
 
