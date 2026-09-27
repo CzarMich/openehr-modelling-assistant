@@ -8,6 +8,7 @@ import { Store } from "./store.mjs";
 import { McpClient, WRITE_TOOLS } from "./mcp.mjs";
 import { CodexProvider } from "./codex.mjs";
 import { ReviewClient } from "./reviews.mjs";
+import { readModels } from "./models.mjs";
 
 const publicDir = fileURLToPath(new URL("../../public/chat/", import.meta.url));
 const json = (res, status, data) => {
@@ -52,7 +53,8 @@ export function createApplication(
     } = {},
 ) {
     const active = new Map(),
-        rate = new Map();
+        rate = new Map(),
+        modelReads = new Map();
     store.prune();
     const cleanup = setInterval(() => {
         try {
@@ -82,13 +84,18 @@ export function createApplication(
             if ((config.enabled || config.reviewEnabled) && req.headers.host !== new URL(config.origin).host)
                 throw Object.assign(new Error("Unknown host"), { status: 421 });
             const assets = {
+                "/": ["index.html", "text/html; charset=utf-8"],
                 "/chat/": ["index.html", "text/html; charset=utf-8"],
+                "/chat/workspace.js": ["workspace.js", "text/javascript"],
+                "/chat/workspace.css": ["workspace.css", "text/css"],
                 "/chat/app.js": ["app.js", "text/javascript"],
                 "/chat/style.css": ["style.css", "text/css"],
-                "/chat/reviews": ["reviews.html", "text/html; charset=utf-8"],
                 "/chat/reviews.js": ["reviews.js", "text/javascript"],
-                "/chat/reviews.css": ["reviews.css", "text/css"],
             };
+            if (req.method === "GET" && path === "/chat/reviews") {
+                res.writeHead(302, { Location: "/chat/#governance" });
+                return res.end();
+            }
             if (req.method === "GET" && path === "/chat") {
                 res.writeHead(302, { Location: "/chat/" });
                 return res.end();
@@ -174,6 +181,26 @@ export function createApplication(
                     return json(res, 200, await reviews.request(session, "POST", "/api/v1/reviews" + suffix, input));
                 }
                 throw Object.assign(new Error("Not found"), { status: 404 });
+            }
+            if (path.startsWith("/chat/api/models/")) {
+                if (req.method !== "GET")
+                    throw Object.assign(new Error("Model browsing is read-only."), { status: 403 });
+                const count = modelReads.get(identity) || 0;
+                if (count >= 2 || [...modelReads.values()].reduce((a, b) => a + b, 0) >= 16)
+                    throw Object.assign(new Error("Repository requests are busy. Please retry shortly."), {
+                        status: 429,
+                    });
+                modelReads.set(identity, count + 1);
+                const controller = new AbortController();
+                const deadline = setTimeout(() => controller.abort(), 20000);
+                try {
+                    return json(res, 200, await readModels(mcpFactory(controller.signal), req.url));
+                } finally {
+                    clearTimeout(deadline);
+                    const remaining = (modelReads.get(identity) || 1) - 1;
+                    if (remaining) modelReads.set(identity, remaining);
+                    else modelReads.delete(identity);
+                }
             }
             if (!config.enabled)
                 throw Object.assign(new Error("Browser chat is not configured on this deployment."), { status: 503 });

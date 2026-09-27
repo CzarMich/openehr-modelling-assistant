@@ -83,6 +83,7 @@ async function loadSession() {
     $("sign-out").hidden = !session.authenticated;
     $("user-name").textContent = session.user?.name || "";
     controls();
+    document.dispatchEvent(new CustomEvent("workspace:session", { detail: session }));
     if (!session.enabled) notice("Browser chat is not configured on this deployment.");
 }
 async function list() {
@@ -371,12 +372,21 @@ $("sign-out").onclick = async () => {
         notice(e.message);
     }
 };
-$("toggle-sidebar").onclick = () => $("sidebar").classList.toggle("open");
+$("toggle-sidebar").onclick = () => {
+    const expanded = $("sidebar").classList.toggle("open");
+    $("toggle-sidebar").setAttribute("aria-expanded", String(expanded));
+};
 document
     .querySelectorAll(".suggestion")
     .forEach((button) => (button.onclick = () => send(button.dataset.prompt).catch((e) => notice(e.message))));
 loadSession()
     .then(() => {
-        if (session.authenticated) return list();
+        if (session.authenticated && session.enabled) return list();
     })
     .catch(() => notice("The chat service is currently unavailable. Please try again shortly."));
+
+document.addEventListener("workspace:discuss", (event) => {
+    $("message").value = event.detail.prompt;
+    controls();
+    $("message").focus();
+});

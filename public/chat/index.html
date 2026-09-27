@@ -3,14 +3,18 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#123f3b" />
-        <title>Chat · openEHR Modelling Assistant</title>
+        <meta name="theme-color" content="#005eb8" />
+        <title>openEHR Modelling Assistant</title>
         <link rel="stylesheet" href="/chat/style.css" />
-        <script src="/chat/app.js" defer></script>
+        <link rel="stylesheet" href="/chat/workspace.css" />
+        <script src="/chat/app.js" type="module"></script>
+        <script src="/chat/reviews.js" type="module"></script>
+        <script src="/chat/workspace.js" type="module"></script>
     </head>
-    <body>
+    <body data-section="chat">
+        <a class="skip-link" href="#workspace-content">Skip to workspace</a>
         <div class="workspace">
-            <aside id="sidebar" class="sidebar" aria-label="Conversations">
+            <aside id="sidebar" class="sidebar" aria-label="Workspace navigation">
                 <a class="brand" href="/chat/" aria-label="openEHR Modelling Assistant"
                     ><span class="brand-symbol" aria-hidden="true"
                         ><svg
@@ -25,143 +29,359 @@
                             <path d="M9 5V2h15v18h-4M9 11h7M9 15h7M9 19h4" /></svg></span
                     ><span>openEHR<span class="brand-subtitle">Modelling Assistant</span></span></a
                 >
+
+                <div class="platform-label">MODELLING WORKSPACE</div>
+                <nav class="workspace-tabs" role="tablist" aria-label="Workspace">
+                    <button id="tab-chat" role="tab" aria-controls="panel-chat" aria-selected="true" data-tab="chat">
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 3V6a2 2 0 0 1 2-2Z" />
+                            <path d="M7 9h10M7 13h7" />
+                        </svg>
+                        Chat
+                    </button>
+                    <button
+                        id="tab-models"
+                        role="tab"
+                        aria-controls="panel-models"
+                        aria-selected="false"
+                        tabindex="-1"
+                        data-tab="models"
+                    >
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M3 6h7l2 2h9v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+                            <path d="M3 8V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2" />
+                        </svg>
+                        Models
+                    </button>
+                    <button
+                        id="tab-governance"
+                        role="tab"
+                        aria-controls="panel-governance"
+                        aria-selected="false"
+                        tabindex="-1"
+                        data-tab="governance"
+                    >
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7Z" />
+                            <path d="m8 12 3 3 5-6" />
+                        </svg>
+                        Governance
+                    </button>
+                </nav>
                 <button id="new-chat" class="new-chat" disabled>
                     <span aria-hidden="true">+</span> New conversation
                 </button>
-                <a href="/chat/reviews" class="sidebar-label">MODEL REVIEWS</a>
                 <div class="sidebar-label">YOUR CONVERSATIONS</div>
                 <nav id="conversations" aria-label="Your conversations">
                     <p class="empty-list">Sign in to start a conversation.</p>
                 </nav>
                 <div class="sidebar-bottom">
-                    <span class="status-dot"></span><span>Models, with context.</span
+                    <span class="status-dot"></span><span>Clinical modelling workspace</span
                     ><a
-                        href="https://github.com/CzarMich/openehr-modelling-assistant/blob/main/docs/BROWSER_CHAT.md"
+                        href="https://github.com/CzarMich/openehr-modelling-assistant/blob/main/docs/BROWSER_WORKSPACE.md"
                         target="_blank"
                         rel="noopener noreferrer"
                         >User guide ↗</a
                     >
                 </div>
             </aside>
-            <main class="main">
+            <main class="main" id="workspace-content" tabindex="-1">
                 <header class="topbar">
                     <div class="topbar-left">
-                        <button id="toggle-sidebar" class="icon-button mobile-only" aria-label="Toggle conversations">
+                        <button
+                            id="toggle-sidebar"
+                            class="icon-button mobile-only"
+                            aria-label="Toggle conversations"
+                            aria-controls="conversations"
+                            aria-expanded="false"
+                        >
                             ☰</button
-                        ><span class="workspace-name">Modelling workspace</span
-                        ><span class="context-badge">Drafts &amp; discovery</span>
+                        ><span class="workspace-name" id="section-title">Modelling workspace</span
+                        ><span class="context-badge" id="section-context">Drafts &amp; discovery</span>
                     </div>
                     <div class="account">
                         <span id="user-name"></span><button id="sign-out" class="text-button" hidden>Sign out</button>
                     </div>
                 </header>
-                <div id="notice" role="alert" class="notice" hidden></div>
-                <section id="welcome" class="welcome">
-                    <div class="eyebrow"><span class="status-dot"></span> OPEN KNOWLEDGE. BETTER MODELS.</div>
-                    <h1>What are you<br /><em>modelling today?</em></h1>
-                    <p class="intro">
-                        Find the right archetypes, explore your models, and turn requirements into a considered first
-                        draft.
-                    </p>
-                    <div id="login-panel" class="login-panel" hidden>
-                        <a class="primary-button" href="/chat/auth/login"
-                            >Sign in to start chatting <span aria-hidden="true">→</span></a
-                        >
-                        <p>
-                            Use your organisation account. Your conversations are private to your sign-in; model
-                            repositories may be shared.
+                <section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
+                    <div id="notice" role="alert" class="notice" hidden></div>
+                    <section id="welcome" class="welcome">
+                        <div class="eyebrow"><span class="status-dot"></span> OPENEHR MODELLING ASSISTANT</div>
+                        <h1>Your clinical modelling workspace</h1>
+                        <p class="intro">
+                            Discover reusable archetypes, develop templates, and prepare models for review. Start with a
+                            requirement or open an existing project.
                         </p>
-                    </div>
-                    <div id="suggestions" class="suggestions">
-                        <button
-                            class="suggestion"
-                            data-prompt="List the available CKM sources, then help me find a blood pressure archetype. Retrieve real results and explain which source you used."
-                            disabled
-                        >
-                            <span class="suggestion-icon"
-                                ><svg
-                                    viewBox="0 0 24 24"
-                                    width="24"
-                                    height="24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.5"
-                                >
-                                    <circle cx="10" cy="10" r="6" />
-                                    <path d="m15 15 5 5" /></svg></span
-                            ><strong>Find an archetype</strong><span>Discover reusable models for blood pressure.</span
-                            ><span class="arrow" aria-hidden="true">↗</span>
-                        </button>
-                        <button
-                            class="suggestion"
-                            data-prompt="Help me plan a neonatal admission template. Begin with requirements and available openEHR guides. Keep unresolved concepts explicit and treat the model as a draft."
-                            disabled
-                        >
-                            <span class="suggestion-icon"
-                                ><svg
-                                    viewBox="0 0 24 24"
-                                    width="24"
-                                    height="24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.5"
-                                >
-                                    <rect x="3" y="6" width="14" height="15" rx="2" />
-                                    <path d="M7 6V2h14v15h-4M7 11h6M7 15h6" /></svg></span
-                            ><strong>Shape a template</strong><span>Turn a modelling requirement into a draft.</span
-                            ><span class="arrow" aria-hidden="true">↗</span>
-                        </button>
-                        <button
-                            class="suggestion"
-                            data-prompt="List the modelling projects I can access and explain how I can inspect their artifacts and revision history. Do not change anything."
-                            disabled
-                        >
-                            <span class="suggestion-icon"
-                                ><svg
-                                    viewBox="0 0 24 24"
-                                    width="24"
-                                    height="24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.5"
-                                >
-                                    <circle cx="6" cy="5" r="2.5" />
-                                    <circle cx="6" cy="19" r="2.5" />
-                                    <circle cx="18" cy="5" r="2.5" />
-                                    <path d="M6 7.5v9M18 7.5c0 6-12 3-12 8" /></svg></span
-                            ><strong>Explore your models</strong
-                            ><span>Review projects, artifacts and revision history.</span
-                            ><span class="arrow" aria-hidden="true">↗</span>
-                        </button>
-                    </div>
-                    <div class="welcome-note">
-                        <span aria-hidden="true">◇</span> Start with your requirements. Terminology binding is optional.
-                    </div>
-                </section>
-                <section id="thread" class="thread" aria-label="Chat messages" hidden></section>
-                <div id="activity" class="activity" role="status" aria-live="polite"></div>
-                <div class="composer-wrap">
-                    <form id="chat-form" class="composer">
-                        <label class="sr-only" for="message">Message the modelling assistant</label
-                        ><textarea
-                            id="message"
-                            maxlength="8000"
-                            rows="2"
-                            placeholder="Ask about an archetype, describe a model, or paste a draft…"
-                            disabled
-                        ></textarea>
-                        <div class="composer-actions">
-                            <span id="composer-hint">Sign in to begin</span
-                            ><button id="stop" type="button" class="stop-button" hidden>Stop response</button
-                            ><button id="send" type="submit" class="send-button" aria-label="Send message" disabled>
-                                ↑
+                        <div id="login-panel" class="login-panel" hidden>
+                            <a class="primary-button" href="/chat/auth/login"
+                                >Sign in to start chatting <span aria-hidden="true">→</span></a
+                            >
+                            <p>
+                                Use your organisation account. Your conversations are private to your sign-in; model
+                                repositories may be shared.
+                            </p>
+                        </div>
+                        <div id="suggestions" class="suggestions">
+                            <button
+                                class="suggestion"
+                                data-prompt="List the available CKM sources, then help me find a blood pressure archetype. Retrieve real results and explain which source you used."
+                                disabled
+                            >
+                                <span class="suggestion-icon"
+                                    ><svg
+                                        viewBox="0 0 24 24"
+                                        width="24"
+                                        height="24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                    >
+                                        <circle cx="10" cy="10" r="6" />
+                                        <path d="m15 15 5 5" /></svg></span
+                                ><strong>Find an archetype</strong
+                                ><span>Discover reusable models for blood pressure.</span
+                                ><span class="arrow" aria-hidden="true">↗</span>
+                            </button>
+                            <button
+                                class="suggestion"
+                                data-prompt="Help me plan a neonatal admission template. Begin with requirements and available openEHR guides. Keep unresolved concepts explicit and treat the model as a draft."
+                                disabled
+                            >
+                                <span class="suggestion-icon"
+                                    ><svg
+                                        viewBox="0 0 24 24"
+                                        width="24"
+                                        height="24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                    >
+                                        <rect x="3" y="6" width="14" height="15" rx="2" />
+                                        <path d="M7 6V2h14v15h-4M7 11h6M7 15h6" /></svg></span
+                                ><strong>Shape a template</strong><span>Turn a modelling requirement into a draft.</span
+                                ><span class="arrow" aria-hidden="true">↗</span>
+                            </button>
+                            <button
+                                class="suggestion"
+                                data-prompt="List the modelling projects I can access and explain how I can inspect their artifacts and revision history. Do not change anything."
+                                disabled
+                            >
+                                <span class="suggestion-icon"
+                                    ><svg
+                                        viewBox="0 0 24 24"
+                                        width="24"
+                                        height="24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                    >
+                                        <circle cx="6" cy="5" r="2.5" />
+                                        <circle cx="6" cy="19" r="2.5" />
+                                        <circle cx="18" cy="5" r="2.5" />
+                                        <path d="M6 7.5v9M18 7.5c0 6-12 3-12 8" /></svg></span
+                                ><strong>Explore your models</strong
+                                ><span>Review projects, artifacts and revision history.</span
+                                ><span class="arrow" aria-hidden="true">↗</span>
                             </button>
                         </div>
+                        <div class="welcome-note">
+                            <span aria-hidden="true">◇</span> Start with your requirements. Terminology binding is
+                            optional.
+                        </div>
+                    </section>
+                    <section id="thread" class="thread" aria-label="Chat messages" hidden></section>
+                    <div id="activity" class="activity" role="status" aria-live="polite"></div>
+                    <div class="composer-wrap">
+                        <form id="chat-form" class="composer">
+                            <label class="sr-only" for="message">Message the modelling assistant</label
+                            ><textarea
+                                id="message"
+                                maxlength="8000"
+                                rows="2"
+                                placeholder="Ask about an archetype, describe a model, or paste a draft…"
+                                disabled
+                            ></textarea>
+                            <div class="composer-actions">
+                                <span id="composer-hint">Sign in to begin</span
+                                ><button id="stop" type="button" class="stop-button" hidden>Stop response</button
+                                ><button id="send" type="submit" class="send-button" aria-label="Send message" disabled>
+                                    ↑
+                                </button>
+                            </div>
+                        </form>
+                        <p class="disclaimer">
+                            Generated models remain drafts. Check sources and obtain qualified review before use.
+                        </p>
+                    </div>
+                </section>
+
+                <section id="panel-models" role="tabpanel" aria-labelledby="tab-models" class="content-panel" hidden>
+                    <div class="page-intro">
+                        <p class="eyebrow">MODEL REPOSITORY</p>
+                        <h1>Your models</h1>
+                        <p>
+                            Browse project artifacts, inspect their exact source, and keep revision context as you work.
+                        </p>
+                    </div>
+                    <div class="model-toolbar">
+                        <label for="model-project">Project</label
+                        ><select id="model-project">
+                            <option value="">Select a project</option></select
+                        ><button id="refresh-models" class="secondary-button">Refresh projects</button
+                        ><label class="search-field" for="model-filter"
+                            ><span class="sr-only">Filter models</span
+                            ><input id="model-filter" type="search" placeholder="Filter by name or type"
+                        /></label>
+                    </div>
+                    <p id="model-notice" role="status" aria-live="polite">Sign in to browse the model repository.</p>
+                    <div class="model-layout">
+                        <section class="model-list-panel" aria-label="Project artifacts">
+                            <div class="list-heading">
+                                <h2>Artifacts</h2>
+                                <span id="model-count" class="count-badge">0</span>
+                            </div>
+                            <div id="model-list" class="artifact-list">
+                                <p class="empty-state">Choose a project to view its models.</p>
+                            </div>
+                        </section>
+                        <section id="model-detail" class="model-detail" aria-label="Selected model" hidden>
+                            <div class="detail-heading">
+                                <h2 id="model-title"></h2>
+                                <span id="model-state" class="badge"></span>
+                            </div>
+                            <p id="model-revision" class="revision-note"></p>
+                            <div class="model-actions">
+                                <button id="discuss-model" class="primary-button">Discuss in chat</button
+                                ><button id="review-model" class="secondary-button">Open governance</button>
+                            </div>
+                            <h3>Source</h3>
+                            <pre id="model-source" tabindex="0"></pre>
+                            <details>
+                                <summary>Artifact metadata</summary>
+                                <pre id="model-metadata"></pre>
+                            </details>
+                        </section>
+                    </div>
+                </section>
+
+                <section
+                    id="panel-governance"
+                    role="tabpanel"
+                    aria-labelledby="tab-governance"
+                    class="content-panel governance-panel"
+                    hidden
+                >
+                    <div class="page-intro">
+                        <p class="eyebrow">MODEL GOVERNANCE</p>
+                        <h1>Model governance</h1>
+                        <p>
+                            Inspect the source and validation evidence, then record your decision. Reviewing a draft
+                            does not approve it for clinical use.
+                        </p>
+                    </div>
+                    <div class="review-session">
+                        <span id="review-signed-in-user"></span
+                        ><a href="/chat/auth/login?review=1" id="review-signin">Sign in for model review</a
+                        ><button id="review-signout" hidden>Sign out</button>
+                    </div>
+                    <p id="review-notice" role="status" aria-live="polite"></p>
+                    <form id="review-project-form">
+                        <label for="review-project">Project</label
+                        ><input
+                            id="review-project"
+                            name="project"
+                            value="default"
+                            pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,79}"
+                            required
+                        /><button id="review-load" disabled>Load reviews</button>
                     </form>
-                    <p class="disclaimer">
-                        Generated models remain drafts. Check sources and obtain qualified review before use.
-                    </p>
-                </div>
+                    <div class="review-layout">
+                        <section aria-label="Model revisions">
+                            <h2>Revisions awaiting decisions</h2>
+                            <div id="review-reviews"><p>Sign in and choose a project.</p></div>
+                            <div class="pager">
+                                <button id="review-previous" disabled>Previous</button
+                                ><button id="review-next" disabled>Next</button>
+                            </div>
+                        </section>
+                        <section id="review-detail" aria-label="Selected model review" hidden>
+                            <div class="detail-heading">
+                                <h2 id="review-title"></h2>
+                                <span id="review-state" class="badge"></span>
+                            </div>
+                            <p id="review-identity"></p>
+                            <p id="review-source-status" class="callout"></p>
+                            <details open>
+                                <summary>Exact source revision</summary>
+                                <pre id="review-source"></pre>
+                            </details>
+                            <details open>
+                                <summary>Validation evidence</summary>
+                                <p id="review-validation-status"></p>
+                                <pre id="review-validation"></pre>
+                            </details>
+                            <details>
+                                <summary>Audit history</summary>
+                                <ol id="review-audit"></ol>
+                            </details>
+                            <form id="review-decision-form">
+                                <h3>Record a decision</h3>
+                                <p id="review-action-note"></p>
+                                <label for="review-decision">Available action</label
+                                ><select id="review-decision" required></select
+                                ><label for="review-comment">Review comment</label
+                                ><textarea
+                                    id="review-comment"
+                                    maxlength="4000"
+                                    rows="4"
+                                    required
+                                    placeholder="Explain your decision and any remaining concerns."
+                                ></textarea
+                                ><button id="review-review-decision" disabled>Review decision</button>
+                            </form>
+                            <div
+                                id="review-confirmation"
+                                class="confirmation"
+                                role="region"
+                                aria-label="Confirm model decision"
+                                hidden
+                            >
+                                <h3>Confirm this exact revision</h3>
+                                <pre id="review-confirmation-details"></pre>
+                                <p>
+                                    This records your authenticated decision. It does not change the source or deploy a
+                                    model to a CDR.
+                                </p>
+                                <button id="review-confirm-decision">Confirm decision</button
+                                ><button id="review-cancel-decision" class="secondary">Cancel</button>
+                            </div>
+                        </section>
+                    </div>
+                </section>
             </main>
         </div>
     </body>

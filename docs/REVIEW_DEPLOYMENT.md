@@ -68,3 +68,5 @@ An authenticated account without a mapped governance role receives `403 GOVERNAN
 ## PostgreSQL and optional retrieval cache
 
 See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.
+
+The [unified browser workspace](BROWSER_WORKSPACE.md) provides Chat, Models and Governance in one window. Model browsing reads the configured filesystem, Git or SharePoint repository and carries the selected revision into chat.

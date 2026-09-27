@@ -1,4 +1,12 @@
 import { test, expect } from "@playwright/test";
+let browserErrors;
+test.beforeEach(async ({ page }) => {
+    browserErrors = [];
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+});
+test.afterEach(async () => {
+    expect(browserErrors).toEqual([]);
+});
 async function login(page) {
     await page.goto("/chat/");
     await page.getByRole("link", { name: "Sign in to start chatting" }).click();
@@ -101,22 +109,22 @@ test("binding plan confirmation includes both source and plan revisions", async 
 test("human review shows exact evidence, confirms the decision, and blocks incomplete approval", async ({ page }) => {
     await login(page);
     await page.goto("/chat/reviews");
-    await expect(page.locator("#signed-in-user")).toContainText("Signed in as");
+    await expect(page.locator("#review-signed-in-user")).toContainText("Signed in as");
     await page.getByRole("button", { name: "templates/review.oet · REVIEW_REQUESTED" }).click();
-    await expect(page.locator("#identity")).toContainText("source-review-revision");
-    await expect(page.locator("#validation-status")).toContainText("approval and publication are blocked");
-    await expect(page.locator("#source")).toContainText("<script>");
+    await expect(page.locator("#review-identity")).toContainText("source-review-revision");
+    await expect(page.locator("#review-validation-status")).toContainText("approval and publication are blocked");
+    await expect(page.locator("#review-source")).toContainText("<script>");
     expect(await page.evaluate(() => window.__reviewInjected)).toBeUndefined();
     await expect(page.getByRole("option", { name: "Approve exact revision" })).toHaveCount(0);
     await page.getByLabel("Review comment").fill("Reviewed the exact synthetic revision; technical gates remain open.");
     await page.getByRole("button", { name: "Review decision", exact: true }).click();
     await expect(page.getByRole("region", { name: "Confirm model decision" })).toBeVisible();
-    await expect(page.locator("#confirmation-details")).toContainText("source-review-revision");
-    await expect(page.locator("#confirmation-details")).toContainText('"expectedSequence": 3');
-    await expect(page.locator("#state")).toHaveText("REVIEW_REQUESTED");
+    await expect(page.locator("#review-confirmation-details")).toContainText("source-review-revision");
+    await expect(page.locator("#review-confirmation-details")).toContainText('"expectedSequence": 3');
+    await expect(page.locator("#review-state")).toHaveText("REVIEW_REQUESTED");
     await page.getByRole("button", { name: "Confirm decision", exact: true }).click();
-    await expect(page.locator("#state")).toHaveText("REVIEWED");
-    await expect(page.locator("#notice")).toContainText("recorded for the displayed revision");
+    await expect(page.locator("#review-state")).toHaveText("REVIEWED");
+    await expect(page.locator("#review-notice")).toContainText("recorded for the displayed revision");
     await expect(page.getByRole("button", { name: "Review decision", exact: true })).toBeDisabled();
 });
 
@@ -130,7 +138,7 @@ test("review workspace fits mobile and cancellation does not submit a decision",
     await page.getByRole("button", { name: "Review decision", exact: true }).click();
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(page.getByRole("region", { name: "Confirm model decision" })).toBeHidden();
-    await expect(page.locator("#state")).toHaveText("REVIEW_REQUESTED");
+    await expect(page.locator("#review-state")).toHaveText("REVIEW_REQUESTED");
 });
 
 test("requirements graph writes require exact graph and revision confirmation", async ({ page }) => {
@@ -141,4 +149,77 @@ test("requirements graph writes require exact graph and revision confirmation", 
     await expect(page.locator(".approval pre")).toContainText("graph-revision");
     await page.getByRole("button", { name: "Confirm save", exact: true }).click();
     await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
+});
+
+test("one workspace preserves chat and exact model context across tabs", async ({ page, context }) => {
+    await login(page);
+    await send(page, "Which CKMs are configured?");
+    await expect(page.locator(".message.assistant")).toContainText("Terminology binding is optional.");
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
+    await page.getByRole("button", { name: /admission.oet/ }).click();
+    await expect(page.locator("#model-source")).toContainText("<script>");
+    expect(await page.evaluate(() => window.__modelInjected)).toBeUndefined();
+    await expect(page.locator("#model-revision")).toContainText("d".repeat(40));
+    await page.getByRole("button", { name: "Discuss in chat", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: "Message the modelling assistant" })).toHaveValue(
+        /admission.oet.*exact revision/,
+    );
+    await expect(page.locator(".message.assistant")).toContainText("Terminology binding is optional.");
+    await page.getByRole("tab", { name: "Governance", exact: true }).click();
+    await expect(page.locator("#review-signed-in-user")).toContainText("Test Modeller");
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
+    await expect(page.locator("#model-source")).toContainText("<template>");
+    expect(context.pages()).toHaveLength(1);
+    await page.screenshot({ path: "test-results/unified-workspace-desktop.png", fullPage: true });
+});
+
+test("workspace tabs support keyboard navigation and fit a narrow viewport", async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("tab", { name: "Chat", exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "Models", exact: true })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("button", { name: /admission.oet/ }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByLabel("Filter models").fill("no-match");
+    await expect(page.locator("#model-list")).toContainText("No models match");
+    await page.getByRole("tab", { name: "Governance", exact: true }).click();
+    await expect(page.locator("#review-project")).toHaveValue("default");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: "test-results/unified-workspace-mobile.png", fullPage: true });
+});
+
+test("repository outage has a recoverable error and keeps navigation available", async ({ page }) => {
+    await login(page);
+    await page.route("**/chat/api/models/projects", (route) =>
+        route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({ error: "Repository is temporarily unavailable." }),
+        }),
+    );
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
+    await expect(page.locator("#model-notice")).toContainText("temporarily unavailable");
+    await expect(page.getByRole("button", { name: "Refresh projects" })).toBeEnabled();
+    await page.getByRole("tab", { name: "Chat", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: "Message the modelling assistant" })).toBeEnabled();
+});
+
+test("workspace has no detected WCAG AA accessibility violations in its primary views", async ({ page }) => {
+    const { default: AxeBuilder } = await import("@axe-core/playwright");
+    await login(page);
+    for (const name of ["Chat", "Models", "Governance"]) {
+        await page.getByRole("tab", { name, exact: true }).click();
+        if (name === "Models") await page.getByRole("button", { name: /admission.oet/ }).click();
+        if (name === "Governance")
+            await page.getByRole("button", { name: "templates/review.oet · REVIEW_REQUESTED" }).click();
+        const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+        expect(
+            result.violations.map(({ id, description, nodes }) => ({
+                id,
+                description,
+                targets: nodes.map((n) => n.target),
+            })),
+        ).toEqual([]);
+    }
 });

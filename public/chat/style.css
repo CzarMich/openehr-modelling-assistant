@@ -1,12 +1,12 @@
 :root {
     color-scheme: light;
-    --ink: #203c38;
-    --muted: #697b73;
-    --green: #174f44;
-    --line: #dde4db;
-    --surface: #fafbf7;
-    --soft: #f0f3ec;
-    --serif: Georgia, "Times New Roman", serif;
+    --ink: #17324d;
+    --muted: #52677d;
+    --green: #005eb8;
+    --line: #dbe4ed;
+    --surface: #f6f8fb;
+    --soft: #edf3f9;
+    --serif: "Segoe UI", Inter, system-ui, sans-serif;
 }
 * {
     box-sizing: border-box;
@@ -48,7 +48,7 @@ a {
 button:focus-visible,
 a:focus-visible,
 textarea:focus-visible {
-    outline: 3px solid #799b64;
+    outline: 3px solid #0072ce;
     outline-offset: 4px;
 }
 [hidden] {
@@ -61,7 +61,7 @@ textarea:focus-visible {
 .sidebar {
     width: 272px;
     flex-shrink: 0;
-    background: #edf1e8;
+    background: #f1f5fa;
     border-right: 1px solid var(--line);
     padding: 32px 22px 24px;
     display: flex;
@@ -83,7 +83,7 @@ textarea:focus-visible {
     display: grid;
     place-items: center;
     background: var(--green);
-    color: #eaf2e4;
+    color: #ffffff;
     border-radius: 12px;
     width: 44px;
     height: 44px;
@@ -136,7 +136,7 @@ textarea:focus-visible {
     margin-bottom: 5px;
 }
 .conversation-row.selected {
-    background: #dce5d5;
+    background: #e3eefb;
 }
 .conversation-row button {
     border: 0;
@@ -179,7 +179,7 @@ textarea:focus-visible {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #749663;
+    background: #005eb8;
     flex-shrink: 0;
 }
 .main {
@@ -191,7 +191,7 @@ textarea:focus-visible {
 }
 .topbar {
     height: 78px;
-    border-bottom: 1px solid #e6eae2;
+    border-bottom: 1px solid #dbe4ed;
     padding: 0 40px;
     display: flex;
     align-items: center;
@@ -210,10 +210,10 @@ textarea:focus-visible {
 .context-badge {
     font-size: 10px;
     letter-spacing: 0.4px;
-    border: 1px solid #dce5d6;
+    border: 1px solid #dbe4ed;
     border-radius: 20px;
     padding: 3px 9px;
-    color: #627651;
+    color: #4b6580;
 }
 .account {
     display: flex;
@@ -252,7 +252,7 @@ textarea:focus-visible {
 }
 .welcome h1 em {
     font-weight: 400;
-    color: #668054;
+    color: #005eb8;
 }
 .intro {
     max-width: 525px;
@@ -271,9 +271,9 @@ textarea:focus-visible {
     position: relative;
     text-align: left;
     padding: 21px 18px 35px;
-    border: 1px solid #dce4d6;
+    border: 1px solid #dbe4ed;
     border-radius: 11px;
-    background: #fffefb;
+    background: #ffffff;
     color: var(--ink);
     transition:
         transform 0.15s,
@@ -281,7 +281,7 @@ textarea:focus-visible {
 }
 .suggestion:not(:disabled):hover {
     transform: translateY(-3px);
-    border-color: #78966a;
+    border-color: #005eb8;
 }
 .suggestion strong,
 .suggestion > span {
@@ -291,7 +291,7 @@ textarea:focus-visible {
     font-size: 24px;
     line-height: 1;
     margin-bottom: 20px;
-    color: #698659;
+    color: #005eb8;
 }
 .suggestion strong {
     font-size: 13px;
@@ -307,11 +307,11 @@ textarea:focus-visible {
     position: absolute;
     right: 15px;
     bottom: 11px;
-    color: #798c71;
+    color: #52677d;
 }
 .welcome-note {
     font-size: 11px;
-    color: #778871;
+    color: #52677d;
     display: flex;
     gap: 9px;
     align-items: center;
@@ -321,7 +321,7 @@ textarea:focus-visible {
     font-size: 17px;
 }
 .login-panel {
-    border-left: 2px solid #aebfa3;
+    border-left: 2px solid #b6cfe8;
     padding-left: 18px;
     margin: 22px 0;
 }
@@ -348,15 +348,15 @@ textarea:focus-visible {
     padding: 16px 48px 24px;
 }
 .composer {
-    border: 1px solid #cdd8c6;
+    border: 1px solid #cddbea;
     border-radius: 14px;
-    background: #fffefb;
-    box-shadow: 0 4px 18px #21392b05;
+    background: #ffffff;
+    box-shadow: 0 4px 18px #17324d05;
     padding: 17px 18px 10px;
 }
 .composer:focus-within {
-    border-color: #799968;
-    box-shadow: 0 0 0 2px #849d6f12;
+    border-color: #005eb8;
+    box-shadow: 0 0 0 2px #005eb812;
 }
 textarea {
     display: block;
@@ -372,7 +372,7 @@ textarea {
     outline: none !important;
 }
 textarea::placeholder {
-    color: #95a08f;
+    color: #52677d;
 }
 .composer-actions {
     display: flex;
@@ -383,7 +383,7 @@ textarea::placeholder {
 .composer-actions > span {
     margin-right: auto;
     font-size: 10px;
-    color: #8b9883;
+    color: #52677d;
 }
 .send-button {
     width: 33px;
@@ -405,7 +405,7 @@ textarea::placeholder {
 }
 .disclaimer {
     font-size: 10px;
-    color: #87927e;
+    color: #52677d;
     text-align: center;
     margin: 12px 0 0;
 }
@@ -431,7 +431,7 @@ textarea::placeholder {
 }
 .message.user {
     margin-left: 10%;
-    background: #edf1e8;
+    background: #f1f5fa;
     padding: 16px 20px;
     border-radius: 14px 14px 3px 14px;
 }
@@ -456,7 +456,7 @@ textarea::placeholder {
     margin: 0 0 12px;
 }
 .message-content pre {
-    background: #eef2ea;
+    background: #edf3f9;
     padding: 16px;
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -477,10 +477,10 @@ textarea::placeholder {
 .tool-chip {
     font-size: 10px;
     border: 1px solid var(--line);
-    background: #f1f5ed;
+    background: #edf3f9;
     padding: 4px 8px;
     border-radius: 5px;
-    color: #67795b;
+    color: #52677d;
 }
 .tool-chip[data-status="failed"] {
     color: #996138;
@@ -612,7 +612,7 @@ textarea::placeholder {
         transform: translateX(-100%);
         z-index: 5;
         width: 270px;
-        box-shadow: 10px 0 30px #203c3820;
+        box-shadow: 10px 0 30px #17324d20;
         transition: transform 0.2s;
     }
     .sidebar.open {
@@ -701,7 +701,7 @@ textarea::placeholder {
 }
 
 .message-content :not(pre) > code {
-    background: #edf1e7;
+    background: #edf3f9;
     padding: 2px 4px;
     border-radius: 3px;
     font-size: 0.9em;

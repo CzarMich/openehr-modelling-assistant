@@ -107,3 +107,5 @@ Draft binding-plan saves display the exact model revision, plan revision and dec
 The **Model review** link opens `/chat/reviews`. Select a project, inspect the exact source revision, validation findings and audit history, and explicitly confirm a role-permitted decision. This workspace can run with `CHAT_ENABLED=false` and no model-provider account. See [review identity/deployment](REVIEW_DEPLOYMENT.md) and [governance](GOVERNANCE.md). Chat tools can prepare and request review but cannot clinically approve a model.
 
 The default browser image now uses the `reviews` target. To enable conversational chat, set `MODELLING_BROWSER_TARGET=chat` in the Compose environment or use the existing development chat override before rebuilding. This keeps the default deployment independent of a provider executable.
+
+The [unified browser workspace](BROWSER_WORKSPACE.md) provides Chat, Models and Governance in one window. Model browsing reads the configured filesystem, Git or SharePoint repository and carries the selected revision into chat.

@@ -146,3 +146,7 @@ Browser chat and model governance share one verified human session. Review brows
 ## PostgreSQL and optional model caching
 
 The shared audit contract now supports PostgreSQL with indexed tenant/project lookup, transaction-scoped append/replay locks, separate owner/runtime roles and immutable SQL enforcement. SQLite remains compatible; the offline cutover copies and compares canonical histories without changing hashes or timestamps. Model retrieval can use authenticated, bounded Valkey/Redis JSON entries keyed by authoritative repository revision. Cache failures use source reads, and lifecycle/authentication decisions bypass caching. The [storage guide](POSTGRES_AND_CACHE.md) documents configuration, backup and repeatable real-service acceptance. Synthetic retrieval timings in the evidence describe their workload; production capacity is not inferred.
+
+## Unified browser workspace
+
+The landing URL serves an integrated blue-and-white workspace with Chat, Models and Governance tabs. A read-only authenticated browser adapter calls fixed repository MCP tools; model source is escaped and revision context carries to the conversation without submitting automatically. Shared navigation preserves tab state and governance retains exact-revision confirmation. Browser tests exercise mobile/keyboard access, context preservation, error recovery and signed-in review.

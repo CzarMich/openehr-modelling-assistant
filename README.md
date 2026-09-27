@@ -99,7 +99,7 @@ return schemas, examples and dependency/failure notes for every exposed tool.
 
 ```mermaid
 flowchart TD
-    U[Browser chat] --> W[Chat service: history, streaming and write confirmation]
+    U[Unified browser workspace: Chat, Models and Governance] --> W[Chat service: history, streaming and write confirmation]
     W <--> I[OIDC sign-in]
     W <--> AIC[Isolated Codex client]
     W -->|Declared modelling tools over MCP| S[openEHR Modelling Assistant]
@@ -208,3 +208,5 @@ Archetype Designer users: see the [integration guide](docs/ARCHETYPE_DESIGNER_IN
 The [MCP protocol profile](docs/MCP_PROTOCOL.md) is verified over production HTTP and stdio, with explicit capabilities and version negotiation.
 
 PostgreSQL is the recommended governance backend. Optional Valkey accelerates repeated model/template reads while source revisions remain authoritative. See [storage and cache deployment](docs/POSTGRES_AND_CACHE.md) for configuration, SQLite migration and recovery.
+
+The main browser URL now opens one [tabbed modelling workspace](docs/BROWSER_WORKSPACE.md). Chat, repository browsing and governance share navigation and sign-in; switching tabs preserves the conversation and selected revision.
