@@ -13,6 +13,8 @@ for (const flag of [
 ])
     assert.ok(args.includes(flag), flag);
 assert.equal(process.env.CHAT_MCP_API_KEY, undefined);
+assert.equal(process.env.TOKIO_WORKER_THREADS, "2");
+assert.equal(process.env.RAYON_NUM_THREADS, "2");
 const send = (data) => process.stdout.write(JSON.stringify(data) + "\n");
 createInterface({ input: process.stdin }).on("line", (line) => {
     const m = JSON.parse(line);

@@ -37,7 +37,7 @@ services:
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    pids_limit: 128
+    pids_limit: 512
     mem_limit: 1536m
     restart: unless-stopped
   ingress:

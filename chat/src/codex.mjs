@@ -8,7 +8,7 @@ export class CodexProvider {
         this.config = config;
     }
     async run({ messages, tools, callTool, onEvent, signal }) {
-        const env = { PATH: process.env.PATH, LANG: "C.UTF-8" };
+        const env = { PATH: process.env.PATH, LANG: "C.UTF-8", TOKIO_WORKER_THREADS: "2", RAYON_NUM_THREADS: "2" };
         for (const key of [
             "HOME",
             "SSL_CERT_FILE",

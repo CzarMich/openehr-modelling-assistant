@@ -89,3 +89,11 @@ npm run test:browser
 ```
 
 Security tests exercise identity signatures/claims, state replay, group restrictions, sessions, CSRF, cross-user conversation access, tool allowlists, exact write confirmation, cancellation, provider protocol and retention. Browser tests use a clearly separated deterministic fixture and cover sign-in UX, streaming, history, code rendering, write confirmation, cancellation, mobile layout and untrusted markup. The fixture is excluded from the runtime image. Live development verification uses the actual identity provider, Codex account and MCP service; see the implementation report and evidence. Native MCP bearer-token verification is still a separate, unfinished capability.
+
+To check the configured container's three-turn concurrency limit with actual provider and read-only MCP calls, run from the repository root:
+
+```sh
+docker exec -i openehr-modelling-dev-chat-1 node --input-type=module < chat/test/live-concurrency.mjs
+```
+
+This probe uses the configured provider account and reports successful turns and container task limits without printing conversation content or credentials. The container allows 512 tasks; each provider process limits its Tokio and Rayon worker pools to two threads. This avoids exhausting the process/thread allowance on hosts with many CPU cores.

@@ -70,4 +70,6 @@ Verification includes 18 Node security/protocol/retention tests, four determinis
 
 Evidence: [live checks](evidence/browser-chat-live.json), [security/protocol tests](evidence/browser-chat-security-tests.txt), [browser fixture tests](evidence/browser-chat-ui-tests.txt), [desktop](evidence/browser-chat-desktop.png) and [mobile](evidence/browser-chat-mobile.png). Fixture tests are distinguished from live account/provider tests. The development chat is enabled; other environments keep browser chat disabled until an identity client and Codex account are configured. The default server deployment continues to expose the MCP service independently.
 
+Three simultaneous live provider turns with actual MCP tool calls also pass; see [concurrency evidence](evidence/browser-chat-concurrency.json). This check exposed thread exhaustion under the original container allowance. Explicit provider worker-pool limits and a 512-task container allowance resolve the measured failure. The repeatable probe checks that all three turns finish without new task-limit denials.
+
 See [browser chat](BROWSER_CHAT.md) for the user workflow, environment variables, credential provisioning, persistence, privacy, limits and repeatable checks. The remaining compiler, CDR, visual-editor and operational-governance work remains in the continuation handoff.
