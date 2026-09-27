@@ -72,3 +72,9 @@ the Implementation column is either dead code or an undocumented requirement.
 | REQ-F14 | Explicit terminology, value sets, bindings, provenance and diff (partial) | `tests/Enterprise/TerminologyProviderTest.php` |
 | REQ-N11 | Authenticated bounded transport and redacted failures (landed) | `tests/Enterprise/ConfigurationAndAuthTest.php` |
 | REQ-N12 | Client-neutral deployment and truthful capability documentation (landed) | `tests/Content/InstallDocContractTest.php` |
+
+## Browser chat
+
+| REQ | Capability | Implementation | Verification |
+|---|---|---|---|
+| **REQ-F15** | Authenticated browser modelling chat | `chat/src/`, `public/chat/`, `chat/Dockerfile` | `chat/test/security.test.mjs`, `chat/test/codex.test.mjs`, `chat/test/browser.spec.mjs` |

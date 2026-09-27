@@ -12,6 +12,10 @@ The user requested a pause after publishing the verified capability update, with
 
 The capability matrix describes shipped code, not work in an isolated branch. Hosted Designer login/account authorization is still unavailable; Git interoperability does not establish a visual round trip. Do not claim that connection is complete.
 
+## Browser chat follow-up delivered
+
+The user subsequently requested an actual browser chat, so that feature was implemented as a separate Node MCP client. See [browser chat](BROWSER_CHAT.md). Browser OIDC sign-in and conversation ownership are separate from the saved native MCP bearer-verification branch below. Merge this chat delivery into that branch before continuing; do not remove either identity boundary or claim shared model access is per-project RBAC. The broader compiler/CDR/editor/governance work remains the next implementation scope.
+
 ## Saved OIDC work in progress
 
 The isolated worktree is `/home/hyq/workspace/openehr-modelling-assistant-identity`, branch `feat/oidc-identity`. Local checkpoint commit: `97085c3`. It is intentionally not pushed, deployed or merged. Its Docker test container is `openehr-modelling-identity-tests`.

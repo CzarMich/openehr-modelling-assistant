@@ -55,7 +55,7 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `MODEL_GIT_SSH_KEY_FILE` | empty | Private SSH key path inside container; configure with known-hosts path. |
 | `MODEL_GIT_KNOWN_HOSTS_FILE` | empty | Pinned SSH host identities; strict verification remains enabled. |
 
-Other supported process settings: `HTTPS_PROXY` and comma-separated `NO_PROXY` control outbound HTTPS; `XDG_DATA_HOME` changes the cache/session root (default `/tmp`, application subdirectory added). Legacy `ALLOWED_HOSTS` is accepted only when `MCP_ALLOWED_HOSTS` is absent. Composer development uses `COMPOSER_HOME`. No model-provider or CDR secret is required. Private Git remotes use the optional SSH credential files above; provider-specific GitHub/GitLab API and Graph tokens are not consumed.
+Other supported process settings: `HTTPS_PROXY` and comma-separated `NO_PROXY` control outbound HTTPS; `XDG_DATA_HOME` changes the cache/session root (default `/tmp`, application subdirectory added). Legacy `ALLOWED_HOSTS` is accepted only when `MCP_ALLOWED_HOSTS` is absent. Composer development uses `COMPOSER_HOME`. No model-provider or CDR secret is required by the MCP core. The optional browser chat has its own identity and model-provider configuration. Private Git remotes use the optional SSH credential files above; provider-specific GitHub/GitLab API and Graph tokens are not consumed.
 
 ## Multiple CKMs
 
@@ -67,3 +67,7 @@ CKM_DEFAULT_SOURCE=regional
 Replace example domains with actual CKM REST bases. The default international source remains available as `default`; change `CKM_API_BASE_URL` to replace it. Call `ckm_sources`, then pass `ckm:"regional"` to search/get/draft tools. Each server must implement the compatible CKM REST API; authenticated/private CKM credentials and federation across different API families are not implemented. Configuring multiple named sources is supported and unit-tested; only the public international CKM has a live endpoint test.
 
 See [deployment](DEPLOYMENT.md) for environment choices, [security](SECURITY.md) for trust boundaries, and [terminology](TERMINOLOGY.md) for terminology server/Keycloak configuration.
+
+## Browser chat settings
+
+The optional Node client reads `.env.chat` or the external `MODELLING_CHAT_ENV_FILE`. Its complete variable table is in [browser chat configuration](BROWSER_CHAT.md#configuration), with a copyable [example](../.env.chat.example). These settings do not change the PHP configuration contract.

@@ -240,3 +240,12 @@ requirements:
     packages: [docs/MICROSOFT_AGENT_INTEGRATION.md, docs/MCP_CLIENTS.md, Dockerfile, docker-compose.yml, scripts/mcp-smoke.py]
     tests: [tests/Content/InstallDocContractTest.php]
     adr: ["0008"]
+
+  - id: REQ-F15
+    title: Authenticated browser modelling chat
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [chat/src/*.mjs, public/chat, chat/Dockerfile]
+    tests: [chat/test/security.test.mjs, chat/test/codex.test.mjs, chat/test/browser.spec.mjs]
+    verification: npm --prefix chat test and npm --prefix chat run test:browser

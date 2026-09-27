@@ -4,6 +4,10 @@ openEHR Modelling Assistant is a PHP 8.4 application. MCP is its current interfa
 
 ```mermaid
 flowchart TB
+    Browser[Browser chat workspace] --> Chat[Chat service: sessions, history and write confirmation]
+    Chat <--> Identity[OIDC identity provider]
+    Chat <--> Codex[Isolated Codex client]
+    Chat --> MCP[MCP tools, prompts and resources]
     AI[Codex, Copilot Studio or another MCP client] --> MCP[MCP tools, prompts and resources]
     UI[Future visual editor / API] -.-> Core[Modelling domain services]
     MCP --> Core
@@ -31,3 +35,5 @@ Model files, local value sets, binding records, requirements and decisions share
 XML parsing is deterministic. OET/OPT checks cover a documented structural subset; ADL checks inspect its header; AQL parsing/execution and OPT compilation are unavailable. QA records those stages as NOT_EXECUTED and keeps release eligibility false. Domain governance policy cannot turn an AI-supplied approval field into a release.
 
 Source selection is deployment-controlled. Each CKM tool accepts a configured source name; it cannot accept an arbitrary destination URL. See [configuration](CONFIGURATION.md), [repository](MODEL_REPOSITORY.md), [terminology](TERMINOLOGY.md), [governance](GOVERNANCE.md), and the [capability matrix](../CAPABILITIES.md).
+
+The optional [browser chat](BROWSER_CHAT.md) is a separate Node MCP client with a pinned Codex runtime. It keeps provider/MCP credentials server-side and requires exact-change confirmation for repository writes. Browser OIDC authenticates chat users; it does not implement direct inbound MCP OIDC or per-project RBAC. Conversation storage is private to each signed-in identity, while the configured model repository may be shared.

@@ -10,3 +10,7 @@ conformance
 .env.*
 *.log
 *.tmp
+
+**/node_modules
+chat/test-results
+chat/playwright-report

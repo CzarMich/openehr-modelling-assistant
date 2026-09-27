@@ -7,6 +7,16 @@
     request_body {
         max_size {$MAX_REQUEST_BYTES:2097152}
     }
+    @chat path /chat /chat/*
+    handle @chat {
+        reverse_proxy chat:8350 {
+            flush_interval -1
+            transport http {
+                response_header_timeout 30s
+                read_timeout 600s
+            }
+        }
+    }
     handle / {
         root * /srv
         rewrite * /landing.html

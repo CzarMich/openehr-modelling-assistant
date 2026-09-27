@@ -25,7 +25,9 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Archetype Designer repository layouts | WORKING | Configurable content root; category folders or flat native files; Unicode/spaces preserved; real private Git round trip |
 | Hosted Archetype Designer UI connection | NOT TESTED | Login required; repository integration verified independently, account linking and visual import/export not yet verified |
 | Codex development connection | WORKING | Installed Codex app-server initialized the HTTPS service and discovered all 31 tools with a private credential helper |
-| Service introduction page | WORKING | Root URL explains purpose, MCP connection and optional integrations; not a visual modeller |
+| Browser modelling chat | WORKING | OIDC sign-in, private persistent conversations, streamed replies, actual tool activity and confirmed draft writes through an isolated Codex client; optional service |
+| Browser identity and session isolation | WORKING | Authorization code flow with PKCE, signed identity claims, secure cookies, CSRF and per-user conversation ownership; shared model repository principal |
+| Service introduction page | WORKING | Root URL links to browser chat, MCP connection and optional integrations; not a visual modeller |
 | Hosted Git reviews and SharePoint storage | NOT IMPLEMENTED | Generic Git storage is available; provider-specific review/Graph APIs remain separate work |
 | OPT compilation, native template editing/terminology application | NOT IMPLEMENTED | Requires qualified compiler/modelling engine |
 | AQL parser/execution, composition validation, CDR deployment | NOT IMPLEMENTED | Prompts/examples and optional adapter boundary only |
