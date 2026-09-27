@@ -9,3 +9,7 @@ REQ-F15 adds an optional Node chat service alongside the PHP MCP core. It uses v
 ## Human governance adapter
 
 REQ-F16 adds transport-independent exact-revision governance, a protected append-only ledger, authenticated browser review and a versioned review API. MCP exposes preparation and review requests, never clinical approval. Browser role claims and dedicated request assertions establish interactive identity; qualified validation remains mandatory. [ADR-0015](decisions/0015-persisted-governance-and-interactive-human-approval.md) records this boundary. [OpenAPI](openapi/reviews.json), [governance](GOVERNANCE.md) and [deployment](REVIEW_DEPLOYMENT.md) describe its contracts.
+
+## Project requirements and evidence graph
+
+REQ-F17 adds shared services for versioned typed requirements, decisions, exact model anchors and governance evidence. Four MCP adapters expose conditional graph saves, reads, element explanations and requirement queries. [ADR-0016](decisions/0016-versioned-requirements-graph-and-evidence-boundaries.md) explains the separation of declarations, reference checks and clinical satisfaction. [The graph contract](REQUIREMENTS_TRACEABILITY.md) documents storage, limits and migration.

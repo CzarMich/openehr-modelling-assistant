@@ -23,6 +23,10 @@ flowchart TB
     Scope --> Core
     Core --> Validation[Structural validator and QA stages]
     Core --> Repository[ModelRepository interface]
+    Core --> Trace[ProjectTraceability: typed graph and deterministic queries]
+    Trace --> Repository
+    Trace --> Anchors[Exact XML or JSON document anchors]
+    Trace -->|Validation and review event hashes| Ledger
     Repository --> Snap[Shared snapshot revision and history semantics]
     Snap --> FS[Filesystem locks and atomic snapshots]
     Snap --> SP[SharePoint immutable files and conditional index]
@@ -63,3 +67,5 @@ The [binding-plan application service](TERMINOLOGY_BINDING_PLANS.md) combines a 
 The [human review adapter](GOVERNANCE.md) uses the same `ModelGovernance` application service as MCP preparation tools. Clinical decisions require a distinct interactive browser identity, configured role and explicit exact-revision confirmation. The browser backend creates a short-lived assertion bound to method, target, body and a durable single-use nonce. It uses a dedicated key that is absent from model-worker environments. Native bearer/API-key credentials never establish human identity.
 
 The authoritative lifecycle and validation evidence live in a separate SQLite ledger, not writable repository metadata. Transactions enforce audit-sequence compare-and-swap; hash chains and database triggers detect changes and prohibit application-level edits/deletes. Root storage administration remains a trust boundary. Model repository and ledger writes are not a distributed transaction; every decision records its exact observed revision and never approves newer content. See [review deployment](REVIEW_DEPLOYMENT.md) for storage, roles, rotation and backup limits. The default browser image supports human review without a provider runtime; conversational chat is an explicit optional target.
+
+The [requirements graph](REQUIREMENTS_TRACEABILITY.md) stores typed requirement/decision/model links through `ModelRepository`. `Domain/Traceability/Graph` owns bounded validation and traversal; `ProjectTraceability` owns conditional persistence and queries; `TraceabilityEvidence` resolves pinned sources and exact audit events within the authenticated project/tenant. Document-anchor inspection sits behind a domain interface. XML/JSON locations resolve deterministically; native inherited paths require the engine. Graph declarations remain separate from clinical satisfaction and release qualification. Repository/ledger snapshots are observed separately, and reads recompute freshness.

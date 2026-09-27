@@ -119,7 +119,7 @@ def main():
         client.rpc("notifications/initialized", notify=True)
         record("initialize", init["serverInfo"])
         tools = client.listing("tools/list", "tools")
-        expected = {'governance_prepare', 'governance_validate', 'governance_request_review', 'governance_reopen_draft', 'governance_get', 'governance_list', 'model_terminology_inspect', 'terminology_binding_plan', 'terminology_binding_plan_save', 'terminology_binding_plan_get', 'terminology_catalogue_save', 'terminology_catalogue_get', 'terminology_catalogue_search', 'terminology_catalogue_lookup', 'terminology_catalogue_validate', 'terminology_catalogue_expand', 'terminology_catalogue_translate', 'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
+        expected = {'model_traceability_save', 'model_traceability_get', 'model_traceability_explain', 'model_traceability_requirement', 'governance_prepare', 'governance_validate', 'governance_request_review', 'governance_reopen_draft', 'governance_get', 'governance_list', 'model_terminology_inspect', 'terminology_binding_plan', 'terminology_binding_plan_save', 'terminology_binding_plan_get', 'terminology_catalogue_save', 'terminology_catalogue_get', 'terminology_catalogue_search', 'terminology_catalogue_lookup', 'terminology_catalogue_validate', 'terminology_catalogue_expand', 'terminology_catalogue_translate', 'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
         assert expected <= {t['name'] for t in tools}, 'Required tool missing from discovery'
         assert len({t['name'] for t in tools}) == len(tools)
         assert all(t['inputSchema'].get('additionalProperties') is False for t in tools)
@@ -223,6 +223,28 @@ def main():
             client.tool('model_artifact_save',dict(project=project,path=model_path,content=model_xml+'\n',expectedRevision=model['revision']))
             assert client.tool('terminology_binding_plan_get', args_plan)['freshness']['status'] == 'STALE_OR_MODIFIED'
             record('revision-bound binding plans, offline validation, unchanged source and stale evidence detection')
+            source = client.tool('model_artifact_get', dict(project=project, path=model_path))
+            provenance = dict(description='Synthetic software acceptance only.', provenance=['Protocol fixture; no clinical specification.'])
+            source_ref = {key: source[key] for key in ['path', 'revision', 'sha256']}
+            graph = {'schema': 1, 'nodes': [
+                dict(id='R-023', type='requirement', title='Synthetic requirement', priority='must', status='ACTIVE', **provenance),
+                dict(id='D-1', type='decision', title='Explicit modelling choice', status='RECORDED', rationale='Use the recorded source rule.', **provenance),
+                dict(id='C-1', type='template_constraint', title='Source rule', artifact=dict(source_ref, anchor={'kind':'xml_location','value':'/1/1/1'}), **provenance),
+            ], 'edges': [
+                dict(**{'from':'R-023','to':'D-1'}, relation='motivates', rationale='Requirement motivates the choice.'),
+                dict(**{'from':'D-1','to':'C-1'}, relation='justifies', rationale='Recorded rationale for the exact rule.'),
+                dict(**{'from':'R-023','to':'C-1'}, relation='satisfied_by', coverage='full', rationale='Explicit draft coverage assertion.'),
+            ]}
+            trace = client.tool('model_traceability_save', dict(project=project, graph=graph))
+            assert trace['coverage'][0]['element_references_current_and_resolved'] and trace['clinical_approval'] is False
+            assert client.tool('model_traceability_requirement', dict(project=project, requirement='R-023'))['requirement_coverage']['elements'] == ['C-1']
+            assert [node['id'] for node in client.tool('model_traceability_explain', dict(project=project, node='C-1'))['graph']['nodes']] == ['C-1','D-1','R-023']
+            client.tool('model_traceability_save', dict(project=project, graph=graph), error=True)
+            client.tool('model_artifact_save',dict(project=project,path=model_path,content=model_xml+'\n\n',expectedRevision=source['revision']))
+            stale_trace = client.tool('model_traceability_get', dict(project=project))
+            assert stale_trace['evidence']['C-1']['status'] == 'STALE'
+            assert stale_trace['semantic_satisfaction'] == 'NOT_ASSESSED'
+            record('persistent requirement/decision queries, exact anchors, write conflicts and stale source evidence')
             if args.governance:
                 source = client.tool('model_artifact_get', dict(project=project, path=model_path))
                 prepared = client.tool('governance_prepare', dict(project=project, path=model_path, modelRevision=source['revision'], comment='Independent synthetic protocol check.'))
@@ -235,6 +257,17 @@ def main():
                 assert len(client.tool('governance_list', dict(project=project))['items']) == 1
                 assert client.tool('governance_get', dict(subject=prepared['subject']))['source']['sha256'] == source['sha256']
                 record('authoritative governance audit, incomplete validation, agent review request and stale-event rejection')
+                graph['nodes'][2]['artifact'].update({key: source[key] for key in ['path','revision','sha256']})
+                event = checked['events'][1]
+                graph['nodes'].append(dict(id='V-1',type='validation_evidence',title='Executed pipeline evidence',event=dict(subject=checked['subject'],sequence=event['sequence'],hash=event['hash']),**provenance))
+                graph['edges'].append(dict(**{'from':'C-1','to':'V-1'},relation='validated_by',rationale='Installed pipeline executed for this exact revision.'))
+                linked = client.tool('model_traceability_save',dict(project=project,graph=graph,expectedRevision=trace['artifact']['revision']))
+                assert linked['evidence']['V-1']['status'] == 'VERIFIED'
+                assert linked['evidence']['V-1']['release_eligible_at_event'] is False
+                graph['nodes'][-1]['event']['hash'] = '0'*64
+                client.tool('model_traceability_save',dict(project=project,graph=graph,expectedRevision=linked['artifact']['revision']),error=True)
+                record('traceability resolves authentic exact-source validation and rejects fabricated event hashes')
+
 
         if args.live_ckm:
             for name, arguments in [('ckm_archetype_search', {'keyword':'body weight','maxResults':2}),

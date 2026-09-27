@@ -258,3 +258,12 @@ requirements:
     packages: [src/Domain/Governance/*.php, src/Integrations/Governance/*.php, src/Application/ModelGovernance.php, src/Rest/ReviewApi.php, src/Tools/GovernanceTools.php]
     tests: [tests/Enterprise/GovernanceAuditStoreTest.php, tests/Enterprise/ModelGovernanceTest.php, tests/Enterprise/InteractiveReviewAuthenticatorTest.php, tests/Enterprise/ReviewApiTest.php, chat/test/reviews.test.mjs, chat/test/browser.spec.mjs]
     adr: ["0015"]
+
+  - id: REQ-F17
+    title: Persistent queryable project requirement and evidence graph
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Domain/Traceability/*.php, src/Application/ProjectTraceability.php, src/Application/TraceabilityEvidence.php, src/Integrations/Traceability/*.php, src/Validation/JsonDocument.php, src/Tools/TraceabilityTools.php]
+    tests: [tests/Enterprise/TraceabilityGraphTest.php, tests/Enterprise/ProjectTraceabilityTest.php, tests/Tools/TraceabilityOutputCases.php]
+    adr: ["0016"]

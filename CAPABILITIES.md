@@ -22,7 +22,7 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Explicit XML terminology inspection | WORKING | Bounded OET/OPT coded choices, named queries and native reference preservation; revision-specific locations, without inherited ADL semantics |
 | Terminology binding plans | WORKING | Offline exact-membership proposals, explicit aliases, pinned local code validation, repository history and stale-evidence detection; review required |
 | Terminology impact and manifest | PARTIAL | Concept/property diff and declared dependencies; no hierarchy/global index |
-| Requirements traceability | PARTIAL | Explicit declared coverage; no clinical/test proof |
+| Requirements traceability | WORKING | Versioned typed graph, deterministic element/requirement queries, exact XML/JSON anchors, authoritative audit references, stale-evidence findings and repository conflicts; coverage remains a modeller assertion, with native inherited paths awaiting the engine |
 | Persisted model governance | WORKING | Exact-revision lifecycle, server-produced validation evidence, append-only audit chain, sequence conflicts and independent human decisions; real approval remains blocked until qualified validation is available |
 | Browser human review and versioned review REST API | WORKING | Source/evidence inspection, role-based decisions, explicit confirmation and single-use request-bound assertions; ordinary MCP credentials cannot approve |
 | QA and release qualification | PARTIAL | Preflight truthfully records unavailable stages; complete deterministic clinical-model qualification requires the engine and formal QA work |

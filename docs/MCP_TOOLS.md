@@ -2914,6 +2914,401 @@ Output schema:
 
 Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
 
+## `model_traceability_explain`
+
+Answer why an element exists from the stored requirement and decision trail, including associated terminology, validation and review evidence. Node identifiers come from the persisted graph; no rationale is inferred.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "node": {
+      "type": "string"
+    },
+    "revision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "node"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_traceability_explain",
+  "arguments": {
+    "project": "neonatal-care",
+    "node": "C-1"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_traceability_get`
+
+Read a versioned requirements graph, resolve pinned source/anchor/audit references and report declared coverage and unresolved/stale evidence. Native inherited openEHR paths require the qualified engine.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "revision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_traceability_get",
+  "arguments": {
+    "project": "neonatal-care"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_traceability_requirement`
+
+Return the exact model elements explicitly linked to a requirement, with full/partial/excluded/unresolved declarations and reference verification. An authentic validation or review event does not certify every graph assertion.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "requirement": {
+      "type": "string"
+    },
+    "revision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "requirement"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_traceability_requirement",
+  "arguments": {
+    "project": "neonatal-care",
+    "requirement": "R-023"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
+## `model_traceability_save`
+
+Save the project's explicit requirement/decision/model/evidence graph as a conditional DRAFT revision. Graph schema and pinned references are checked; this does not prove clinical satisfaction or approve a model.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "graph": {
+      "type": "object"
+    },
+    "expectedRevision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "graph"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "model_traceability_save",
+  "arguments": {
+    "project": "neonatal-care",
+    "graph": {
+      "schema": 1,
+      "nodes": [
+        {
+          "id": "R-023",
+          "type": "requirement",
+          "title": "Project requirement",
+          "description": "Record the actual user-supplied modelling requirement.",
+          "provenance": [
+            "Project requirements workshop notes"
+          ],
+          "priority": "must",
+          "status": "ACTIVE"
+        }
+      ],
+      "edges": []
+    }
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVERNANCE.md), and [workflow](workflows/neonatal-admission.md). Partial validation never certifies deployability.
+
 ## `model_validate`
 
 Run deterministic bounded preflight checks. Partial results never certify deployment.

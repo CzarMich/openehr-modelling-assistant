@@ -63,3 +63,9 @@ Native OPT compilation, full ADL/AQL validation, CDR execution, full project/tea
 | **REQ-N12** | Client-neutral deployment and truthful capability documentation. | landed; exact boundaries in CAPABILITIES.md |
 
 | **REQ-F16** | Persist exact-revision governance and immutable audit events; permit clinical approval only through an independent authenticated human session after qualified validation, never through an AI/MCP caller. | `Application/ModelGovernance`, `Domain/Governance`, `Rest/ReviewApi`, browser review workspace |
+
+## Queryable project requirements
+
+| ID | Requirement | Primary capability surface |
+|---|---|---|
+| **REQ-F17** | Persist typed requirements, decisions and exact model/evidence links; answer element rationale and requirement coverage deterministically, with stale/missing/unexecuted evidence and declared clinical satisfaction kept distinct. | `model_traceability_*`, shared application/domain services and repository/audit contracts |

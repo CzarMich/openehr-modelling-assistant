@@ -44,3 +44,5 @@ referenced from [requirements.md](../requirements.md),
 - [ADR-0014: Revision-bound terminology binding plans](0014-revision-bound-terminology-binding-plans.md)
 
 - [ADR-0015: Persisted governance and interactive human approval](0015-persisted-governance-and-interactive-human-approval.md)
+
+- [0016: Versioned requirements graph and evidence boundaries](0016-versioned-requirements-graph-and-evidence-boundaries.md)

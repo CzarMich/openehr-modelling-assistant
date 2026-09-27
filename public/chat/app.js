@@ -5,6 +5,10 @@ let session = null,
     running = false,
     controller = null;
 const toolLabels = {
+    model_traceability_save: "Save requirements traceability",
+    model_traceability_get: "Requirements and evidence graph",
+    model_traceability_explain: "Explain model element",
+    model_traceability_requirement: "Requirement coverage trail",
     governance_prepare: "Prepare model review",
     governance_validate: "Record validation evidence",
     governance_request_review: "Request human review",

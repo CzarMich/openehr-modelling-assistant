@@ -1,4 +1,5 @@
 export const WRITE_TOOLS = new Set([
+    "model_traceability_save",
     "governance_prepare",
     "governance_validate",
     "governance_request_review",
@@ -11,6 +12,9 @@ export const WRITE_TOOLS = new Set([
     "terminology_binding_plan_save",
 ]);
 export const READ_TOOLS = new Set([
+    "model_traceability_get",
+    "model_traceability_explain",
+    "model_traceability_requirement",
     "governance_get",
     "governance_list",
     "ckm_sources",

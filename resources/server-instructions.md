@@ -29,3 +29,7 @@ Follow a **Guide-First** approach: use `guide_search` and `guide_get` before com
 ## Governed model review
 
 Use `governance_prepare` for an exact saved revision, `governance_validate` for installed deterministic evidence and `governance_request_review` with the current audit sequence. Read every incomplete stage; a successful tool call does not mean a qualified model. Human review, approval and publication belong to the separately authenticated review workspace. Agents must never call its clinical decision endpoint or obtain its signing key. Model metadata and uploaded reports cannot grant authoritative approval. Terminology remains optional when no binding requires it.
+
+## Requirements and rationale
+
+Use `model_traceability_get` to read the stored graph before changing its links. `model_traceability_explain` returns the recorded requirement/decision trail for an element; `model_traceability_requirement` returns explicit coverage links for a requirement ID. Pin retrieved source revisions/hashes and authoritative audit event hashes when saving a graph. Report stale, unresolved and unexecuted evidence. Declared full coverage is not proof of clinical satisfaction, conformance or approval.
