@@ -10,6 +10,7 @@
         }
     ],
     "require": {
+        "php": "^8.4",
         "ext-curl": "*",
         "ext-dom": "*",
         "ext-json": "*",
@@ -18,11 +19,10 @@
         "ext-simplexml": "*",
         "firebase/php-jwt": "^7.2",
         "guzzlehttp/guzzle": "^7.9",
-        "mcp/sdk": "^0.7.0",
+        "mcp/sdk": "^0.8.1",
         "monolog/monolog": "^3.9",
         "nyholm/psr7": "^1.8",
         "nyholm/psr7-server": "^1.1",
-        "php": "^8.4",
         "psr/log": "^3.0",
         "psr/simple-cache": "^3.0",
         "symfony/cache": "^8.0",

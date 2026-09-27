@@ -63,8 +63,8 @@ sh: ## Open an interactive shell in dev container
 run-stdio: ## Run MCP server (stdio transport) in dev container
 	$(DOCKER_COMPOSE_DEV) run --rm -T app php public/index.php --transport=stdio
 
-conformance: ## Run MCP conformance tests against server (requires make up-dev; URL: http://ingress:8343/mcp). Results in conformance/
-	$(DOCKER_COMPOSE_DEV) run --rm node npx -y @modelcontextprotocol/conformance server --url http://ingress:8343/mcp -o conformance --expected-failures tests/conformance-baseline.yml
+conformance: ## Verify the advertised MCP profile in isolated HTTP/stdio production containers
+	scripts/test-protocol-container.sh
 
 ##@ Quality & CI
 

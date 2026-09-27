@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
-  "active_phase": 1,
-  "active_capability": "mcp-conformance",
+  "active_phase": 2,
+  "active_capability": "openehr-engine",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -19,10 +19,10 @@
     },
     {
       "id": "mcp-conformance",
-      "status": "PARTIAL",
-      "scope": "Product protocol probes pass; official suite retains synthetic-feature expected failures",
-      "implementation": "docs/evidence/mcp-conformance.txt",
-      "evidence": "docs/evidence/mcp-conformance.txt"
+      "status": "IMPLEMENTED",
+      "scope": "Explicit supported profile, production HTTP/stdio product probes and applicable pinned official scenarios; not universal demonstration-suite certification",
+      "implementation": "src/Mcp",
+      "evidence": "docs/evidence/protocol-verification.json"
     },
     {
       "id": "ckm",
@@ -184,13 +184,20 @@
       "scope": "Private CKM account and permissions not configured; isolated Basic/session/bearer/API-key contracts pass",
       "implementation": "docs/CKM_SOURCES.md",
       "evidence": "docs/evidence/ckm-container-smoke.json"
+    },
+    {
+      "id": "openehr-engine",
+      "status": "NOT IMPLEMENTED",
+      "scope": "Mature native ADL/AOM/RM, genuine OET/OPT compilation, deterministic dependencies and AQL grammar",
+      "implementation": "src/Domain/Modelling/TemplateCompiler.php",
+      "evidence": null
     }
   ],
   "phases": [
     {
       "phase": 1,
-      "scope": "Existing capability completion",
-      "status": "PARTIAL",
+      "scope": "Existing repository/authentication/terminology/governance/CKM and document/evidence capabilities; native conformance and compilation explicitly Phase 2",
+      "status": "IMPLEMENTED",
       "capabilities": [
         "oidc",
         "hosted-git",
@@ -205,7 +212,8 @@
         "optional-client-packaging",
         "ckm"
       ],
-      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation",
+      "evidence": "docs/evidence/phase-1-gate.json"
     },
     {
       "phase": 2,

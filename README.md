@@ -110,7 +110,7 @@ flowchart TD
     S -->|Prepare and request review only| GV
     GV --> AU[Separate append-only audit ledger]
     GV --> R
-    M[Copilot Studio, Codex or another MCP client] -->|MCP| S[openEHR Modelling Assistant]
+    M[Copilot Studio, Codex or another MCP client] -->|Verified HTTP / stdio MCP profile| S[openEHR Modelling Assistant]
     S --> ID[Transport identity: local, API key or verified OIDC]
     ID --> TEN[Signed tenant namespace and write permissions]
     S --> FK[Bounded federated CKM discovery: source and version provenance]
@@ -203,3 +203,5 @@ URLs and logo are deployment configuration. Branding does not change openEHR sta
 or imply authorship of upstream components, EY certification or clinical validation.
 
 Archetype Designer users: see the [integration guide](docs/ARCHETYPE_DESIGNER_INTEGRATION.md) for shared model repositories, file exchange and the current synchronization limits.
+
+The [MCP protocol profile](docs/MCP_PROTOCOL.md) is verified over production HTTP and stdio, with explicit capabilities and version negotiation.

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Verified MCP protocol profile, negotiated clients and HTTP/stdio acceptance.
+
 - Add source-specific CKM authentication and bounded federated model discovery.
 
 - Add staged document validation, simplified JSON profiles and exact-revision project QA.

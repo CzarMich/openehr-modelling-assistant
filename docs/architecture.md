@@ -17,3 +17,5 @@ REQ-F17 adds shared services for versioned typed requirements, decisions, exact 
 REQ-F18 adds separate document validation stages and exact-revision project QA through shared application services. Formal findings retain parse/profile errors, recorded evidence and unavailable engine checks independently. [ADR-0017](decisions/0017-staged-document-validation-and-project-evidence-qa.md) and [Validation and QA](VALIDATION_AND_QA.md) define contracts and migration.
 
 REQ-F19 binds optional service credentials to configured CKM sources and exposes bounded federation through a knowledge port and shared application service. [ADR-0018](decisions/0018-source-bound-ckm-authentication-and-federated-discovery.md) records source identity, deadline and credential boundaries.
+
+REQ-F20: `src/Mcp` bounds the supported protocol profile and SDK integration; clients retain negotiation and correlate responses. Production HTTP/stdio acceptance is independent of clinical services. See [MCP protocol](MCP_PROTOCOL.md).
