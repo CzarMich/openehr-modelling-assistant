@@ -286,6 +286,14 @@
     "inputSchema": {
       "type": "object",
       "properties": {
+        "metadata": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "additionalProperties": true
+        },
         "project": {
           "type": "string"
         },
@@ -295,22 +303,6 @@
         "content": {
           "type": "string",
           "maxLength": 2097152
-        },
-        "metadata": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "default": null,
-          "definition": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "additionalProperties": true,
-            "default": null
-          },
-          "items": {}
         },
         "expectedRevision": {
           "type": [

@@ -10,7 +10,7 @@ flowchart TB
     Core --> Validation[Structural validator and QA stages]
     Core --> Repository[ModelRepository interface]
     Repository --> FS[Filesystem snapshots]
-    Repository --> Git[Git adapter: plain files and commit revisions]
+    Repository --> Git[Git adapter: native files, layout mapping and commit revisions]
     Git --> Cache[Persistent local Git object store]
     Git --> Remote[Optional GitHub, GitLab or other Git remote]
     Designer[Archetype Designer: account connection required] -.-> Remote

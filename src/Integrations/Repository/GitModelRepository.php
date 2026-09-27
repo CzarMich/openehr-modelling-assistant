@@ -12,6 +12,8 @@ final class GitModelRepository implements GitRepository
 {
     private string $directory;
     private string $branch;
+    private string $contentPrefix;
+    private bool $flatLayout;
     private string $remote;
     private GitProcess $process;
     private int $syncSeconds;
@@ -28,6 +30,12 @@ final class GitModelRepository implements GitRepository
         if (!is_dir($this->directory) && !mkdir($this->directory, 0700, true) && !is_dir($this->directory)) {
             throw new \RuntimeException('REPOSITORY_UNAVAILABLE');
         }
+        $this->flatLayout = $settings->get('MODEL_GIT_LAYOUT') === 'flat';
+        $contentPath = $settings->get('MODEL_GIT_CONTENT_PATH');
+        if ($contentPath !== '' && (!preg_match('~^[A-Za-z0-9][A-Za-z0-9_/-]*$~D', $contentPath) || str_contains($contentPath, '//') || str_ends_with($contentPath, '/'))) {
+            throw new \InvalidArgumentException('INVALID_GIT_CONTENT_PATH');
+        }
+        $this->contentPrefix = $contentPath === '' ? '' : $contentPath . '/';
         $this->branch = $settings->get('MODEL_GIT_BRANCH');
         $this->branchName($this->branch);
         $this->remote = $settings->get('MODEL_GIT_REMOTE_URL');
@@ -72,7 +80,9 @@ final class GitModelRepository implements GitRepository
         return $this->locked(false, function (): array {
             $ids = [];
             foreach (array_keys($this->tree) as $path) {
-                if ($path === '.modelling/project.json' || $this->isArtifactPath($path)) {
+                if (!str_starts_with($path, $this->contentPrefix)) { continue; }
+                $path = substr($path, strlen($this->contentPrefix));
+                if ($path === '.modelling/project.json' || $this->logicalPath($path) !== null) {
                     $ids['default'] = true;
                 } elseif (preg_match('~^projects/([A-Za-z0-9][A-Za-z0-9_-]{0,63})/\.modelling/project.json$~D', $path, $matches)) {
                     $ids[$matches[1]] = true;
@@ -124,8 +134,8 @@ final class GitModelRepository implements GitRepository
             $this->project($project); $prefix = $this->prefix($project); $items = [];
             foreach (array_keys($this->tree) as $fullPath) {
                 if (!str_starts_with($fullPath, $prefix)) { continue; }
-                $path = substr($fullPath, strlen($prefix));
-                if ($this->isArtifactPath($path)) { $items[] = $this->artifact($project, $path, $this->requiredHead()); }
+                $path = $this->logicalPath(substr($fullPath, strlen($prefix)));
+                if ($path !== null) { $items[] = $this->artifact($project, $path, $this->requiredHead()); }
             }
             return $items;
         });
@@ -153,7 +163,7 @@ final class GitModelRepository implements GitRepository
         }
         return $this->locked(true, function () use ($project, $path, $content, $metadata, $expectedRevision): array {
             $this->activeProject($project);
-            $fullPath = $this->prefix($project) . $path;
+            $fullPath = $this->storagePath($project, $path);
             $current = isset($this->tree[$fullPath]) ? $this->artifact($project, $path, $this->requiredHead())['revision'] : null;
             if ($current !== $expectedRevision) { throw new \RuntimeException('REVISION_CONFLICT'); }
             $this->commit([$fullPath => $content, $this->metadataPath($project, $path) => $this->json(['metadata' => $metadata])], 'Save model artifact ' . $path);
@@ -168,7 +178,7 @@ final class GitModelRepository implements GitRepository
             $this->activeProject($project);
             $artifact = $this->artifact($project, $path, $this->requiredHead());
             if ($artifact['revision'] !== $expectedRevision) { throw new \RuntimeException('REVISION_CONFLICT'); }
-            $this->commit([$this->prefix($project) . $path => null, $this->metadataPath($project, $path) => null], 'Delete model artifact ' . $path);
+            $this->commit([$this->storagePath($project, $path) => null, $this->metadataPath($project, $path) => null], 'Delete model artifact ' . $path);
             return null;
         });
     }
@@ -178,7 +188,7 @@ final class GitModelRepository implements GitRepository
         $this->artifactPath($path);
         return $this->locked(false, function () use ($project, $path): array {
             $this->project($project);
-            $output = trim($this->git(['log', '--format=%H', '--max-count=1001', $this->requiredHead(), '--', $this->prefix($project) . $path, $this->metadataPath($project, $path)]));
+            $output = trim($this->git(['log', '--format=%H', '--max-count=1001', $this->requiredHead(), '--', $this->storagePath($project, $path), $this->metadataPath($project, $path)]));
             if ($output === '') { return []; }
             $revisions = explode("\n", $output);
             if (count($revisions) > 1000) { throw new \RuntimeException('GIT_HISTORY_LIMIT'); }
@@ -233,7 +243,7 @@ final class GitModelRepository implements GitRepository
         // Existing native model repositories are readable without adding assistant metadata.
         if ($id === 'default' && $this->head !== null) {
             foreach (array_keys($this->tree) as $file) {
-                if ($this->isArtifactPath($file)) {
+                if (str_starts_with($file, $this->contentPrefix) && $this->logicalPath(substr($file, strlen($this->contentPrefix))) !== null) {
                     return ['id' => 'default', 'name' => 'Git model repository', 'description' => 'Imported model content',
                         'status' => 'ACTIVE', 'revision' => $this->head, 'provider' => 'git'];
                 }
@@ -250,7 +260,7 @@ final class GitModelRepository implements GitRepository
     /** @return array<string, mixed> */
     private function artifact(string $project, string $path, string $at, bool $allowDeleted = false): array
     {
-        $fullPath = $this->prefix($project) . $path;
+        $fullPath = $this->storagePath($project, $path);
         $metadataPath = $this->metadataPath($project, $path);
         $tree = $at === $this->head ? $this->tree : $this->validatedTree($at);
         $deleted = !isset($tree[$fullPath]);
@@ -407,12 +417,38 @@ final class GitModelRepository implements GitRepository
     private function prefix(string $id): string
     {
         if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/D', $id)) { throw new \InvalidArgumentException('INVALID_PROJECT_ID'); }
-        return $id === 'default' ? '' : 'projects/' . $id . '/';
+        return $this->contentPrefix . ($id === 'default' ? '' : 'projects/' . $id . '/');
     }
+    private function logicalPath(string $relative): ?string
+    {
+        if ($this->flatLayout) {
+            if (str_starts_with($relative, 'archetypes/') || str_starts_with($relative, 'templates/')) { return null; }
+            if (!str_contains($relative, '/')) {
+                if (preg_match('/\\.(adl|adls|adlf|a\\.json)$/D', $relative)) { $relative = 'archetypes/' . $relative; }
+                elseif (preg_match('/\\.(t\\.json|oet|opt)$/D', $relative)) { $relative = 'templates/' . $relative; }
+            }
+        }
+        return $this->isArtifactPath($relative) ? $relative : null;
+    }
+
+    private function storagePath(string $project, string $path): string
+    {
+        $relative = $path;
+        if ($this->flatLayout && (str_starts_with($path, 'archetypes/') || str_starts_with($path, 'templates/'))) {
+            $relative = substr($path, strpos($path, '/') + 1);
+            if (str_contains($relative, '/') || $this->logicalPath($relative) !== $path) {
+                throw new \InvalidArgumentException('GIT_FLAT_LAYOUT_REQUIRES_NATIVE_FILENAME');
+            }
+        }
+        return $this->prefix($project) . $relative;
+    }
+
     private function isArtifactPath(string $path): bool
     {
-        return strlen($path) <= 240 && preg_match('~^(requirements|archetypes|templates|terminology|aql|tests|validation|decisions|documentation)/[A-Za-z0-9_./-]+$~D', $path) === 1
-            && !str_contains($path, '..') && !str_contains($path, '//') && !str_ends_with($path, '/');
+        return strlen($path) <= 240 && preg_match('//u', $path) === 1
+            && preg_match('~^(requirements|archetypes|templates|terminology|aql|tests|validation|decisions|documentation)/[^\\x00-\\x1f\\x7f]+$~D', $path) === 1
+            && !str_contains($path, '\\') && !str_contains($path, '%') && !str_contains($path, '//')
+            && !preg_match('~(^|/)\\.{1,2}(/|$)~D', $path) && !str_ends_with($path, '/');
     }
     private function artifactPath(string $path): void { if (!$this->isArtifactPath($path)) { throw new \InvalidArgumentException('INVALID_ARTIFACT_PATH'); } }
     private function branchName(string $name): void

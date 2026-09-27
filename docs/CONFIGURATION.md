@@ -44,6 +44,8 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `MODEL_REPOSITORY_PATH` | `/tmp/openehr-models` | Absolute private writable path. Compose overrides it to /data/models; development override uses /tmp/development-models. |
 | `MODEL_REPOSITORY_WRITE_ENABLED` | `false` | true enables draft project/artifact write tools; false denies them. |
 
+| `MODEL_GIT_CONTENT_PATH` | empty | Relative model root in Git, e.g. local; does not move existing files. |
+| `MODEL_GIT_LAYOUT` | `categories` | categories stores category folders; flat maps native ADL/template filenames at the configured root. |
 | `MODEL_GIT_REMOTE_URL` | empty | Optional Git remote: ssh://, anonymous HTTPS, absolute local Git path; empty means offline Git. |
 | `MODEL_GIT_BRANCH` | `main` | Branch for reads and draft commits. |
 | `MODEL_GIT_SYNC_SECONDS` | `5` | Read refresh interval, 0–300 seconds. Writes always refresh. |

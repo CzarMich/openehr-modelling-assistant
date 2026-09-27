@@ -1,6 +1,8 @@
 # Layer on docker-compose.yml. Set an external, mode-600 MODELLING_ENV_FILE.
 services:
   app:
+    environment:
+      MODEL_REPOSITORY_PATH: ${MODEL_REPOSITORY_PATH:-/data/models}
     env_file:
       - path: ${MODELLING_ENV_FILE:?Set MODELLING_ENV_FILE to the dev runtime configuration}
         required: true

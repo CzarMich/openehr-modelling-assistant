@@ -20,7 +20,7 @@ Execution metadata belongs in [evidence](evidence/), including the baseline and 
 
 | Check | Result / evidence |
 |---|---|
-| PHP 8.4 unit and regression suite | PASS: 648 tests / 2959 assertions; `git-unit-tests.txt` |
+| PHP 8.4 unit and regression suite | PASS: 651 tests / 2978 assertions; `designer-unit-tests.txt` |
 | PHPStan level 8 and requirement drift gate | PASS in the same final log |
 | Composer dependency audit | No known advisories after compatible dependency updates |
 | Production app/ingress and development image build | PASS; readiness confirmed through Caddy/FPM |
@@ -59,3 +59,5 @@ The active GitHub repository was recreated independently with a new repository i
 ## Git and development integration
 
 Real Git tests exercise local history, two independent remote writers, rejected stale writes, native-file round trips through an external Git client, rejected pushes without advancing the accepted local branch, branch/diff operations, remote history rewrites, symlink rejection and disabled writes. The authenticated development deployment uses Git with no external terminology server; its HTTP evidence verifies persistence, history, conflict rejection and empty terminology manifests. This is not evidence of a hosted Designer account connection or a clinical model round trip.
+
+The shared authoring stage adds a configurable model root, native flat-file mapping and Unicode filenames. A real private Git repository and scoped deploy key verify bidirectional native ADL synchronization and stale-write rejection. Live testing also found and fixed an MCP metadata schema declaration that advertised an array instead of an object; the protocol regression suite and HTTP smoke checks now exercise metadata objects. Hosted Designer account access remains unavailable, so no UI round trip is claimed. See `evidence/designer-git-roundtrip.json` and [the continuation handoff](NEXT_SESSION.md).

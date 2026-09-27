@@ -203,6 +203,44 @@ final class GitRepositoryTest extends TestCase
         return [['../../outside'], ['/etc/passwd'], ['templates/../../outside'], ['templates/%2e%2e/file'], ['templates//file'], ["templates/file\0"], ['.git/config'], ['.modelling/project.json']];
     }
 
+    public function test_designer_local_layout_and_unicode_file_names_are_preserved(): void
+    {
+        $remote = $this->remote();
+        $settings = new Settings(['MODEL_REPOSITORY_PROVIDER' => 'git', 'MODEL_REPOSITORY_PATH' => $this->root . '/cache',
+            'MODEL_GIT_REMOTE_URL' => $remote, 'MODEL_GIT_CONTENT_PATH' => 'local', 'MODEL_GIT_SYNC_SECONDS' => '0']);
+        $repository = new GitModelRepository($settings);
+        $repository->createProject('default', 'Designer models', '');
+        $path = 'templates/Überblick (draft).t.json';
+        $native = '{"preserved":true}';
+        $first = $repository->saveArtifact('default', $path, $native, [], null);
+        self::assertSame($native, $this->git(['--git-dir=' . $remote, 'show', 'main:local/' . $path]));
+        self::assertSame('default', $repository->listProjects()[0]['id']);
+        self::assertSame($path, $repository->listArtifacts('default')[0]['path']);
+        self::assertSame($first['revision'], (new GitModelRepository($settings))->getArtifact('default', $path)['revision']);
+        $repository->createProject('second', 'Second project', '');
+        self::assertCount(2, $repository->listProjects());
+    }
+
+    public function test_designer_flat_layout_maps_native_files_to_logical_categories(): void
+    {
+        $remote = $this->remote();
+        $settings = new Settings(['MODEL_REPOSITORY_PROVIDER' => 'git', 'MODEL_REPOSITORY_PATH' => $this->root . '/cache',
+            'MODEL_GIT_REMOTE_URL' => $remote, 'MODEL_GIT_CONTENT_PATH' => 'local', 'MODEL_GIT_LAYOUT' => 'flat', 'MODEL_GIT_SYNC_SECONDS' => '0']);
+        $repository = new GitModelRepository($settings);
+        $repository->createProject('default', 'Designer', '');
+        $first = $repository->saveArtifact('default', 'templates/Native template.t.json', '{"native":true}', [], null);
+        self::assertSame('{"native":true}', $this->git(['--git-dir=' . $remote, 'show', 'main:local/Native template.t.json']));
+        self::assertSame('templates/Native template.t.json', $repository->listArtifacts('default')[0]['path']);
+        $repository->saveArtifact('default', 'archetypes/openEHR-EHR-CLUSTER.test.v0.adl', 'archetype test', [], null);
+        self::assertCount(2, $repository->listArtifacts('default'));
+        $repository->deleteArtifact('default', 'templates/Native template.t.json', $first['revision']);
+        self::assertCount(2, $repository->history('default', 'templates/Native template.t.json'));
+        $repository->createProject('nested', 'Other project', '');
+        $repository->saveArtifact('nested', 'templates/Other.t.json', '{}', [], null);
+        self::assertCount(1, $repository->listArtifacts('default'));
+        self::assertCount(1, $repository->listArtifacts('nested'));
+    }
+
     public function test_credentials_in_remote_url_are_rejected_without_echoing_secret(): void
     {
         try {

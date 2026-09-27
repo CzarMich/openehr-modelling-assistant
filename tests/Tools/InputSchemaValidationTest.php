@@ -86,6 +86,15 @@ final class InputSchemaValidationTest extends TestCase
         $this->assertLessThanOrEqual(50, count($result['items']));
     }
 
+    public function test_artifact_metadata_is_a_nullable_object_at_the_protocol_boundary(): void
+    {
+        $base = ['project' => 'example', 'path' => 'templates/test.oet', 'content' => '<test/>'];
+        foreach ([$base, $base + ['metadata' => null], $base + ['metadata' => ['source' => 'CKM', 'requirements' => ['R1']]]] as $arguments) {
+            self::assertSame([], $this->validate(\OpenEHR\Assistant\Tools\ProjectService::class, 'save', $arguments));
+        }
+        self::assertNotSame([], $this->validate(\OpenEHR\Assistant\Tools\ProjectService::class, 'save', $base + ['metadata' => ['not', 'an', 'object']]));
+    }
+
     /**
      * @param array<string, mixed> $arguments
      * @return list<array<string, mixed>>
