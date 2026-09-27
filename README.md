@@ -220,3 +220,7 @@ The [MCP protocol profile](docs/MCP_PROTOCOL.md) is verified over production HTT
 PostgreSQL is the recommended governance backend. Optional Valkey accelerates repeated model/template reads while source revisions remain authoritative. See [storage and cache deployment](docs/POSTGRES_AND_CACHE.md) for configuration, SQLite migration and recovery.
 
 The main browser URL now opens one [tabbed modelling workspace](docs/BROWSER_WORKSPACE.md). Chat, repository browsing and governance share navigation and sign-in; switching tabs preserves the conversation and selected revision.
+
+### Acknowledgements
+
+This fork was inspired by the work started by [Sebastian Iancu](https://github.com/sebastian-iancu). Thanks to [Lars Fuhrmann](https://github.com/larfuma) for bringing forward the idea for this work, and to [John Meredith](https://github.com/johnmeredith) for being a supportive manager.
