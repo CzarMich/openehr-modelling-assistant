@@ -16,3 +16,5 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 - [A–Z completion audit](COMPLETION_AUDIT.md) and [execution queue](COMPLETION_QUEUE.json)
 
 [Hosted Git repositories](HOSTED_REPOSITORIES.md) documents GitHub/GitLab API capabilities, deployment credentials and draft review acceptance.
+
+[SharePoint repository](SHAREPOINT_REPOSITORY.md) documents Graph storage, authentication, conditional writes, provisioning and acceptance.

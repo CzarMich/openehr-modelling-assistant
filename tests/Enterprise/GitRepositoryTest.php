@@ -255,4 +255,16 @@ final class GitRepositoryTest extends TestCase
         $this->expectExceptionMessage('RESERVED_METADATA_FIELD: approved_by');
         $repository->saveArtifact('default', 'templates/test.oet', '<test/>', ['approved_by' => 'agent'], null);
     }
+    public function test_deep_metadata_cannot_commit_an_unreadable_revision(): void
+    {
+        $repository = new GitModelRepository($this->settings());
+        $repository->createProject('default', 'Test', '');
+        $original = $repository->saveArtifact('default', 'templates/test.oet', '<first/>', [], null);
+        $metadata = ['leaf' => 'value'];
+        for ($i = 0; $i < 65; $i++) { $metadata = ['nested' => $metadata]; }
+        try { $repository->saveArtifact('default', 'templates/test.oet', '<unreadable/>', $metadata, $original['revision']); self::fail('Deep metadata committed.'); }
+        catch (\InvalidArgumentException $error) { self::assertSame('INVALID_ARTIFACT_METADATA', $error->getMessage()); }
+        self::assertSame($original, $repository->getArtifact('default', 'templates/test.oet'));
+    }
+
 }

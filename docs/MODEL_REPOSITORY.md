@@ -55,7 +55,7 @@ Individual Git commands have a timeout and bounded output. Accepted trees allow 
 | `filesystem` | Atomic snapshots and platform revisions | Unavailable | Unavailable |
 | `git` | Plain files, Git revisions, optional remote synchronization | MCP tools | Unavailable |
 | `github` / `gitlab` | Same native Git storage and revisions | MCP tools plus hosted branch listing | Draft creation, reuse and metadata |
-| `sharepoint` | Not implemented | Not applicable | Not implemented |
+| `sharepoint` | Immutable project snapshots, conditional pointer updates, logical revisions/history | Unavailable | Unavailable |
 
 `model_projects` returns actual adapter capabilities. These flags describe the adapter; the documented MCP tool catalogue defines what clients can invoke. Unsupported provider-specific modes never silently fall back to filesystem.
 
@@ -70,3 +70,7 @@ Record artifact type, human version, source CKM/version/hash, declared dependenc
 ## Native identity namespaces
 
 [OIDC deployments](OIDC.md) select storage only from verified issuer/tenant claims. Filesystem and local Git caches use private namespace directories. Hosted Git requires distinct configured remotes per tenant; unknown mappings fail closed. API-key deployments retain their existing shared repository. Authentication changes do not automatically migrate or expose existing model data.
+
+## SharePoint snapshots
+
+Select `sharepoint` for the Graph repository adapter. It shares the filesystem revision/history semantics and adds remote ETag conflict detection, hash verification and dedicated tenant storage mappings. See [SharePoint provisioning, permissions and acceptance](SHAREPOINT_REPOSITORY.md). Metadata is limited to 64 KiB and 16 nested levels across providers so saved revisions remain readable. Native SharePoint document versions and clinical approvals are distinct from application revision history.

@@ -35,6 +35,12 @@ final class Settings
         'MODEL_GIT_LAYOUT' => 'categories', 'MODEL_GIT_CONTENT_PATH' => '', 'MODEL_GIT_REMOTE_URL' => '', 'MODEL_GIT_BRANCH' => 'main', 'MODEL_GIT_SYNC_SECONDS' => '5',
         'MODEL_GIT_TIMEOUT' => '30', 'MODEL_GIT_AUTHOR_NAME' => 'openEHR Modelling Assistant',
         'MODEL_GIT_AUTHOR_EMAIL' => 'modelling-assistant@localhost',
+        'SHAREPOINT_GRAPH_URL' => 'https://graph.microsoft.com/v1.0/',
+        'SHAREPOINT_SITE_ID' => '', 'SHAREPOINT_LIST_ID' => '', 'SHAREPOINT_DRIVE_ID' => '', 'SHAREPOINT_FOLDER_ID' => '',
+        'SHAREPOINT_ACCESS_TOKEN' => '', 'SHAREPOINT_TENANT_ID' => '', 'SHAREPOINT_CLIENT_ID' => '', 'SHAREPOINT_CLIENT_SECRET' => '',
+        'SHAREPOINT_TOKEN_URL' => '', 'SHAREPOINT_TOKEN_SCOPE' => 'https://graph.microsoft.com/.default',
+        'SHAREPOINT_DOWNLOAD_HOSTS' => '', 'SHAREPOINT_MAX_PROJECT_BYTES' => '8388608',
+        'OIDC_TENANT_SHAREPOINT_REPOSITORIES' => '{}',
         'MODEL_HOSTED_API_URL' => '', 'MODEL_HOSTED_TOKEN' => '', 'MODEL_GIT_REVIEW_TARGET' => 'main',
         'MODEL_GIT_SSH_KEY_FILE' => '', 'MODEL_GIT_KNOWN_HOSTS_FILE' => '',
     ];
@@ -57,7 +63,7 @@ final class Settings
                 throw new InvalidArgumentException("Invalid configuration: $key.");
             }
         }
-        foreach (['HTTP_TIMEOUT', 'CKM_TIMEOUT', 'MAX_REQUEST_BYTES', 'MAX_UPSTREAM_BYTES', 'MCP_PORT', 'MODEL_GIT_TIMEOUT'] as $key) {
+        foreach (['HTTP_TIMEOUT', 'CKM_TIMEOUT', 'MAX_REQUEST_BYTES', 'MAX_UPSTREAM_BYTES', 'MCP_PORT', 'MODEL_GIT_TIMEOUT', 'SHAREPOINT_MAX_PROJECT_BYTES'] as $key) {
             if (!ctype_digit($this->get($key)) || (int) $this->get($key) < 1) {
                 throw new InvalidArgumentException("$key must be a positive integer.");
             }
@@ -86,7 +92,7 @@ final class Settings
         if (!preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $this->get('AUTH_API_KEY_HEADER')) || !preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $this->get('TERMINOLOGY_API_KEY_HEADER'))) {
             throw new InvalidArgumentException('Invalid AUTH_API_KEY_HEADER.');
         }
-        foreach (['MODEL_HOSTED_API_URL', 'CKM_API_BASE_URL', 'TERMINOLOGY_FHIR_BASE_URL', 'OIDC_ISSUER', 'OIDC_JWKS_URI',
+        foreach (['SHAREPOINT_GRAPH_URL', 'SHAREPOINT_TOKEN_URL', 'MODEL_HOSTED_API_URL', 'CKM_API_BASE_URL', 'TERMINOLOGY_FHIR_BASE_URL', 'OIDC_ISSUER', 'OIDC_JWKS_URI',
             'PRODUCT_URL', 'PRODUCT_SUPPORT_URL', 'PRODUCT_DOCUMENTATION_URL', 'PRODUCT_LOGO_URL'] as $key) {
             if ($this->get($key) !== '') {
                 self::validateUrl($this->get($key));
@@ -95,8 +101,13 @@ final class Settings
         if ($this->get('TERMINOLOGY_API_KEY') !== '' && $this->get('TERMINOLOGY_BEARER_TOKEN') !== '') {
             throw new InvalidArgumentException('Configure one terminology authentication method.');
         }
+        if ($this->get('MODEL_REPOSITORY_PROVIDER') === 'sharepoint' && $this->get('SHAREPOINT_ACCESS_TOKEN') !== ''
+            && ($this->get('SHAREPOINT_CLIENT_ID') !== '' || $this->get('SHAREPOINT_CLIENT_SECRET') !== '')) {
+            throw new InvalidArgumentException('Configure one SharePoint authentication method.');
+        }
         $this->ckmSources();
         $this->tenantGitRemotes();
+        $this->tenantSharePointRepositories();
         if ($this->get('MCP_ALLOWED_HOSTS') === '' || str_contains($this->get('MCP_ALLOWED_HOSTS'), '*')) {
             throw new InvalidArgumentException('MCP_ALLOWED_HOSTS requires explicit hostnames.');
         }
@@ -177,6 +188,30 @@ final class Settings
             throw new InvalidArgumentException('Tenants require distinct Git remotes.');
         }
         return $remotes;
+    }
+
+    /** @return array<string, array{site_id:string, list_id:string, drive_id:string, folder_id:string}> */
+    public function tenantSharePointRepositories(): array
+    {
+        try { $map = json_decode($this->get('OIDC_TENANT_SHAREPOINT_REPOSITORIES'), true, 8, JSON_THROW_ON_ERROR); }
+        catch (\JsonException) { throw new InvalidArgumentException('Invalid OIDC_TENANT_SHAREPOINT_REPOSITORIES JSON.'); }
+        if (!is_array($map) || ($map !== [] && array_is_list($map)) || count($map) > 1000) {
+            throw new InvalidArgumentException('Invalid SharePoint tenant map.');
+        }
+        $lists = []; $folders = [];
+        foreach ($map as $tenant => $target) {
+            if (!is_string($tenant) || !preg_match('/^[a-f0-9]{64}$/D', $tenant) || !is_array($target)
+                || count($target) !== 4) { throw new InvalidArgumentException('Invalid SharePoint tenant mapping.'); }
+            foreach (['site_id', 'list_id', 'drive_id', 'folder_id'] as $field) {
+                if (!is_string($target[$field] ?? null) || !preg_match('/^[A-Za-z0-9][A-Za-z0-9_.!,~-]{0,249}$/D', $target[$field])
+                    || str_contains($target[$field], '..')) { throw new InvalidArgumentException('Invalid SharePoint tenant target.'); }
+            }
+            $list = strtolower($target['site_id'] . '/' . $target['list_id']);
+            $folder = $target['drive_id'] . '/' . $target['folder_id'];
+            if (isset($lists[$list]) || isset($folders[$folder])) { throw new InvalidArgumentException('Tenants require distinct SharePoint lists and folders.'); }
+            $lists[$list] = true; $folders[$folder] = true;
+        }
+        return $map;
     }
 
     /**

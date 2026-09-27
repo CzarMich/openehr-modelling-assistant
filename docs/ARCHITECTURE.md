@@ -15,14 +15,15 @@ flowchart TB
     Scope --> Core
     Core --> Validation[Structural validator and QA stages]
     Core --> Repository[ModelRepository interface]
-    Repository --> FS[Filesystem snapshots]
+    Repository --> Snap[Shared snapshot revision and history semantics]
+    Snap --> FS[Filesystem locks and atomic snapshots]
+    Snap --> SP[SharePoint immutable files and conditional index]
     Repository --> Git[Git adapter: native files, layout mapping and commit revisions]
     Git --> Cache[Persistent local Git object store]
     Git --> Remote[Optional GitHub, GitLab or other Git remote]
     Git --> Hosting[HostedRepositoryProvider: GitHub or GitLab APIs]
     Hosting --> Reviews[Metadata, branches, protection and draft reviews]
     Designer[Archetype Designer: account connection required] -.-> Remote
-    Repository -.-> SP[Future SharePoint adapter]
     Core --> Terms[Optional terminology checks: TerminologyProvider]
     Terms --> Local[Local value sets]
     Terms --> FHIR[Optional FHIR terminology server]
@@ -30,7 +31,7 @@ flowchart TB
     Core -.-> CDR[Optional future CDR adapter]
 ```
 
-Solid edges are implemented; dotted edges are extension boundaries. `src/Domain` owns modelling, terminology, traceability and repository contracts. `src/Integrations` implements filesystem, Git and FHIR adapters. The generic Git adapter supports hosted GitHub/GitLab repositories without a hosting-provider SDK. Optional hosting adapters implement `HostedRepositoryProvider`; `src/Application/RepositoryService` supplies transport-independent operations and write authorization. Hosted metadata is scoped to the configured tenant repository; draft reviews cannot approve clinical models. The dotted Designer edge represents an account-specific integration that still needs a hosted Designer round-trip acceptance test. `src/Apis` implements CKM retrieval. `src/Tools` adapts domain calls to closed MCP schemas. `public/index.php` supplies authentication, transport, discovery, sessions and redacted logging.
+Solid edges are implemented; dotted edges are extension boundaries. `src/Domain` owns modelling, terminology, traceability and repository contracts. `src/Integrations` implements filesystem, Git, SharePoint and FHIR adapters. Snapshot stores share domain revision/history rules. SharePoint uses a unique project index and ETag-conditional pointer updates; outbound Graph credentials are independent of inbound identity. The generic Git adapter supports hosted GitHub/GitLab repositories without a hosting-provider SDK. Optional hosting adapters implement `HostedRepositoryProvider`; `src/Application/RepositoryService` supplies transport-independent operations and write authorization. Hosted metadata is scoped to the configured tenant repository; draft reviews cannot approve clinical models. The dotted Designer edge represents an account-specific integration that still needs a hosted Designer round-trip acceptance test. `src/Apis` implements CKM retrieval. `src/Tools` adapts domain calls to closed MCP schemas. `public/index.php` supplies authentication, transport, discovery, sessions and redacted logging.
 
 The HTTP path is enterprise TLS gateway → Caddy → private PHP-FPM → MCP handler. stdio uses the same discovery and domain services with local process permissions. CDR credentials and terminology-server configuration are unnecessary for startup, retrieval, draft generation, persistence or local structural validation. Models need no terminology binding. An explicitly requested external terminology check returns `NOT_EXECUTED` when no server is configured; local value sets remain usable.
 

@@ -26,13 +26,13 @@ CKM, or operate as a terminology server.
 - Parse XML securely; check an OET/OPT structural profile and ADL headers; compare XML
   structure, constraints and leaf values. These checks do not certify openEHR conformance.
 - Persist projects, requirements, artefacts, decisions, metadata and immutable revisions
-  using filesystem snapshots or Git, including GitHub/GitLab metadata and draft reviews, with revision conflict detection.
+  using filesystem/SharePoint snapshots or Git, including GitHub/GitLab metadata and draft reviews, with revision conflict detection.
 - Represent local/external value sets and bindings, invoke FHIR terminology operations,
   compare terminology changes, and produce declared terminology dependency manifests.
 - Report explicit requirements traceability and a QA preflight that identifies unexecuted checks.
 
 There is **no OPT compiler, complete ADL/AQL validator, CDR execution adapter,
-visual modeller, SharePoint storage adapter, hosted Git review API, or operational approval UI**.
+visual modeller, or operational clinical approval UI**.
 The interfaces and governance policy prepare these extensions. Native OIDC bearer
 verification, signed write permissions and tenant storage isolation are implemented;
 see [identity configuration and migration](docs/OIDC.md). Full project RBAC remains separate work.
@@ -96,6 +96,7 @@ flowchart TD
     S --> D[Modelling services and structural checks]
     D --> R[Model Repository interface]
     R --> F[Filesystem snapshots and revisions]
+    R --> SP[SharePoint snapshots and conditional project index]
     R --> G[Git adapter: native model files and commit revisions]
     G --> O[Persistent local Git object store]
     G <--> H[Optional GitHub, GitLab or other Git remote]
@@ -108,14 +109,14 @@ flowchart TD
 ```
 
 Solid edges show implemented paths. Git works locally or with a configured remote;
-filesystem and Git expose the same Model Repository interface. The shared Git
+filesystem, SharePoint and Git expose the same Model Repository interface. SharePoint passes isolated Graph/OAuth contract checks; live tenant acceptance requires configured access. The shared Git
 round trip is verified, while the dotted Archetype Designer connection still needs
 an authenticated hosted UI acceptance test. The CDR adapter remains unimplemented.
 Modelling and persistence work without a terminology server or terminology bindings.
 
 ```mermaid
 flowchart TD
-    Chat[Browser chat or another MCP client] --> P[Select filesystem or Git storage] --> R[Open project and read current revision]
+    Chat[Browser chat or another MCP client] --> P[Select filesystem, SharePoint or Git storage] --> R[Open project and read current revision]
     R --> D[Retrieve CKM sources and draft model changes]
     D --> V[Run available structural checks and inspect diff]
     V --> T{Terminology binding needed?}

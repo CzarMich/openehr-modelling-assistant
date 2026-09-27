@@ -29,6 +29,8 @@ referenced from [requirements.md](../requirements.md),
 
 | [0010](0010-hosted-git-capabilities.md) | Hosted Git capabilities beside generic storage | Accepted | REQ-F12, REQ-N11 |
 
+| [0011](0011-sharepoint-conditional-snapshots.md) | Conditional SharePoint project snapshots | Accepted | REQ-F12, REQ-N11 |
+
 ## Writing a new ADR
 
 1. Copy the structure of an existing record. Number sequentially (`NNNN-kebab-title.md`).
