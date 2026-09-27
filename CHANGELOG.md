@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-09-27
+
 - Immutable external model originals with protected import provenance and exact source downloads.
 
 - Expand legacy template compilation with reused nodes, RM attribute refinement and existing-model regression fixtures.

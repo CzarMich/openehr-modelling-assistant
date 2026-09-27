@@ -9,7 +9,7 @@ define('APP_NAME', $settings->get('MCP_SERVER_NAME'));
 define('APP_TITLE', $settings->get('PRODUCT_NAME'));
 define('APP_DESCRIPTION', $settings->get('PRODUCT_DESCRIPTION'));
 define('APP_ICON', $settings->get('PRODUCT_LOGO_URL'));
-define('APP_VERSION', '0.20.0');
+define('APP_VERSION', '0.21.0');
 define('APP_ENV', $settings->get('APP_ENV'));
 define('LOG_LEVEL', $settings->get('LOG_LEVEL'));
 define('APP_DIR', dirname(__DIR__));
