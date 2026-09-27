@@ -79,3 +79,5 @@ Native ADL 2/OPT 2 compilation and AQL syntax parsing are available through the 
 | **REQ-N13** | Support PostgreSQL governance with atomic, hash-preserving migration and optional bounded, tenant/revision-scoped model caching that cannot override authorization or audit authority. | AuditStore, immutable model reads and real service acceptance |
 
 | **REQ-F21** | Compile validated ADL 2 templates into OPT 2 ADL and supported OET/ADL 1.4 into OPT 1.4 XML with explicit hash-pinned dependencies, revalidate serialized output, inspect native paths and parse AQL; atomically persist native builds and revision/compiler evidence without clinical approval. | Native engine port, private engine sidecar, MCP and project build service |
+
+| **REQ-F22** | Preserve exact externally supplied original bytes, distinguish source declarations and format detection from conformance, record protected idempotent import provenance, reject original mutation and prevent imports from implying clinical approval. | `model_import_inspect`, `model_artifact_import`, `model_artifact_provenance`, original repository port and browser source download |

@@ -31,5 +31,6 @@ grep -Fxq STORAGE_DEPLOYMENT_CONTINUED "$MODELLING_STORAGE_SECRET_DIR/continuati
 "${compose[@]}" exec -T app php /storage-probe.php resume
 address=$("${compose[@]}" port ingress 8343)
 python3 "$GOVERNANCE_TEST_REPO/scripts/governance-fixture-smoke.py" --url "http://$address" --state "$MODELLING_STORAGE_SECRET_DIR/review-state.json" --evidence "$GOVERNANCE_TEST_REPO/docs/evidence/ci-postgres-governance-smoke.json"
+python3 "$GOVERNANCE_TEST_REPO/scripts/import-fixture-smoke.py" --url "http://$address/mcp" --writes --catalogue "$GOVERNANCE_TEST_REPO/docs/evidence/tool-catalogue.json" --evidence "$GOVERNANCE_TEST_REPO/docs/evidence/ci-import-smoke.json"
 "${compose[@]}" stop cache
 "${compose[@]}" exec -T app php /storage-probe.php outage

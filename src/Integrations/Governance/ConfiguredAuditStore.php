@@ -23,9 +23,9 @@ final class ConfiguredAuditStore implements AuditStore
             ? new PostgresAuditStore(PostgresConnection::connect($this->settings))
             : new SqliteAuditStore($this->settings->get('GOVERNANCE_DATABASE_PATH'));
     }
-    public function subjects(string $tenant, string $project, int $limit = 100, int $offset = 0): array
+    public function subjects(string $tenant, string $project, int $limit = 100, int $offset = 0, ?string $firstType = null): array
     {
-        return $this->store()->subjects($tenant, $project, $limit, $offset);
+        return $this->store()->subjects($tenant, $project, $limit, $offset, $firstType);
     }
     public function events(string $tenant, string $subject): array
     {

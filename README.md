@@ -115,6 +115,9 @@ flowchart TD
     FK --> K[Multiple named CKMs with source-specific credentials]
     S --> B[Bundled specifications and guides]
     S --> D[Modelling services and structural checks]
+    D --> IM[Manual file import: exact original bytes and explicit type assurance]
+    IM --> R
+    IM --> AU
     D --> NE[Native engine: ADL 1.4/2 and AQL parsers]
     NE --> LR[Legacy profile: reused nodes, RM attributes and explicit slot constraints]
     LR --> OPT
@@ -147,10 +150,13 @@ filesystem, SharePoint and Git expose the same Model Repository interface. Share
 round trip is verified, while the dotted Archetype Designer connection still needs
 an authenticated hosted UI acceptance test. The CDR adapter remains unimplemented.
 Modelling and persistence work without a terminology server or terminology bindings.
+[Manual file imports](docs/MODEL_IMPORTS.md) preserve original bytes and protected import receipts across filesystem, Git and SharePoint. Source declarations remain separate from conformance and clinical approval. The Models tab can download the exact source, including binary originals.
 
 ```mermaid
 flowchart TD
     Chat[Browser chat or another MCP client] --> P[Select filesystem, SharePoint or Git storage] --> R[Open project and read current revision]
+    R --> IM[Optional manual file import: inspect and preserve original]
+    IM --> D
     R --> D[Search configured CKMs; select exact source; draft model changes]
     D --> V[Run available structural checks and inspect diff]
     V --> COMP[Compile ADL 2 or supported OET; check native OPT and preserve build evidence]

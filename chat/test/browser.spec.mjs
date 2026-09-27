@@ -173,6 +173,38 @@ test("one workspace preserves chat and exact model context across tabs", async (
     await page.screenshot({ path: "test-results/unified-workspace-desktop.png", fullPage: true });
 });
 
+test("original binary source downloads with exact bytes and stays in the workspace", async ({ page, context }) => {
+    await login(page);
+    const bytes = Buffer.from([0x50, 0x4b, 0, 0xff]),
+        artifact = {
+            path: "originals/" + "a".repeat(64) + "/Original ü.zip",
+            revision: "b".repeat(40),
+            sha256: "c".repeat(64),
+            content: null,
+            content_base64: bytes.toString("base64"),
+            content_encoding: "base64",
+            size_bytes: bytes.length,
+            metadata: { kind: "original_source" },
+            status: "DRAFT",
+        };
+    await page.route("**/chat/api/models/project?*", (route) =>
+        route.fulfill({ json: { project: { id: "default" }, artifacts: [artifact] } }),
+    );
+    await page.route("**/chat/api/models/artifact?*", (route) => route.fulfill({ json: artifact }));
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
+    await page.getByRole("button", { name: /Original ü.zip/ }).click();
+    await expect(page.locator("#model-source")).toContainText("Original binary file · 4 bytes");
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download source", exact: true }).click();
+    const download = await downloadPromise,
+        stream = await download.createReadStream(),
+        chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    expect(Buffer.concat(chunks)).toEqual(bytes);
+    expect(download.suggestedFilename()).toBe("Original ü.zip");
+    expect(context.pages()).toHaveLength(1);
+});
+
 test("workspace tabs support keyboard navigation and fit a narrow viewport", async ({ page }) => {
     await login(page);
     await page.setViewportSize({ width: 390, height: 844 });

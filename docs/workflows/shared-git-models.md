@@ -43,3 +43,5 @@ For an entirely local workflow leave `MODEL_GIT_REMOTE_URL` empty, or select `fi
 For coded XML sources, use [binding plans](../TERMINOLOGY_BINDING_PLANS.md) to inspect explicit choices, preserve references, compare project ValueSets and record unresolved decisions. Save the plan against the source revision, then regenerate it after source or catalogue changes. This does not edit the native model or establish clinical approval.
 
 Native ADL 2 and supported legacy OET builds can use `template_compile_project`; the generated `.opt` stays a native file and build evidence uses repository metadata. It never rewrites imported sources or constitutes Git/clinical approval. [Compiler profiles](../OPT_COMPILATION.md).
+
+Manually exported source files can be preserved through [original imports](../MODEL_IMPORTS.md). Native bytes are committed under the create-only original namespace; protected platform receipts identify their exact commits and hashes. Compile supported OET/ADL using those pinned revisions, keeping the OPT and build evidence separate. External-tool declarations and a shared Git history do not establish semantic round-trip equivalence.

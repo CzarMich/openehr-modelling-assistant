@@ -46,4 +46,6 @@ Different repository layouts are used in practice; the [modelling workshop repos
 
 The [unified browser workspace](BROWSER_WORKSPACE.md) provides Chat, Models and Governance in one window. Model browsing reads the configured filesystem, Git or SharePoint repository and carries the selected revision into chat.
 
-See the [version/account compatibility report](ARCHETYPE_DESIGNER_COMPATIBILITY.md), [generic exchange architecture](MODELLING_TOOL_INTEGRATION.md), and [current step-by-step workflow](workflows/archetype-designer.md). These distinguish implemented operations from the remaining governed import/handoff subsystem.
+See the [version/account compatibility report](ARCHETYPE_DESIGNER_COMPATIBILITY.md), [generic exchange architecture](MODELLING_TOOL_INTEGRATION.md), and [current step-by-step workflow](workflows/archetype-designer.md). These distinguish implemented operations from the remaining working-copy, handoff and semantic round-trip subsystem.
+
+The assistant now accepts a manually exported file with `model_artifact_import`, preserving its exact original bytes and recording protected platform provenance. `model_import_inspect` distinguishes content markers from caller declarations; `.t.json` is preserved without an assumed OET/OPT/Web Template conversion. Imported supported OET/ADL sources can feed the documented compiler with explicit dependency revisions. This does not verify a hosted Designer UI round trip or automate its export API. [Manual workflow](MODEL_IMPORTS.md).

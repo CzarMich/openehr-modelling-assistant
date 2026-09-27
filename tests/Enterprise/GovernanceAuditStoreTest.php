@@ -68,6 +68,20 @@ final class GovernanceAuditStoreTest extends TestCase
         self::assertSame('Separate tenant', $store->events($tenant, self::SUBJECT)[0]['comment']);
     }
 
+    public function test_stream_filter_applies_before_pagination(): void
+    {
+        $store = new SqliteAuditStore($this->path);
+        foreach (['a' => 'MODEL_IMPORT_REQUESTED', 'b' => 'REGISTER', 'c' => 'MODEL_IMPORT_REQUESTED', 'd' => 'REGISTER'] as $id => $type) {
+            $store->append('shared', str_repeat($id, 64), 0, ['type' => $type] + $this->event());
+        }
+        self::assertSame(str_repeat('b', 64), $store->subjects('shared', 'project', 1, 0, 'REGISTER')[0]['subject']);
+        self::assertSame(str_repeat('d', 64), $store->subjects('shared', 'project', 1, 1, 'REGISTER')[0]['subject']);
+        self::assertCount(2, $store->subjects('shared', 'project', firstType: 'MODEL_IMPORT_REQUESTED'));
+        self::assertCount(4, $store->subjects('shared', 'project'));
+        $this->expectExceptionMessage('INVALID_AUDIT_STREAM_TYPE');
+        $store->subjects('shared', 'project', firstType: "' OR 1=1 --");
+    }
+
     public function test_duplicate_assertion_is_rejected_across_connections(): void
     {
         $nonce = bin2hex(random_bytes(32)); $store = new SqliteAuditStore($this->path); $store->consumeNonce($nonce, time() + 60);

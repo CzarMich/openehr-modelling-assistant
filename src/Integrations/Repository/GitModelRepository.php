@@ -7,9 +7,11 @@ namespace OpenEHR\Assistant\Integrations\Repository;
 use OpenEHR\Assistant\Configuration\Settings;
 use OpenEHR\Assistant\Domain\Repository\HostedGitRepository;
 use OpenEHR\Assistant\Domain\Repository\HostedRepositoryProvider;
+use OpenEHR\Assistant\Domain\Repository\OriginalRepository;
+use OpenEHR\Assistant\Domain\Repository\OriginalContent;
 
 /** Plain model files in Git; atomic commits and non-force pushes are the persistence boundary. */
-final class GitModelRepository implements HostedGitRepository
+final class GitModelRepository implements HostedGitRepository, OriginalRepository
 {
     private \OpenEHR\Assistant\Integrations\Cache\ModelReadCache $cache;
     private string $directory;
@@ -184,6 +186,7 @@ final class GitModelRepository implements HostedGitRepository
     public function saveArtifact(string $project, string $path, string $content, array $metadata, ?string $expectedRevision): array
     {
         $this->artifactPath($path);
+        if (OriginalContent::isOriginal($path)) { throw new \RuntimeException('IMPORT_ORIGINAL_IMMUTABLE'); }
         if (strlen($content) > 2097152 || preg_match('//u', $content) !== 1) {
             throw new \InvalidArgumentException('ARTIFACT_TOO_LARGE_OR_INVALID_TEXT');
         }
@@ -200,9 +203,27 @@ final class GitModelRepository implements HostedGitRepository
         });
     }
 
+    public function storeOriginal(string $project, string $path, string $bytes, array $metadata): array
+    {
+        OriginalContent::assertPath($path);
+        OriginalContent::envelope($bytes);
+        \OpenEHR\Assistant\Domain\Repository\ArtifactMetadata::validate($metadata);
+        return $this->locked(true, function () use ($project, $path, $bytes, $metadata): array {
+            $this->activeProject($project);
+            $fullPath = $this->storagePath($project, $path);
+            // Include historical creation/deletion: an external Git client cannot make an import ID reusable.
+            if (isset($this->tree[$fullPath]) || $this->lastChange($this->requiredHead(), [$fullPath]) !== '') {
+                throw new \RuntimeException('IMPORT_ORIGINAL_EXISTS');
+            }
+            $this->commit([$fullPath => $bytes, $this->metadataPath($project, $path) => $this->json(['metadata' => $metadata])], 'Preserve imported model source');
+            return $this->artifact($project, $path, $this->requiredHead());
+        });
+    }
+
     public function deleteArtifact(string $project, string $path, string $expectedRevision): void
     {
         $this->artifactPath($path);
+        if (OriginalContent::isOriginal($path)) { throw new \RuntimeException('IMPORT_ORIGINAL_IMMUTABLE'); }
         $this->locked(true, function () use ($project, $path, $expectedRevision): null {
             $this->activeProject($project);
             $artifact = $this->artifact($project, $path, $this->requiredHead());
@@ -329,12 +350,12 @@ final class GitModelRepository implements HostedGitRepository
             }
         }
         $content = $this->blob($contentAt, $fullPath);
-        if (preg_match('//u', $content) !== 1) {
+        if (!OriginalContent::isOriginal($path) && preg_match('//u', $content) !== 1) {
             throw new \RuntimeException('GIT_INVALID_TEXT');
         }
         $metadata = isset($tree[$metadataPath]) ? json_decode($this->blob($at, $metadataPath), true, 32, JSON_THROW_ON_ERROR) : [];
         $revision = $this->lastChange($at, [$fullPath, $metadataPath]);
-        return ['path' => $path, 'content' => $content, 'metadata' => is_array($metadata) && is_array($metadata['metadata'] ?? null) ? $metadata['metadata'] : [],
+        return (OriginalContent::isOriginal($path) ? OriginalContent::envelope($content) : []) + ['path' => $path, 'content' => $content, 'metadata' => is_array($metadata) && is_array($metadata['metadata'] ?? null) ? $metadata['metadata'] : [],
             'status' => $deleted ? 'DELETED' : 'DRAFT', 'revision' => $revision, 'sha256' => hash('sha256', $content),
             'updated_at' => trim($this->git(['show', '-s', '--format=%cI', $revision])), 'provider' => 'git'];
     }
@@ -548,6 +569,10 @@ final class GitModelRepository implements HostedGitRepository
 
     private function isArtifactPath(string $path): bool
     {
+        if (OriginalContent::isOriginal($path)) {
+            try { OriginalContent::assertPath($path); return true; }
+            catch (\InvalidArgumentException) { return false; }
+        }
         return strlen($path) <= 240 && preg_match('//u', $path) === 1
             && preg_match('~^(requirements|archetypes|templates|terminology|aql|tests|validation|decisions|documentation)/[^\\x00-\\x1f\\x7f]+$~D', $path) === 1
             && !str_contains($path, '\\') && !str_contains($path, '%') && !str_contains($path, '//')

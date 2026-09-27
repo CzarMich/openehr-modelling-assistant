@@ -20,6 +20,7 @@ final readonly class TerminologyBindingPlans
     public function inspect(string $project, string $path, ?string $revision = null): array
     {
         $artifact = $this->repository->getArtifact($project, $path, $revision);
+        if (!is_string($artifact['content'] ?? null)) { throw new \RuntimeException('MODEL_TEXT_FORMAT_REQUIRED'); }
         return ['source' => $this->evidence($artifact), 'inspection' => $this->inspector->inspect($artifact['content'], strtolower(pathinfo($path, PATHINFO_EXTENSION))),
             'clinical_approval' => false, 'model_changed' => false];
     }

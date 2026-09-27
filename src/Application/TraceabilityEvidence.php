@@ -48,7 +48,7 @@ final readonly class TraceabilityEvidence
                             throw new \LengthException('TRACEABILITY_REFERENCE_LIMIT');
                         }
                         $sources[$key] = $this->repository->getArtifact($project, $ref['path'], $ref['revision']);
-                        $bytes += strlen($sources[$key]['content']);
+                        $bytes += ($sources[$key]['size_bytes'] ?? strlen($sources[$key]['content'] ?? ''));
                         self::budget($bytes);
                     }
                     $source = $sources[$key];
@@ -62,7 +62,7 @@ final readonly class TraceabilityEvidence
                             }
                             if (!isset($current[$ref['path']])) {
                                 $current[$ref['path']] = $this->repository->getArtifact($project, $ref['path']);
-                                $bytes += strlen($current[$ref['path']]['content']);
+                                $bytes += ($current[$ref['path']]['size_bytes'] ?? strlen($current[$ref['path']]['content'] ?? ''));
                                 self::budget($bytes);
                             }
                             if ($current[$ref['path']]['revision'] !== $ref['revision'] || $current[$ref['path']]['sha256'] !== $ref['sha256']) {
@@ -75,7 +75,8 @@ final readonly class TraceabilityEvidence
                             $result['reason'] = 'The historical revision resolves, but its current project source cannot be verified.';
                         }
                         if (isset($ref['anchor'])) {
-                            $result['anchor'] = $this->anchors->inspect($source['content'], $ref['anchor']);
+                            $result['anchor'] = is_string($source['content'] ?? null) ? $this->anchors->inspect($source['content'], $ref['anchor'])
+                                : ['status' => 'NOT_EXECUTED', 'reason' => 'Binary original has no supported text anchor representation.'];
                             if ($result['anchor']['status'] !== 'RESOLVED') {
                                 $result['status'] = $result['anchor']['status'];
                                 $result['reason'] = $result['anchor']['reason'];
@@ -102,7 +103,7 @@ final readonly class TraceabilityEvidence
                     }
                     $history = $events[$ref['subject']];
                     $event = $history[$ref['sequence'] - 1] ?? null;
-                    if (!is_array($event) || ($event['project'] ?? '') !== $project || $event['hash'] !== $ref['hash']) {
+                    if (($history[0]['type'] ?? null) !== 'REGISTER' || !is_array($event) || ($event['project'] ?? '') !== $project || $event['hash'] !== $ref['hash']) {
                         $result = ['status' => 'INVALID', 'reason' => 'The event is absent from this tenant/project or its exact hash does not match.'];
                     } elseif (($node['type'] === 'validation_evidence' && $event['type'] !== 'VALIDATION')
                         || ($node['type'] === 'review' && ($event['type'] !== 'TRANSITION' || ($event['actor']['human'] ?? false) !== true

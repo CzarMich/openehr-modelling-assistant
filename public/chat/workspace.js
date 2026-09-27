@@ -145,7 +145,12 @@ function renderList() {
                 $("model-title").textContent = selected.path;
                 $("model-state").textContent = selected.status;
                 $("model-revision").textContent = "Revision " + selected.revision + " · SHA-256 " + selected.sha256;
-                $("model-source").textContent = selected.content;
+                $("model-source").textContent =
+                    selected.content_encoding === "base64"
+                        ? "Original binary file · " +
+                          selected.size_bytes +
+                          " bytes. Download to inspect in a compatible application."
+                        : selected.content;
                 $("model-metadata").textContent = JSON.stringify(selected.metadata, null, 2);
                 renderList();
                 $("model-detail").setAttribute("tabindex", "-1");
@@ -174,6 +179,19 @@ $("discuss-model").onclick = () => {
             },
         }),
     );
+};
+$("download-model").onclick = () => {
+    if (!selected) return;
+    const bytes =
+        selected.content_encoding === "base64"
+            ? Uint8Array.from(atob(selected.content_base64), (c) => c.charCodeAt(0))
+            : new TextEncoder().encode(selected.content);
+    const link = document.createElement("a"),
+        url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+    link.href = url;
+    link.download = selected.path.split("/").at(-1);
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
 $("review-model").onclick = () => activate("governance");
 function updateSession(value) {

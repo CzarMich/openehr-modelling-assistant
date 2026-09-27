@@ -7,6 +7,8 @@ services:
       MCP_ALLOWED_HOSTS: localhost,127.0.0.1,app,ingress
       MODEL_REPOSITORY_WRITE_ENABLED: "true"
       MODEL_REPOSITORY_PATH: /tmp/models
+      GOVERNANCE_ENABLED: "true"
+      GOVERNANCE_DATABASE_PATH: /tmp/governance/audit.sqlite
       AUTH_MODE: api_key
       AUTH_API_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       OPENEHR_ENGINE_URL: http://127.0.0.1:8090

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readModels } from "../src/models.mjs";
+import { createHash } from "node:crypto";
 function client(result) {
     const calls = [];
     return {
@@ -78,4 +79,39 @@ test("browser model responses redact upstream details and report unavailable rev
         readModels(c, "/chat/api/models/projects"),
         (e) => e.status === 503 && !e.message.includes("private"),
     );
+});
+
+test("browser preserves verified binary originals and rejects corrupt payloads and unsafe filenames", async () => {
+    const bytes = Buffer.from([0x50, 0x4b, 0, 0xff]);
+    const artifact = {
+        path: "originals/" + "a".repeat(64) + "/Original ü.zip",
+        revision: "b".repeat(40),
+        status: "DRAFT",
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+        content: null,
+        content_base64: bytes.toString("base64"),
+        content_encoding: "base64",
+        size_bytes: bytes.length,
+    };
+    const route = "/chat/api/models/artifact?project=default&path=" + encodeURIComponent(artifact.path);
+    assert.deepEqual(await readModels(client(artifact), route), artifact);
+    for (const corrupt of [
+        { ...artifact, sha256: "0".repeat(64) },
+        { ...artifact, size_bytes: 5 },
+        { ...artifact, content_base64: artifact.content_base64 + "\n" },
+        { ...artifact, content: "fake text" },
+    ]) {
+        await assert.rejects(readModels(client(corrupt), route), (e) => e.status === 503);
+    }
+    for (const filename of ["..", "../secret", "a\\b", "a%2fb", "a\0b"]) {
+        const c = client(artifact);
+        await assert.rejects(
+            readModels(
+                c,
+                "/chat/api/models/artifact?project=default&path=" +
+                    encodeURIComponent("originals/" + "a".repeat(64) + "/" + filename),
+            ),
+        );
+        assert.equal(c.calls.length, 0);
+    }
 });

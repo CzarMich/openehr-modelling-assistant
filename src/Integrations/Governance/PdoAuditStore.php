@@ -14,14 +14,25 @@ abstract class PdoAuditStore implements AuditStore
 
     abstract protected function begin(string $scope): void;
 
-    public function subjects(string $tenant, string $project, int $limit = 100, int $offset = 0): array
+    public function subjects(string $tenant, string $project, int $limit = 100, int $offset = 0, ?string $firstType = null): array
     {
         $this->tenant($tenant);
         $this->project($project);
         if ($limit < 1 || $limit > 100 || $offset < 0 || $offset > 10000) {
             throw new \InvalidArgumentException('INVALID_GOVERNANCE_PAGE');
         }
-        $query = $this->database->prepare('SELECT subject, MAX(sequence) AS sequence FROM governance_events WHERE tenant = :tenant AND project = :project GROUP BY subject ORDER BY subject LIMIT :limit OFFSET :offset');
+        if ($firstType !== null && !preg_match('/^[A-Z][A-Z0-9_]{0,79}$/D', $firstType)) {
+            throw new \InvalidArgumentException('INVALID_AUDIT_STREAM_TYPE');
+        }
+        // Filter by the first event before pagination, preserving existing immutable ledgers.
+        $type = $this->database->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql'
+            ? "CAST(first.event AS jsonb)->>'type'" : "json_extract(first.event, '$.type')";
+        $filter = $firstType === null ? '' : ' AND ' . $type . ' = :first_type';
+        $query = $this->database->prepare('SELECT e.subject, MAX(e.sequence) AS sequence FROM governance_events e
+            JOIN governance_events first ON first.tenant = e.tenant AND first.subject = e.subject AND first.sequence = 1
+            WHERE e.tenant = :tenant AND e.project = :project' . $filter . '
+            GROUP BY e.subject ORDER BY e.subject LIMIT :limit OFFSET :offset');
+        if ($firstType !== null) { $query->bindValue(':first_type', $firstType); }
         $query->bindValue(':tenant', $tenant);
         $query->bindValue(':project', $project);
         $query->bindValue(':limit', $limit, PDO::PARAM_INT);

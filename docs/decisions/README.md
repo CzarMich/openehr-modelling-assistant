@@ -58,3 +58,5 @@ referenced from [requirements.md](../requirements.md),
 - [ADR-0020 — Native openEHR validation and compilation](0020-native-openehr-engine.md)
 
 - [ADR-0022 — Legacy template compilation compatibility profile](0022-legacy-template-compatibility.md)
+
+- [ADR-0023 — Immutable originals and protected import receipts](0023-immutable-originals-and-import-receipts.md)

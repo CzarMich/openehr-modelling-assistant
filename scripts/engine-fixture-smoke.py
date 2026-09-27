@@ -1,5 +1,6 @@
 """Actual MCP-to-native-engine acceptance, offline and without a terminology server/CDR."""
 import argparse
+import base64
 import hashlib
 import importlib.util
 import json
@@ -87,17 +88,19 @@ client.tool('template_compile', {'content': legacy, 'dependencies': legacy_depen
 client.tool('template_compile', {'content': legacy.replace('annotation=', 'min="0" annotation='), 'dependencies': legacy_dependencies}, error=True)
 record('Legacy OET/ADL 1.4 nested compilation, exact terms/bindings, independent OPT XML schema/RM profile and byte-identical rebuild; missing dependencies and widening rejected')
 if args.writes:
-    source = client.tool('model_artifact_save', {'project': 'engine-fixture', 'path': 'templates/legacy.oet', 'content': legacy})
+    imported = client.tool('model_artifact_import', {'project': 'engine-fixture', 'filename': 'legacy.oet', 'contentBase64': base64.b64encode(legacy.encode()).decode()})
+    source = imported['original']
     refs = []
     for index, dependency in enumerate(legacy_dependencies):
-        saved_dep = client.tool('model_artifact_save', {'project': 'engine-fixture', 'path': f'archetypes/legacy-{index}.adl', 'content': dependency['content']})
+        saved_dep = client.tool('model_artifact_import', {'project': 'engine-fixture', 'filename': f'legacy-{index}.adl', 'contentBase64': base64.b64encode(dependency['content'].encode()).decode()})['original']
         refs.append({'identifier': dependency['identifier'], 'path': saved_dep['path'], 'revision': saved_dep['revision']})
     build = client.tool('template_compile_project', {'project': 'engine-fixture', 'path': source['path'], 'revision': source['revision'], 'dependencies': refs})
     saved = client.tool('model_artifact_get', {'project': 'engine-fixture', **{k: build['artifact'][k] for k in ['path', 'revision']}})
     assert saved['content'] == legacy_output['content'] and saved['metadata']['kind'] == 'compiled_opt14'
     assert saved['status'] == 'DRAFT' and saved['metadata']['build']['report']['checks']['full_aom_semantics'] == 'NOT_EXECUTED'
     assert saved['metadata']['build']['report']['compilation_actions'] == legacy_result['compilation_actions']
-    record('OPT 1.4 XML saved as a separate DRAFT build with exact source revisions, compilation actions and explicit qualification limits')
+    assert client.tool('model_artifact_provenance', {'project': 'engine-fixture', 'importId': imported['import_id']}) == imported
+    record('Imported OET and ADL originals compile into a separate OPT 1.4 DRAFT with exact source revisions, unchanged original receipts and explicit qualification limits')
 for query, valid in [('SELECT e/ehr_id/value FROM EHR e', True), ('SELECT !!! FROM', False), ('SELECT e/ehr_id/value FROM EHR e garbage', False)]:
     result = client.tool('aql_validate', {'content': query})
     assert result['valid'] == valid

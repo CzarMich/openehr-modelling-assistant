@@ -6,7 +6,7 @@ Hosted Designer import/export and semantic round trips are **UNVERIFIED**. The a
 |---|---|---|
 | Native Git model file retrieval, conditional updates and external edits | FILE_EXCHANGE_VERIFIED | `evidence/designer-git-roundtrip.json`; independent Git clients, without an authenticated Designer UI |
 | Hosted Designer version/account | EXTERNAL_ACCEPTANCE_REQUIRED | No authenticated account/version established |
-| Designer `.t.json` | Preservation through repository files; semantic interpretation unverified | Distinct authoring format; unknown fields must remain in original source |
+| Designer `.t.json` | Exact immutable original preservation and protected platform receipt; semantic interpretation unverified | Distinct authoring format; unknown fields must remain in original source |
 | OET import/export | EXTERNAL_ACCEPTANCE_REQUIRED | Do not infer capability from existing files or historical descriptions |
 | Legacy OPT 1.4 XML import/export | EXTERNAL_ACCEPTANCE_REQUIRED | Structural assistant inspection does not prove Designer acceptance |
 | Assistant-generated OPT 1.4 XML | Compiler fixture profile verified; Designer import unverified | Bounded OET/ADL 1.4 adapter; see [limits](LEGACY_OPT_COMPILATION.md) |

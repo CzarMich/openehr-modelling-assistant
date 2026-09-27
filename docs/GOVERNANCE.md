@@ -80,3 +80,5 @@ The staged document validator and project QA distinguish authentic validation ev
 Production deployments use the [PostgreSQL ledger](POSTGRES_AND_CACHE.md), separate database roles and atomic migration. Governance events and decisions are never served from the model cache.
 
 A saved compiler build is DRAFT repository evidence. `template_compile_project` cannot establish a human actor or perform an approval transition. Governance qualification still uses its configured validation provider and exact-revision audit chain; a successful OPT 2 or legacy OPT 1.4 compilation must not be treated as complete clinical release qualification.
+
+Manual imports use distinct protected intent/receipt streams. Review queries filter for model registrations before pagination and reject import subjects in governance operations. Import never supplies clinical validation or approval. It requires enabled audit storage; source-tool claims remain caller declarations. See [import provenance](MODEL_IMPORTS.md).
