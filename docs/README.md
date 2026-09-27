@@ -8,4 +8,4 @@ Architecture: [core design](ARCHITECTURE.md), [repository](MODEL_REPOSITORY.md),
 
 Maintenance: [development](development.md), [testing](testing.md), [conventions](conventions.md), [requirements](requirements.md), [traceability](traceability.md), [decisions](decisions/README.md).
 
-Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_LABEL_MIGRATION.md), [implementation report](IMPLEMENTATION_REPORT.md).
+Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_LABEL_MIGRATION.md), [implementation report](IMPLEMENTATION_REPORT.md), [continuation handoff](NEXT_SESSION.md).

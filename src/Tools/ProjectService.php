@@ -62,10 +62,10 @@ final readonly class ProjectService
      * @param array<string, mixed>|null $metadata
      * @return array<string, mixed>
      */
-    #[Schema(additionalProperties: false)]
+    #[Schema(properties: ['metadata' => ['type' => ['object', 'null'], 'additionalProperties' => true, 'default' => null]], additionalProperties: false)]
     #[McpTool(name: 'model_artifact_save', annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
     public function save(string $project, string $path, #[Schema(maxLength: 2097152)] string $content,
-        #[Schema(definition: ['type' => ['object', 'null'], 'additionalProperties' => true, 'default' => null])] ?array $metadata = null, ?string $expectedRevision = null): array
+        ?array $metadata = null, ?string $expectedRevision = null): array
     {
         return ToolResult::run(function () use ($project, $path, $content, $metadata, $expectedRevision): array {
             $this->assertWrites();

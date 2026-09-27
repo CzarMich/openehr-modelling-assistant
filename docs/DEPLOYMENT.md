@@ -113,9 +113,9 @@ GitHub validation runs on PRs and main pushes. The deployment workflow follows a
 
 Development URL: `https://dev-openehr-modelling.sandbox.hygeoniq.com/`; MCP endpoint: `/mcp`. The development LAN address is `192.168.178.20`. A client hosts entry can map the hostname to that address when local DNS does not. HTTPS uses the development certificate authority, which each connecting machine must trust. Never disable certificate verification. The root page describes the service; use an MCP client for modelling conversations.
 
-The development instance has its own API key, model volume and Git history. External terminology is deliberately unconfigured, demonstrating that it is optional. The server deployment continues to use its existing filesystem model volume. These are separate datasets; switching provider is not an implicit migration.
+The development instance has its own API key, model volume and Git history. Its shared authoring connection uses a private model-content Git remote with a scoped SSH deploy key; a separate local Git cache from the initial offline test is retained. External terminology is deliberately unconfigured, demonstrating that it is optional. The server deployment continues to use its existing filesystem model volume. These are separate datasets; switching provider is not an implicit migration.
 
-The external mode-600 configuration is `/opt/hygeoniq/projects/openehr-modelling-assistant/config/runtime.env`. It sets the development hostname, `AUTH_MODE=api_key`, `MODEL_REPOSITORY_PROVIDER=git`, write enablement and empty terminology/remote Git settings. The checked-in overlay provides the existing Traefik network and HTTPS route:
+The external mode-600 configuration is `/opt/hygeoniq/projects/openehr-modelling-assistant/config/runtime.env`. It sets the development hostname, `AUTH_MODE=api_key`, `MODEL_REPOSITORY_PROVIDER=git`, write enablement, optional Git remote/layout settings and empty terminology settings. The checked-in overlay provides the existing Traefik network and HTTPS route:
 
 ```sh
 export MODELLING_ENV_FILE=/absolute/private/path/runtime.env
@@ -126,3 +126,5 @@ docker compose --env-file "$MODELLING_ENV_FILE" -p openehr-modelling-dev \
 This overlay expects the `hygeoniq-proxy` external Docker network, a TLS-configured Traefik and the documented hostname; adapt these deployment-specific settings for another server. Keep the published port on loopback and allow only the intended LAN/clients through the gateway. Runtime secrets are excluded from Git.
 
 Run `scripts/mcp-smoke.py --url https://dev-openehr-modelling.sandbox.hygeoniq.com/mcp --writes --without-terminology` with the dev key in `AUTH_API_KEY`. This tests authenticated discovery, persistence, history, conflict detection and absent terminology. Codex connection instructions are in [MCP clients](MCP_CLIENTS.md).
+
+For the configured private model remote, also supply `MODEL_GIT_KEY_HOST_PATH` and `MODEL_GIT_HOSTS_HOST_PATH`, then append `-f deploy/compose.git-secrets.example.yml` before `up`. The external runtime configuration selects `/data/models/designer`, content path `local` and layout `flat`. The generic command above is sufficient for local Git or anonymous HTTPS; SSH requires the credential mounts.

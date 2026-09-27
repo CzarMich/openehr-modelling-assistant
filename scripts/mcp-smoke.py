@@ -154,9 +154,10 @@ def main():
         if args.writes:
             project = 'smoke-' + str(time.time_ns())
             created = client.tool('model_project_create', {'id': project, 'name':'Integration smoke'})
-            first = client.tool('model_artifact_save', {'project':project,'path':'requirements/smoke.md','content':'Explicit test requirement'})
+            first = client.tool('model_artifact_save', {'project':project,'path':'requirements/smoke.md','content':'Explicit test requirement','metadata':{'source':'synthetic integration check'}})
             got = client.tool('model_artifact_get', {'project':project,'path':'requirements/smoke.md'})
             assert got['content'] == 'Explicit test requirement'
+            assert got['metadata']['source'] == 'synthetic integration check'
             second = client.tool('model_artifact_save', {'project':project,'path':'requirements/smoke.md','content':'Revised explicit test requirement','expectedRevision':first['revision']})
             assert first['revision'] != second['revision']
             client.tool('model_artifact_save', {'project':project,'path':'requirements/smoke.md','content':'stale','expectedRevision':first['revision']},error=True)

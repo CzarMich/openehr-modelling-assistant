@@ -28,7 +28,7 @@ final class Settings
         'MAX_REQUEST_BYTES' => '2097152', 'MAX_UPSTREAM_BYTES' => '8388608',
         'LOG_LEVEL' => 'info', 'MODEL_REPOSITORY_PROVIDER' => 'filesystem',
         'MODEL_REPOSITORY_PATH' => '/tmp/openehr-models', 'MODEL_REPOSITORY_WRITE_ENABLED' => 'false',
-        'MODEL_GIT_REMOTE_URL' => '', 'MODEL_GIT_BRANCH' => 'main', 'MODEL_GIT_SYNC_SECONDS' => '5',
+        'MODEL_GIT_LAYOUT' => 'categories', 'MODEL_GIT_CONTENT_PATH' => '', 'MODEL_GIT_REMOTE_URL' => '', 'MODEL_GIT_BRANCH' => 'main', 'MODEL_GIT_SYNC_SECONDS' => '5',
         'MODEL_GIT_TIMEOUT' => '30', 'MODEL_GIT_AUTHOR_NAME' => 'openEHR Modelling Assistant',
         'MODEL_GIT_AUTHOR_EMAIL' => 'modelling-assistant@localhost',
         'MODEL_GIT_SSH_KEY_FILE' => '', 'MODEL_GIT_KNOWN_HOSTS_FILE' => '',
@@ -44,6 +44,7 @@ final class Settings
         $this->values = array_replace(self::DEFAULTS, $overrides);
         foreach (['MCP_TRANSPORT' => ['stdio', 'streamable-http'], 'AUTH_MODE' => ['none', 'api_key', 'oidc'],
             'APP_ENV' => ['development', 'testing', 'production'],
+            'MODEL_GIT_LAYOUT' => ['categories', 'flat'],
             'TERMINOLOGY_CODESYSTEM_VALIDATE_PARAMETER' => ['url', 'system'],
             'LOG_LEVEL' => ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'],
             'MODEL_REPOSITORY_PROVIDER' => ['filesystem', 'git', 'github', 'gitlab', 'sharepoint']] as $key => $allowed) {

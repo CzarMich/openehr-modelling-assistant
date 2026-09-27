@@ -1,6 +1,6 @@
 # Capability matrix
 
-WORKING means the described subset is implemented; it does not imply clinical approval. Execution evidence and environment limits are in [the implementation report](docs/IMPLEMENTATION_REPORT.md).
+WORKING means the described subset is implemented; it does not imply clinical approval. Statuses describe delivered functionality on the main branch. Execution evidence and environment limits are in [the implementation report](docs/IMPLEMENTATION_REPORT.md); remaining implementation work and its saved state are in [the continuation handoff](docs/NEXT_SESSION.md).
 
 | Capability | Status | Implemented boundary |
 |---|---|---|
@@ -9,6 +9,7 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Existing CKM, guide, examples, terminology and type tools | WORKING | Upstream features retained |
 | Persistent projects, artifacts, metadata and history | WORKING | Filesystem snapshots or plain files in Git; expected revisions and opt-in writes |
 | Local value sets, lookup and code membership | WORKING | Explicit codes and versions; inactive codes rejected |
+| Modelling without terminology server or bindings | WORKING | Authenticated Git persistence, local checks and empty terminology manifests verified over HTTPS |
 | External FHIR terminology (optional) | WORKING | Capabilities, lookup, validation, bounded expansion; provider-dependent datasets |
 | Draft OET generation | PARTIAL | Retrieved COMPOSITION plus direct ENTRY placements only |
 | OET/OPT validation | PARTIAL | XML and structural profile; no schema/dependency/semantic certification |
@@ -19,8 +20,12 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Requirements traceability | PARTIAL | Explicit declared coverage; no clinical/test proof |
 | Governance and QA | PARTIAL | Tested policy boundary and truthful unavailable stages; no persisted approvals |
 | API-key authentication and hardened containers | WORKING | One deployment principal, single tenant; enterprise gateway required |
-| Native inbound OIDC, tenant RBAC | NOT IMPLEMENTED | Configuration fails closed; interface reserved |
+| Native inbound OIDC, tenant RBAC | NOT IMPLEMENTED | Deployed mode still fails closed; verifier/roles/tenant work is isolated and not accepted for delivery |
 | Git storage with GitHub/GitLab/other remotes | WORKING | Plain model files, commit history, remote sync, CAS updates; branch/diff adapter methods |
+| Archetype Designer repository layouts | WORKING | Configurable content root; category folders or flat native files; Unicode/spaces preserved; real private Git round trip |
+| Hosted Archetype Designer UI connection | NOT TESTED | Login required; repository integration verified independently, account linking and visual import/export not yet verified |
+| Codex development connection | WORKING | Installed Codex app-server initialized the HTTPS service and discovered all 31 tools with a private credential helper |
+| Service introduction page | WORKING | Root URL explains purpose, MCP connection and optional integrations; not a visual modeller |
 | Hosted Git reviews and SharePoint storage | NOT IMPLEMENTED | Generic Git storage is available; provider-specific review/Graph APIs remain separate work |
 | OPT compilation, native template editing/terminology application | NOT IMPLEMENTED | Requires qualified compiler/modelling engine |
 | AQL parser/execution, composition validation, CDR deployment | NOT IMPLEMENTED | Prompts/examples and optional adapter boundary only |
