@@ -44,7 +44,7 @@ final class TerminologyProviderTest extends TestCase
         self::assertSame('https://example.org/units', $valueSetQuery['system']);
     }
 
-    public function test_amyterm_api_key_and_explicit_parameter_compatibility(): void
+    public function test_service_api_key_and_explicit_parameter_compatibility(): void
     {
         $history = [];
         $stack = HandlerStack::create(new MockHandler([new Response(200, [], '{"resourceType":"Parameters","parameter":[{"name":"result","valueBoolean":true}]}')]));

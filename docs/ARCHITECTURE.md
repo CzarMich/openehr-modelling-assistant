@@ -26,7 +26,7 @@ flowchart TB
     Designer[Archetype Designer: account connection required] -.-> Remote
     Core --> Terms[Optional terminology checks: TerminologyProvider]
     Terms --> Local[Local value sets]
-    Terms --> FHIR[Optional FHIR terminology server]
+    Terms --> FHIR[Optional FHIR terminology server: CodeSystem, ValueSet and ConceptMap]
     Core --> CKM[Named CKM sources]
     Core -.-> CDR[Optional future CDR adapter]
 ```
@@ -34,6 +34,8 @@ flowchart TB
 Solid edges are implemented; dotted edges are extension boundaries. `src/Domain` owns modelling, terminology, traceability and repository contracts. `src/Integrations` implements filesystem, Git, SharePoint and FHIR adapters. Snapshot stores share domain revision/history rules. SharePoint uses a unique project index and ETag-conditional pointer updates; outbound Graph credentials are independent of inbound identity. The generic Git adapter supports hosted GitHub/GitLab repositories without a hosting-provider SDK. Optional hosting adapters implement `HostedRepositoryProvider`; `src/Application/RepositoryService` supplies transport-independent operations and write authorization. Hosted metadata is scoped to the configured tenant repository; draft reviews cannot approve clinical models. The dotted Designer edge represents an account-specific integration that still needs a hosted Designer round-trip acceptance test. `src/Apis` implements CKM retrieval. `src/Tools` adapts domain calls to closed MCP schemas. `public/index.php` supplies authentication, transport, discovery, sessions and redacted logging.
 
 The HTTP path is enterprise TLS gateway → Caddy → private PHP-FPM → MCP handler. stdio uses the same discovery and domain services with local process permissions. CDR credentials and terminology-server configuration are unnecessary for startup, retrieval, draft generation, persistence or local structural validation. Models need no terminology binding. An explicitly requested external terminology check returns `NOT_EXECUTED` when no server is configured; local value sets remain usable.
+
+Terminology operations preserve repeated multilingual values and separate value-set, code-system and ConceptMap version evidence. Translation returns explicit candidates requiring review; canonical discovery and operation calls remain pinned to the configured FHIR endpoint. Native binding application is still an engine extension.
 
 Model files, local value sets, binding records, requirements and decisions share one repository. Select `filesystem` for atomic JSON project snapshots, or `git`/`github`/`gitlab` for ordinary model files, Git commits and optional remote synchronization. Both use expected revisions to reject stale updates. Git fetches before writes and accepts a commit locally only after its remote push succeeds; a rejected push leaves the accepted local branch unchanged. Each instance needs its own Git cache. Native OIDC partitions local storage by issuer/tenant and maps separate Git remotes per tenant. API-key mode remains a shared service principal. Automatic conflict merge, distributed locking and a search index are separate work.
 

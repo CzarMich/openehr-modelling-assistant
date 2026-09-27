@@ -2176,6 +2176,13 @@
             "string"
           ],
           "default": null
+        },
+        "language": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2257,6 +2264,27 @@
             "string"
           ],
           "default": null
+        },
+        "codeSystemVersion": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "display": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "language": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2332,8 +2360,28 @@
         "count": {
           "type": "integer",
           "default": 50,
-          "minimum": 1,
+          "minimum": 0,
           "maximum": 500
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "language": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "filter": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2342,6 +2390,286 @@
       "additionalProperties": false
     },
     "description": "Request a bounded value-set expansion. The server may return a partial page; never treat it as the whole value set.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_translate",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "conceptMap": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "codeSystemVersion": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "sourceValueSet": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "targetValueSet": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "targetSystem": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "conceptMap",
+        "system",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Translate using an explicit ConceptMap. All candidate mappings require human review; no binding is changed.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_resource_search",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceType": {
+          "type": "string",
+          "enum": [
+            "CodeSystem",
+            "ValueSet",
+            "ConceptMap"
+          ]
+        },
+        "canonical": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "version": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "name": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "count": {
+          "type": "integer",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "resourceType"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Discover CodeSystem, ValueSet or ConceptMap resources on the configured server. A bounded page may be incomplete.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_resource_get",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceType": {
+          "type": "string",
+          "enum": [
+            "CodeSystem",
+            "ValueSet",
+            "ConceptMap"
+          ]
+        },
+        "canonical": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceType",
+        "canonical"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Retrieve a uniquely resolved canonical and optional version. Never silently choose between multiple editions.",
     "annotations": {
       "readOnlyHint": true,
       "openWorldHint": true

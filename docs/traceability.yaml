@@ -220,8 +220,8 @@ requirements:
     status: draft
     implementation: partial
     packages: [src/Domain/Terminology/*.php, src/Integrations/Terminology/*.php, src/Tools/TerminologyBindingService.php]
-    tests: [tests/Enterprise/TerminologyProviderTest.php]
-    adr: ["0008"]
+    tests: [tests/Enterprise/TerminologyProviderTest.php, tests/Enterprise/FhirTerminologyContractTest.php]
+    adr: ["0008", "0012"]
 
   - id: REQ-N11
     title: Authenticated bounded transport and redacted failures

@@ -57,7 +57,7 @@ Native OPT compilation, full ADL/AQL validation, CDR execution, persisted human 
 | **REQ-F11** | Configurable branding and named CKM sources. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-F12** | Provider-neutral persistent projects, artifacts and revisions. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-F13** | Draft OET generation, bounded validation and structural diff. | partial; exact boundaries in CAPABILITIES.md |
-| **REQ-F14** | Explicit terminology, value sets, bindings, provenance and diff. | partial; exact boundaries in CAPABILITIES.md |
+| **REQ-F14** | Optional local/FHIR terminology, canonical discovery, review-only translation, independent versions, explicit bindings and provenance. | partial; exact boundaries in CAPABILITIES.md |
 | **REQ-F15** | Authenticated browser chat with grounded tool calls, private conversation history, streaming and explicit confirmation of model writes. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N11** | Authenticated bounded transport and redacted failures. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N12** | Client-neutral deployment and truthful capability documentation. | landed; exact boundaries in CAPABILITIES.md |

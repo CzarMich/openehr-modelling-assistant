@@ -105,3 +105,5 @@ The optional Node client reads `.env.chat` or the external `MODELLING_CHAT_ENV_F
 | `OIDC_TENANT_SHAREPOINT_REPOSITORIES` | `{}` | Verified platform tenant namespace to distinct site/list/drive/folder map. |
 
 See [SharePoint setup, permissions, migration and acceptance](SHAREPOINT_REPOSITORY.md). These settings are unnecessary for other providers. Inbound identity and outbound Graph credentials remain separate.
+
+Terminology operation settings apply to lookup, validation, expansion, ConceptMap translation and canonical resource discovery. No server is required. Language, count/offset and independent resource editions are tool arguments, not environment variables. Live acceptance uses the `SMOKE_*` variables documented in [Terminology](TERMINOLOGY.md#repeatable-verification); they do not change production configuration.
