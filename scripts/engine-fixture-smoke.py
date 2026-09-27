@@ -69,10 +69,39 @@ if args.writes:
 inspection = client.tool('model_inspect', {'content': cluster, 'format': 'adl2'})['inspection']
 assert any(node['path'] == '/items[id2]/value[id3]' and node['rm_type'] == 'DV_TEXT' for node in inspection['paths'])
 record('Actual model paths, RM types and terminology inspected')
+legacy = (fixtures / 'legacy/nested.oet').read_text()
+legacy_dependencies = [{'identifier': f'openEHR-EHR-{kind.upper()}.engine_fixture.v1',
+    'content': (fixtures / f'legacy/{kind}.adl').read_text()} for kind in ['composition', 'section', 'evaluation', 'cluster']]
+legacy_result = client.tool('template_compile', {'content': legacy, 'dependencies': legacy_dependencies})
+assert legacy_result['valid'] and legacy_result['profile'] == 'OET14_COMPILATION_RM_STRUCTURE'
+assert legacy_result['checks']['full_aom_semantics'] == 'NOT_EXECUTED' and not legacy_result['clinical_approval']
+legacy_output = legacy_result['output']
+assert legacy_output['format'] == 'opt14_xml' and legacy_output['sha256'] == hashlib.sha256(legacy_output['content'].encode()).hexdigest()
+assert 'Textelement' in legacy_output['content'] and 'Synthetic annotation' in legacy_output['content']
+assert client.tool('template_compile', {'content': legacy, 'dependencies': list(reversed(legacy_dependencies))})['output'] == legacy_output
+assert client.tool('template_validate', {'content': legacy, 'dependencies': legacy_dependencies})['valid']
+assert client.tool('opt_validate', {'content': legacy_output['content']})['profile'] == 'OPT14_XML_RM_STRUCTURE'
+legacy_inspection = client.tool('model_inspect', {'content': legacy_output['content'], 'format': 'opt14'})['inspection']
+assert any(node['rm_type'] == 'DV_TEXT' and 'CLUSTER.engine_fixture.v1' in node['path'] for node in legacy_inspection['paths'])
+client.tool('template_compile', {'content': legacy, 'dependencies': legacy_dependencies[:-1]}, error=True)
+client.tool('template_compile', {'content': legacy.replace('annotation=', 'min="0" annotation='), 'dependencies': legacy_dependencies}, error=True)
+record('Legacy OET/ADL 1.4 nested compilation, exact terms/bindings, independent OPT XML schema/RM profile and byte-identical rebuild; missing dependencies and widening rejected')
+if args.writes:
+    source = client.tool('model_artifact_save', {'project': 'engine-fixture', 'path': 'templates/legacy.oet', 'content': legacy})
+    refs = []
+    for index, dependency in enumerate(legacy_dependencies):
+        saved_dep = client.tool('model_artifact_save', {'project': 'engine-fixture', 'path': f'archetypes/legacy-{index}.adl', 'content': dependency['content']})
+        refs.append({'identifier': dependency['identifier'], 'path': saved_dep['path'], 'revision': saved_dep['revision']})
+    build = client.tool('template_compile_project', {'project': 'engine-fixture', 'path': source['path'], 'revision': source['revision'], 'dependencies': refs})
+    saved = client.tool('model_artifact_get', {'project': 'engine-fixture', **{k: build['artifact'][k] for k in ['path', 'revision']}})
+    assert saved['content'] == legacy_output['content'] and saved['metadata']['kind'] == 'compiled_opt14'
+    assert saved['status'] == 'DRAFT' and saved['metadata']['build']['report']['checks']['full_aom_semantics'] == 'NOT_EXECUTED'
+    assert saved['metadata']['build']['report']['compilation_actions'] == legacy_result['compilation_actions']
+    record('OPT 1.4 XML saved as a separate DRAFT build with exact source revisions, compilation actions and explicit qualification limits')
 for query, valid in [('SELECT e/ehr_id/value FROM EHR e', True), ('SELECT !!! FROM', False), ('SELECT e/ehr_id/value FROM EHR e garbage', False)]:
     result = client.tool('aql_validate', {'content': query})
     assert result['valid'] == valid
 record('Native AQL grammar accepts valid queries and rejects malformed/trailing tokens without a CDR')
 args.evidence.parent.mkdir(parents=True, exist_ok=True)
 args.evidence.write_text(json.dumps({'status': 'PASS', 'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-    'checks': checks, 'clinical_approval': False, 'external_services': [], 'scope': 'ADL 2/OPT 2 and AQL native engine; legacy OET/OPT remains separate'}, indent=2) + '\n')
+    'checks': checks, 'clinical_approval': False, 'external_services': [], 'scope': 'ADL 2/OPT 2, explicit OET/OPT 1.4 compatibility profile and AQL syntax; no clinical approval or Designer round-trip claim'}, indent=2) + '\n')

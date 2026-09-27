@@ -91,4 +91,4 @@ REQ-F19 maps CKM credentials/federation to its configuration, HTTP/domain/integr
 
 | REQ-N13 | PostgreSQL audit storage and immutable-revision model cache | `src/Integrations/Governance`, `src/Integrations/Cache` | Storage configuration/unit contracts and `scripts/test-storage-container.sh` | ADR-0021 |
 
-REQ-F21 maps the native engine boundary, compiler and project build evidence to their PHP, Java and actual MCP acceptance tests; see ADR-0020. Legacy OET compilation remains outside the delivered ADL 2 profile.
+REQ-F21 maps the native engine boundary, compiler and project build evidence to their PHP, Java and actual MCP acceptance tests; see ADR-0020. The bounded legacy OET-to-OPT 1.4 compatibility profile and JSON transport regression are covered by ADR-0022 and the same container contract.

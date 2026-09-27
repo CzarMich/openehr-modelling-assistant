@@ -125,6 +125,29 @@ final class NativeEngineTest extends TestCase
         (new HttpOpenEhrEngine($this->settings(), new Client(['handler' => new MockHandler([self::response($report)])])))->compile('template', []);
     }
 
+    public function test_legacy_compilation_is_bound_to_its_format_and_limited_validation_profile(): void
+    {
+        $source = '<template xmlns="openEHR/v1/Template"/>';
+        $report = self::report($source, 'compile/template');
+        $report['profile'] = 'OET14_COMPILATION_RM_STRUCTURE';
+        $report['rm_release_basis'] = 'explicit_legacy_compatibility_profile';
+        $report['checks'] = ['full_aom_semantics' => 'NOT_EXECUTED', 'clinical_review' => 'NOT_EXECUTED'];
+        $report['limitations'] = ['Not full AOM conformance.'];
+        $report['output'] = ['format' => 'opt14_xml', 'content' => '<template/>', 'sha256' => hash('sha256', '<template/>')];
+        $engine = new HttpOpenEhrEngine($this->settings(), new Client(['handler' => new MockHandler([self::response($report)])]));
+        self::assertSame('opt14_xml', $engine->compile($source, [])['output']['format']);
+        foreach ([['profile' => 'ADL2_AOM2_BMM'], ['checks' => ['full_aom_semantics' => 'PASS', 'clinical_review' => 'NOT_EXECUTED']],
+            ['output' => ['format' => 'opt2_adl', 'content' => '<template/>', 'sha256' => hash('sha256', '<template/>')]]] as $override) {
+            $invalid = new HttpOpenEhrEngine($this->settings(), new Client(['handler' => new MockHandler([self::response($override + $report)])]));
+            try {
+                $invalid->compile($source, []);
+                self::fail('Accepted an inconsistent legacy compiler attestation.');
+            } catch (\RuntimeException) {
+                self::addToAssertionCount(1);
+            }
+        }
+    }
+
     public function test_application_pins_and_sorts_dependencies_and_rejects_duplicates(): void
     {
         $port = $this->createMock(OpenEhrEngine::class);

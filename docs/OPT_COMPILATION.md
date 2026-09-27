@@ -1,16 +1,16 @@
 # OPT compilation and native validation
 
-The assistant compiles **ADL 2 templates into OPT 2 in ADL serialization** using Archie 3.20.0. Compilation is deterministic computation, available to browser chat and any MCP client when the optional engine is configured. It needs neither an LLM nor a terminology server/CDR. Legacy Ocean OET XML and legacy OPT 1.4 XML are different formats; this compiler does not convert those formats or Designer `.t.json` authoring files.
+The assistant compiles **ADL 2 templates into OPT 2 in ADL serialization** using Archie 3.20.0. Compilation is deterministic computation, available to browser chat and any MCP client when the optional engine is configured. It needs neither an LLM nor a terminology server/CDR. An explicit [legacy compatibility adapter](LEGACY_OPT_COMPILATION.md) also compiles supported OET XML with ADL 1.4 dependencies into OPT 1.4 XML. Designer `.t.json` remains a separate authoring format.
 
 ## Operations
 
 | Tool | Input and result |
 |---|---|
 | `archetype_validate` | ADL 2 source plus explicit dependencies; native parse, AOM and declared RM checks |
-| `template_validate` | ADL 2 template plus explicit dependencies; source/dependency validation |
-| `template_compile` | Validated ADL 2 template/dependencies; generated OPT 2 ADL, SHA-256, native findings and compiler/dependency evidence |
-| `opt_validate` | Standalone OPT 2 ADL; parse and scoped native flat AOM/RM checks |
-| `model_inspect` | Validated ADL 2 or OPT 2; actual paths, types, multiplicities and terminology |
+| `template_validate` | ADL 2 source/dependency validation, or supported OET compile checks |
+| `template_compile` | ADL 2 → OPT 2 ADL, or supported OET/ADL 1.4 → OPT 1.4 XML; hashes, profile and dependency evidence |
+| `opt_validate` | OPT 2 ADL native checks, or OPT 1.4 XML schema/RM structure profile |
+| `model_inspect` | ADL 2, OPT 2 or explicit `opt14` format; actual paths, types, multiplicities and terminology |
 | `aql_validate` | Native AQL grammar/AST and normalized query; no CDR required |
 | `template_compile_project` | Exact repository template and dependency revisions; new DRAFT OPT with build metadata in one atomic repository save |
 
@@ -20,18 +20,18 @@ Every response separates operation success from validation: inspect `result.vali
 
 ```mermaid
 flowchart TD
-    Source[ADL 2 template: exact repository revision] --> Inputs[Explicit dependency revisions and hashes]
-    Inputs --> Native[Archie: parse and validate source/dependencies]
+    Source[ADL 2 or supported OET: exact repository revision] --> Inputs[Explicit dependency revisions and hashes]
+    Inputs --> Native[Native parser and explicit format-specific validation profile]
     Native --> Compile[Flatten template and expand referenced archetypes]
-    Compile --> Serialize[Serialize OPT 2 ADL]
+    Compile --> Serialize[OPT 2 ADL or OPT 1.4 XML]
     Serialize --> Check[Reparse and validate generated OPT]
     Check --> Hash[Output hash and compiler/source/dependency evidence]
     Hash --> Save[Atomic save: native OPT plus build metadata, DRAFT]
     Save --> Review[QA and authenticated human review]
 ```
 
-1. Import or save the unchanged ADL 2 template and archetypes using `model_artifact_save`. Read their exact repository revisions.
-2. Call `template_compile` for computation only, or `template_compile_project` to save a build. Each dependency uses the same declared RM release as the source and declares its actual full identifier; content hashes are calculated and checked at the service boundary. An unambiguous major-version reference may resolve to its explicitly supplied full edition. Multiple candidate editions are rejected. No implicit CKM download or newer-version substitution occurs.
+1. Import or save the unchanged template and matching-format archetypes using `model_artifact_save`. Read their exact repository revisions.
+2. Call `template_compile` for computation only, or `template_compile_project` to save a build. For ADL 2, each dependency uses the same declared RM release as the source and declares its actual full identifier; content hashes are calculated and checked at the service boundary. An unambiguous major-version reference may resolve to its explicitly supplied full edition. Multiple candidate editions are rejected. No implicit CKM download or newer-version substitution occurs. The legacy profile requires exact ADL 1.4 identifiers and records RM 1.0.2 as its explicit compatibility profile.
 3. Read the generated native OPT from `templates/compiled/<build-id>.opt`. Its sidecar repository metadata contains `build`: source path/revision/hash, dependency identifiers/revisions/hashes, engine/profile/RM versions, output digest, timestamp, transport actor and validation findings. The native model text contains no platform metadata.
 4. Request QA/review separately. Compilation never approves or publishes a model. The existing governance validation provider still uses its own qualification gate; repository build metadata is not a signed governance attestation.
 
@@ -85,7 +85,7 @@ Keep the parent secret directory private. `.secrets` is ignored by Git. The over
 | `MODELLING_ENGINE_IMAGE` | `openehr-modelling-engine:local` | Compose image name; built from the repository by default |
 | `ENGINE_KEY_FILE` | `/run/secrets/engine-key` | Engine process credential path; restart the engine when rotating it |
 
-Requests are limited to 2 MiB per model, 64 dependencies, 8 MiB combined request and 16 MiB response. Two worker JVMs run concurrently, each with a 512 MiB heap and 45-second deadline. Busy requests receive a bounded failure. Saved outputs must fit the repository's 2 MiB artefact and 64 KiB metadata limits. Every operation uses a fixed endpoint and receives content, never arbitrary code, files or retrieval URLs. Source model text must not be used as deployment credentials.
+The engine accepts at most 2 MiB per model, 64 dependencies, 8 MiB combined request and 16 MiB response. Two worker JVMs run concurrently, each with a 512 MiB heap and 45-second deadline. Busy requests receive a bounded failure. Saved outputs must fit the repository's 2 MiB artefact and 64 KiB metadata limits. The inbound HTTP/MCP `MAX_REQUEST_BYTES` setting can impose a smaller combined limit (2 MiB by default); repository-based builds send revision references instead of source bodies. Every operation uses a fixed endpoint and receives content, never arbitrary code, files or retrieval URLs. Source model text must not be used as deployment credentials.
 
 ## Supported profiles and limits
 
@@ -93,7 +93,7 @@ Requests are limited to 2 MiB per model, 64 dependencies, 8 MiB combined request
 - Nested referenced archetypes are expanded and checked with their local terminology scopes. The OPT checker requires embedded root terminology in the template's language; it does not invent missing translations. Original source bytes and compiler serialization are preserved.
 - AQL parsing uses openEHR SDK 2.35.0. Syntax validity does not prove path validity, model compatibility or successful query execution; those checks remain explicitly unexecuted.
 - External terminology membership, clinical suitability, comprehensive rule execution, composition validation and production release qualification are separate checks. A mechanically valid OPT is not an approved clinical model.
-- Legacy OET-to-OPT 1.4 compilation, Designer import acceptance and full semantic cross-compiler comparison are not delivered by the ADL 2 adapter. `.t.json` remains a distinct authoring artefact. See [Designer compatibility](ARCHETYPE_DESIGNER_COMPATIBILITY.md).
+- Legacy OET-to-OPT 1.4 compilation uses a [separate bounded profile](LEGACY_OPT_COMPILATION.md); complete OET coverage, Designer import acceptance and full semantic cross-compiler comparison remain separate work. `.t.json` remains a distinct authoring artefact. See [Designer compatibility](ARCHETYPE_DESIGNER_COMPATIBILITY.md).
 
 ## Repeatable verification
 

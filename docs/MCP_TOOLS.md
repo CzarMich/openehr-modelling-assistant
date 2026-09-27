@@ -2350,7 +2350,7 @@ Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVER
 
 ## `model_inspect`
 
-Inspect validated native ADL 2 or OPT 2 paths, RM types, multiplicities and terminology. Returns findings when the model cannot be validated; no guessed paths.
+Inspect native ADL 2, OPT 2 ADL or OPT 1.4 XML paths, RM types, multiplicities and original terminology. Explicit format and validation profile; no guessed paths or clinical approval.
 
 External dependency: configured native openEHR engine; no terminology server or CDR required.
 
@@ -2369,7 +2369,8 @@ Input schema:
       "type": "string",
       "enum": [
         "adl2",
-        "opt2"
+        "opt2",
+        "opt14"
       ]
     },
     "dependencies": {
@@ -4064,7 +4065,7 @@ Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVER
 
 ## `opt_validate`
 
-Validate an OPT 2 ADL document using native flat AOM/RM checks. Legacy OPT XML requires its separate validation profile.
+Validate OPT 2 ADL using native flat AOM/RM checks, or OPT 1.4 XML using its independent schema and explicit RM structure profile. Inspect checks and limitations: legacy profile is not full AOM semantic conformance or clinical approval.
 
 External dependency: configured native openEHR engine; no terminology server or CDR required.
 
@@ -4259,7 +4260,7 @@ Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVER
 
 ## `template_compile`
 
-Compile an ADL 2 template into OPT 2 ADL, validate the generated output and return exact input/output hashes. Computation only: no repository write, clinical approval or CDR deployment.
+Compile ADL 2 into OPT 2 ADL, or supported OET XML plus exact ADL 1.4 dependencies into OPT 1.4 XML. Returns native output, hashes, dependency evidence and explicit validation profile. Legacy nested placements, bounded rules and original terms are preserved; unsupported constructs fail closed. No repository write, clinical approval or CDR deployment.
 
 External dependency: configured native openEHR engine; no terminology server or CDR required.
 
@@ -4374,7 +4375,7 @@ Output schema:
 
 ## `template_compile_project`
 
-Compile an exact ADL 2 template repository revision with explicit dependency revisions. Atomically save a new native OPT 2 DRAFT with source, compiler, dependency and validation evidence. Never overwrites a previous build or approves a clinical model.
+Compile an exact ADL 2 or supported OET template repository revision with explicit dependency revisions. Atomically save a native OPT 2 ADL or OPT 1.4 XML DRAFT, preserving source hashes, compiler profile, dependency revisions, limitations and validation evidence. Never overwrites a build or approves a clinical model.
 
 External dependency: configured native openEHR engine; no terminology server or CDR required.
 
@@ -4505,7 +4506,7 @@ Output schema:
 
 ## `template_validate`
 
-Validate an ADL 2 template and supplied dependencies using the native engine. Legacy OET XML is a separate format and is rejected here.
+Validate an ADL 2 template or compile-check the explicit legacy OET compatibility profile with exact supplied archetypes. OET requires ADL 1.4 dependencies and uses RM 1.0.2; unsupported constructs fail. Read profile, checks and limitations; legacy checks are not full AOM conformance.
 
 External dependency: configured native openEHR engine; no terminology server or CDR required.
 

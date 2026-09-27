@@ -56,3 +56,5 @@ referenced from [requirements.md](../requirements.md),
 - [0021: PostgreSQL governance and immutable model cache](0021-postgres-governance-and-immutable-model-cache.md)
 
 - [ADR-0020 — Native openEHR validation and compilation](0020-native-openehr-engine.md)
+
+- [ADR-0022 — Legacy template compilation compatibility profile](0022-legacy-template-compatibility.md)

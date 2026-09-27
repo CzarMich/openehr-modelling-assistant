@@ -23,7 +23,7 @@ flowchart TB
     Scope --> Core
     Core --> EnginePort[OpenEhrEngine domain port]
     EnginePort --> Engine[Private native engine: Archie and AQL grammar]
-    Engine --> Builds[OPT 2 output and exact-revision build evidence]
+    Engine --> Builds[OPT 2 ADL / supported OPT 1.4 XML and exact-revision build evidence]
     Builds --> Repository
     Core --> Validation[Separate parse, structure and conformance stages]
     Validation --> Quality[Exact-revision project QA and formal findings]
@@ -65,7 +65,7 @@ Terminology operations preserve repeated multilingual values and separate value-
 
 Model files, local value sets, binding records, requirements and decisions share one repository. Select `filesystem` for atomic JSON project snapshots, or `git`/`github`/`gitlab` for ordinary model files, Git commits and optional remote synchronization. Both use expected revisions to reject stale updates. Git fetches before writes and accepts a commit locally only after its remote push succeeds; a rejected push leaves the accepted local branch unchanged. Each instance needs its own Git cache. Native OIDC partitions local storage by issuer/tenant and maps separate Git remotes per tenant. API-key mode remains a shared service principal. Automatic conflict merge, distributed locking and a search index are separate work.
 
-XML/JSON parsing is deterministic and separate from document structure. OET/OPT and FLAT/STRUCTURED profiles, exact-revision project QA and formal findings are implemented; ADL checks inspect its header. The optional [native engine](OPT_COMPILATION.md) adds ADL 2/AOM/RM validation, AQL syntax parsing and ADL 2-to-OPT 2 compilation. Legacy OET compilation and AQL execution remain separate work. [Validation and QA](VALIDATION_AND_QA.md) records each boundary. QA records those stages as NOT_EXECUTED and keeps release eligibility false. The installed validation executor records authoritative evidence in the governance ledger. Its incomplete stages prevent approval/publication. An AI-supplied report or approval field cannot bypass that gate.
+XML/JSON parsing is deterministic and separate from document structure. OET/OPT and FLAT/STRUCTURED profiles, exact-revision project QA and formal findings are implemented; ADL checks inspect its header. The optional [native engine](OPT_COMPILATION.md) adds ADL 2/AOM/RM validation, AQL syntax parsing and ADL 2-to-OPT 2 compilation. A separate [OET compatibility profile](LEGACY_OPT_COMPILATION.md) adds OPT 1.4 XML compilation and schema/RM structure checks. Complete legacy semantics and AQL execution remain separate work. [Validation and QA](VALIDATION_AND_QA.md) records each boundary. QA records those stages as NOT_EXECUTED and keeps release eligibility false. The installed validation executor records authoritative evidence in the governance ledger. Its incomplete stages prevent approval/publication. An AI-supplied report or approval field cannot bypass that gate.
 
 Source selection and outbound credentials are deployment-controlled. The CKM domain port isolates shared federated aggregation from its configured integration; credentials never appear in source discovery. Each CKM tool accepts a configured source name; it cannot accept an arbitrary destination URL. See [configuration](CONFIGURATION.md), [repository](MODEL_REPOSITORY.md), [terminology](TERMINOLOGY.md), [governance](GOVERNANCE.md), and the [capability matrix](../CAPABILITIES.md).
 

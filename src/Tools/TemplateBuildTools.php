@@ -16,7 +16,7 @@ final readonly class TemplateBuildTools
     {
     }
 
-    /** Compile an exact ADL 2 template repository revision with explicit dependency revisions. Atomically save a new native OPT 2 DRAFT with source, compiler, dependency and validation evidence. Never overwrites a previous build or approves a clinical model.
+    /** Compile an exact ADL 2 or supported OET template repository revision with explicit dependency revisions. Atomically save a native OPT 2 ADL or OPT 1.4 XML DRAFT, preserving source hashes, compiler profile, dependency revisions, limitations and validation evidence. Never overwrites a build or approves a clinical model.
      * @param list<array{identifier: string, path: string, revision: string}> $dependencies
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
