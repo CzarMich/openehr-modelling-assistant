@@ -18,7 +18,7 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Draft OET generation | PARTIAL | Retrieved COMPOSITION plus direct ENTRY placements only |
 | OET/OPT validation | PARTIAL | Separate parse/structure stages, identity/reference syntax and overflow-safe intervals; full schema/dependency/semantic qualification requires the engine |
 | FLAT/STRUCTURED document profiles | WORKING | Unambiguous JSON, field/array/raw-value shapes and explicit stage findings; OPT/RM/terminology conformance remains unexecuted |
-| ADL validation | PARTIAL | Declaration/header preflight; no grammar or RM validator |
+| ADL validation | WORKING for ADL 2 | Native Archie grammar/AOM/BMM/RM checks with explicit dependencies; ADL 1.4 retains header preflight |
 | Model diff | PARTIAL | XML structure, attributes and leaf values; not full semantic equivalence |
 | Binding validation | PARTIAL | Explicit records, path presence, selected-code validation; no native application |
 | Explicit XML terminology inspection | WORKING | Bounded OET/OPT coded choices, named queries and native reference preservation; revision-specific locations, without inherited ADL semantics |
@@ -39,13 +39,15 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Codex development connection | WORKING | Installed Codex app-server initialized the HTTPS service and discovered the modelling tool catalogue with a private credential helper |
 | Browser modelling chat | WORKING | OIDC sign-in, private persistent conversations, streamed replies, actual tool activity and confirmed draft writes through an isolated Codex client; optional service |
 | Browser identity and session isolation | WORKING | Authorization code flow with PKCE, signed identity claims, secure cookies, CSRF and per-user conversation ownership; shared model repository principal |
-| Service introduction page | WORKING | Root URL links to browser chat, MCP connection and optional integrations; not a visual modeller |
+| Unified browser workspace | WORKING | Root URL serves Chat, Models and Governance tabs with shared identity and preserved conversation/draft state |
 | GitHub/GitLab hosting capabilities | WORKING | Shared Git storage plus configured-repository metadata, branches/protection and draft reviews; live GitHub acceptance, GitLab contract tests |
 | GitLab live hosted acceptance | NOT TESTED | Adapter and contract tests implemented; requires a configured GitLab account/token |
 | SharePoint storage | WORKING | Graph-backed immutable snapshots, conditional index updates, revisions/history/metadata and tenant mappings; OAuth and production-container contracts verified |
 | SharePoint live tenant acceptance | NOT TESTED | Implementation and integration harness complete; requires external tenant credentials, identifiers and permissions |
-| OPT compilation, native template editing/terminology application | NOT IMPLEMENTED | Requires qualified compiler/modelling engine |
-| AQL parser/execution, composition validation, CDR deployment | NOT IMPLEMENTED | Prompts/examples and optional adapter boundary only |
+| ADL 2 template compilation and OPT 2 validation | WORKING | Archie 3.20.0, pinned dependencies, nested archetypes, revalidated serialization, deterministic output and atomic native-file/build evidence persistence; [profile](docs/OPT_COMPILATION.md) |
+| Legacy OET-to-OPT 1.4 compilation, native template editing/terminology application | NOT IMPLEMENTED | Separate format/engine work; Designer authoring JSON is never relabelled as OPT |
+| AQL syntax parser | WORKING | Native openEHR SDK 2.35.0 grammar/AST, independent of a CDR; path/model compatibility remains unexecuted |
+| AQL execution, composition validation, CDR deployment | NOT IMPLEMENTED | Separate domain adapter/acceptance work |
 | Copilot Studio tenant connection | NOT TESTED | Current official deployment guide; no tenant available |
 | Visual editor | NOT IMPLEMENTED | Architecture prepared |
 | General REST application API and CLI | PARTIAL | Versioned review API/OpenAPI implemented; remaining model application endpoints and shared CLI follow |

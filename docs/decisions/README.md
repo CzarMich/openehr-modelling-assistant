@@ -54,3 +54,5 @@ referenced from [requirements.md](../requirements.md),
 - [0019: Advertised MCP profile and wire acceptance](0019-advertised-mcp-profile-and-wire-acceptance.md)
 
 - [0021: PostgreSQL governance and immutable model cache](0021-postgres-governance-and-immutable-model-cache.md)
+
+- [ADR-0020 — Native openEHR validation and compilation](0020-native-openehr-engine.md)

@@ -83,3 +83,5 @@ The node in this example is a placeholder and must be replaced with an actual mo
 ## Model binding plans
 
 [Binding plans](TERMINOLOGY_BINDING_PLANS.md) inspect explicit OET/OPT constraints, preserve existing references, compare local catalogue memberships and persist revision-bound DRAFT evidence. They work offline. Native ADL/inherited binding application and compiler round trips remain qualified-engine work; a candidate or CURRENT report never confers clinical approval. Ambiguous relative targets in `terminology_binding_validate` now require an exact `binding.target_location`.
+
+The optional ADL 2 engine preserves component terminologies in generated OPT 2. Mechanical terminology-constraint checks are distinct from external terminology membership validation; compilation does not require a terminology server. See [compiler profiles](OPT_COMPILATION.md).

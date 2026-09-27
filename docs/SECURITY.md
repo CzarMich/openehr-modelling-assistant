@@ -41,3 +41,5 @@ Browser chat and model governance share one verified human session. Review brows
 ## PostgreSQL and optional retrieval cache
 
 See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.
+
+The native openEHR engine accepts fixed authenticated content-only operations, checks Host/Origin and JSON ambiguity, and limits input/output, worker heap, concurrency and execution time. Its private service key is separate from browser/LLM credentials. Model source cannot select retrieval URLs or execute code. Compiler evidence is not human approval. [Engine deployment](OPT_COMPILATION.md).

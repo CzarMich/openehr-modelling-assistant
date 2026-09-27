@@ -33,3 +33,6 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 [CKM sources](CKM_SOURCES.md) covers private source credentials, secret rotation, federated result windows and public/isolated acceptance.
 
 - [MCP protocol profile and acceptance](MCP_PROTOCOL.md)
+
+- [OPT compilation and native validation](OPT_COMPILATION.md): engine deployment, supported formats, exact-revision builds and repeatable acceptance.
+- [External modelling tool integration](MODELLING_TOOL_INTEGRATION.md) and [Designer compatibility](ARCHETYPE_DESIGNER_COMPATIBILITY.md): verified boundaries and remaining exchange work.

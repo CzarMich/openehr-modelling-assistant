@@ -12,7 +12,7 @@ Open the [development chat](https://dev-openehr-modelling.sandbox.hygeoniq.com/c
 - When writes are enabled, review the exact proposed project/artifact change and select **Confirm save** or **Cancel change**. Every write requires a separate confirmation. Revision conflicts are returned by the existing repository adapter. Confirming a draft save does not approve or release a model.
 - **Stop response** cancels further processing. A write already completed remains in repository history. Sign out ends this browser's chat session and stops that user's active turns; it does not globally sign out of other organisational applications.
 
-Terminology servers and bindings remain optional. The chat uses the same bounded structural checks and draft generation as other MCP clients. It does not add full ADL/AQL validation, an OPT compiler, a visual archetype editor, CDR execution or clinical approval. Use modelling examples and synthetic data in the development environment.
+Terminology servers and bindings remain optional. The chat uses the same domain tools as other MCP clients, including [native ADL 2 validation, AQL parsing and OPT 2 compilation](OPT_COMPILATION.md) when the engine is enabled. Saving a project build requires exact-change confirmation. Visual editing, CDR execution and clinical approval remain separate capabilities. Use modelling examples and synthetic data in the development environment.
 
 ## Architecture
 

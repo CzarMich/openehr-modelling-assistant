@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add native ADL 2 validation, OPT 2 compilation and AQL parsing with exact-revision repository build evidence.
+
 - Integrate chat, model browsing and governance in one accessible blue-and-white browser workspace.
 - Preserve deployment script input during PostgreSQL cutover and verify the final deployed revision.
 

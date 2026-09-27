@@ -150,3 +150,5 @@ Follow [review deployment](REVIEW_DEPLOYMENT.md) to enable the OIDC review works
 ## PostgreSQL and optional retrieval cache
 
 See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.
+
+Enable the optional native Java validation/compiler sidecar with `deploy/compose.engine.yml` and a private service-key file. It shares application loopback, exposes no host port, and runs bounded disposable workers. [Configuration, limits and verification](OPT_COMPILATION.md).

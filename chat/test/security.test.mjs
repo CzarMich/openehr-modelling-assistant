@@ -284,7 +284,14 @@ test("MCP tool filtering fails closed for new or disabled write tools", async ()
     const client = new McpClient({ ...loadConfig(), allowWrites: false }, new AbortController().signal);
     client.rpc = async (method) =>
         method === "tools/list"
-            ? { tools: [{ name: "ckm_sources" }, { name: "model_artifact_save" }, { name: "delete_all_models" }] }
+            ? {
+                  tools: [
+                      { name: "ckm_sources" },
+                      { name: "model_artifact_save" },
+                      { name: "template_compile_project" },
+                      { name: "delete_all_models" },
+                  ],
+              }
             : { protocolVersion: "2025-03-26" };
     assert.deepEqual(
         (await client.tools()).map((t) => t.name),
@@ -292,6 +299,7 @@ test("MCP tool filtering fails closed for new or disabled write tools", async ()
     );
     await assert.rejects(() => client.call("model_artifact_save", {}));
     await assert.rejects(() => client.call("delete_all_models", {}));
+    await assert.rejects(() => client.call("template_compile_project", {}));
 });
 
 function oidcFixture(claimOverride = {}, badSignature = false) {

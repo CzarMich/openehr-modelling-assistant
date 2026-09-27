@@ -88,3 +88,5 @@ The [terminology catalogue](TERMINOLOGY_CATALOGUE.md) stores versioned code syst
 ## PostgreSQL and optional retrieval cache
 
 See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.
+
+`template_compile_project` reads exact template/dependency revisions and saves a native ADL 2 OPT under `templates/compiled/<build-id>.opt` together with its bounded build manifest in repository metadata. The save is atomic, creates a DRAFT, preserves source bytes, and cannot overwrite an earlier build. [Compiler and evidence contract](OPT_COMPILATION.md).

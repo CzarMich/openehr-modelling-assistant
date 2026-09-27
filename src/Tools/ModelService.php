@@ -36,7 +36,7 @@ final readonly class ModelService
         return ToolResult::run(fn (): array => $this->validator->diff($before, $after));
     }
 
-    /** Generate a draft OET from a retrieved COMPOSITION and 1–30 direct ENTRY archetypes. No OPT compiler or semantic certification.
+    /** Generate a draft OET from a retrieved COMPOSITION and 1–30 direct ENTRY archetypes. Does not compile legacy OET or certify semantics.
      *
      * @param list<string> $entries
      * @return array<string, mixed>

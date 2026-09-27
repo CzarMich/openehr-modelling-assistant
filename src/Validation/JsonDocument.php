@@ -7,15 +7,15 @@ namespace OpenEHR\Assistant\Validation;
 /** Native JSON parsing plus bounded duplicate-key rejection for unambiguous references. */
 final class JsonDocument
 {
-    public static function parse(string $content): mixed
+    public static function parse(string $content, int $maxBytes = 2097152, int $maxTokens = 100000): mixed
     {
-        if (strlen($content) > 2097152) {
+        if ($maxBytes < 1 || $maxBytes > 16777216 || $maxTokens < 1 || $maxTokens > 1000000 || strlen($content) > $maxBytes) {
             throw new \InvalidArgumentException('JSON_DOCUMENT_TOO_LARGE');
         }
         $value = json_decode($content, false, 64, JSON_THROW_ON_ERROR);
         // Native parsing validates the grammar first. This scan tracks object keys only;
         // strings are decoded with the native parser so escaped aliases compare equally.
-        if (preg_match_all('/"(?:[^"\\\\]|\\\\.)*"|[{}\\[\\]:,]/su', $content, $tokens) === false || count($tokens[0]) > 100000) {
+        if (preg_match_all('/"(?:[^"\\\\]|\\\\.)*"|[{}\\[\\]:,]/su', $content, $tokens) === false || count($tokens[0]) > $maxTokens) {
             throw new \InvalidArgumentException('JSON_DOCUMENT_TOKEN_LIMIT');
         }
         $stack = [];

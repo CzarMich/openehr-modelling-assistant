@@ -31,6 +31,7 @@ const toolLabels = {
     model_project_get: "Project details",
     model_artifact_get: "Model artifact",
     model_artifact_save: "Save draft",
+    template_compile_project: "Compile and save OPT draft",
     model_project_create: "Create project",
     model_validate: "Structural checks",
     model_qa: "Document quality checks",

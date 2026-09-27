@@ -41,3 +41,5 @@ The Designer edge requires account authorization and verified directory/format c
 For an entirely local workflow leave `MODEL_GIT_REMOTE_URL` empty, or select `filesystem`. Choose the repository based on collaboration and backup needs; no terminology or model-provider service is required for either.
 
 For coded XML sources, use [binding plans](../TERMINOLOGY_BINDING_PLANS.md) to inspect explicit choices, preserve references, compare project ValueSets and record unresolved decisions. Save the plan against the source revision, then regenerate it after source or catalogue changes. This does not edit the native model or establish clinical approval.
+
+Native ADL 2 builds can use `template_compile_project`; the generated `.opt` stays a native file and build evidence uses repository metadata. It never rewrites imported sources or constitutes Git/clinical approval. [Compiler profiles](../OPT_COMPILATION.md).

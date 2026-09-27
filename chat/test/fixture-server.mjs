@@ -59,11 +59,12 @@ const reviews = {
         };
     },
 };
+let loginSequence = 0;
 auth.login = async (req, res) => {
     reviewState = "REVIEW_REQUESTED";
     reviewSequence = 3;
     auth.sessions.set("browser-test", {
-        identity: "fixture-user",
+        identity: `fixture-user-${++loginSequence}`,
         name: "Test Modeller",
         csrf: "test-csrf",
         expires: Date.now() + 3600000,
@@ -85,6 +86,19 @@ const provider = {
                 path: "requirements/example.txt",
                 content: "A reviewed draft",
                 expectedRevision: "revision-one",
+            });
+        else if (text === "compile")
+            await callTool("template_compile_project", {
+                project: "default",
+                path: "templates/fixture.adlt",
+                revision: "template-revision",
+                dependencies: [
+                    {
+                        identifier: "openEHR-EHR-COMPOSITION.engine_fixture.v1.0.0",
+                        path: "archetypes/fixture.adls",
+                        revision: "dependency-revision",
+                    },
+                ],
             });
         else if (text === "traceability")
             await callTool("model_traceability_save", {
@@ -131,7 +145,11 @@ const provider = {
             await callTool("model_review_request", { branch: "draft/model", title: "Review model" });
         else await callTool("ckm_sources", {});
         const answer =
-            text === "save" || text === "terminology" || text === "bindings" || text === "traceability"
+            text === "compile" ||
+            text === "save" ||
+            text === "terminology" ||
+            text === "bindings" ||
+            text === "traceability"
                 ? "The draft was saved after your confirmation."
                 : text === "review"
                   ? "The draft review was requested after your confirmation."
@@ -152,6 +170,7 @@ const mcpFactory = () => ({
         { name: "ckm_sources", inputSchema: { type: "object" } },
         { name: "model_traceability_save", inputSchema: { type: "object" } },
         { name: "model_artifact_save", inputSchema: { type: "object" } },
+        { name: "template_compile_project", inputSchema: { type: "object" } },
         { name: "terminology_binding_plan_save", inputSchema: { type: "object" } },
         { name: "terminology_catalogue_save", inputSchema: { type: "object" } },
         { name: "model_review_request", inputSchema: { type: "object" } },

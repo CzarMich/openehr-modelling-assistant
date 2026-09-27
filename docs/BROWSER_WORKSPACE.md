@@ -21,3 +21,5 @@ The former `/chat/` and `/chat/reviews` links remain compatible; the review URL 
 ## Verification
 
 Run `npm --prefix chat test`, `npm --prefix chat run check:format`, and `npm --prefix chat run test:browser`. Automated axe checks cover detected WCAG A/AA violations in the primary desktop views; they supplement, rather than replace, manual accessibility review. Browser fixtures cover the common identity, exact-revision model browsing, escaping, chat/selection preservation, draft-write and review confirmations, mobile layout, keyboard tabs and recoverable repository errors. `scripts/test-review-workspace-container.sh` verifies the provider-independent production image and anonymous-access rejection. Screenshots and traces belong with test evidence rather than the user guide.
+
+With the native engine configured, ask chat to validate an ADL 2 template or compile it into OPT 2. The `template_compile` call computes an output; saving a repository build through `template_compile_project` asks for confirmation of the exact input revisions. [Formats and build evidence](OPT_COMPILATION.md).

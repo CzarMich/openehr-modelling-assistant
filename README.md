@@ -42,10 +42,8 @@ CKM, or operate as a terminology server.
   and retain validation and audit evidence in a separate protected ledger. The review workspace
   works without an LLM account; agents cannot approve models.
 
-There is **no OPT compiler, complete ADL/AQL validator, CDR execution adapter,
-or visual modeller**. The browser review workspace records authenticated human
-reviews and immutable audit history; approval/publication requires qualified engine evidence
-and therefore remains blocked by the current validation gap. Native OIDC bearer
+The optional [native engine](docs/OPT_COMPILATION.md) validates ADL 2, parses AQL and compiles ADL 2 templates into OPT 2 with exact-revision build evidence. Legacy OET-to-OPT 1.4 compilation, model-aware AQL validation, CDR execution and visual editing remain separate implementation work. The browser review workspace records authenticated human
+reviews and immutable audit history. Approval/publication still requires qualified governance validation; a compiler result alone does not satisfy that gate. Native OIDC bearer
 verification, signed write permissions and tenant storage isolation are implemented;
 see [identity configuration and migration](docs/OIDC.md). Full project RBAC remains separate work.
 See the [capability matrix](CAPABILITIES.md) and [verification report](docs/IMPLEMENTATION_REPORT.md).
@@ -58,7 +56,7 @@ select **Sign in to start chatting**, and use your organisation account. Try:
 [Browser chat](docs/BROWSER_CHAT.md) explains use, deployment, identity/model configuration,
 privacy, limits and testing. Other deployments enable this optional client separately.
 The PHP MCP service remains usable with external AI clients and without browser chat.
-Open `/chat/reviews` for human review: select a project, inspect the recorded source and
+Select the **Governance** tab for human review: select a project, inspect the recorded source and
 validation, then record an explicitly confirmed decision permitted by your role.
 See [review deployment and identity configuration](docs/REVIEW_DEPLOYMENT.md).
 
@@ -117,6 +115,9 @@ flowchart TD
     FK --> K[Multiple named CKMs with source-specific credentials]
     S --> B[Bundled specifications and guides]
     S --> D[Modelling services and structural checks]
+    D --> NE[Native engine: ADL 2 and AQL parser]
+    NE --> OPT[Validated OPT 2 and exact-revision build evidence]
+    OPT --> R
     D --> VQ[Separate validation stages and exact-revision project QA]
     VQ --> R[Model Repository interface]
     VQ --> TG
@@ -150,7 +151,8 @@ flowchart TD
     Chat[Browser chat or another MCP client] --> P[Select filesystem, SharePoint or Git storage] --> R[Open project and read current revision]
     R --> D[Search configured CKMs; select exact source; draft model changes]
     D --> V[Run available structural checks and inspect diff]
-    V --> S[Save model DRAFT with expectedRevision]
+    V --> COMP[Compile supported ADL 2 templates; validate OPT 2 and preserve build evidence]
+    COMP --> S[Save model DRAFT with expectedRevision]
     S --> C{Revision or push conflict?}
     C -->|Yes: reread and reconcile| R
     C -->|No| T{Terminology binding needed?}
