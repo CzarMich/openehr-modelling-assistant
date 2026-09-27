@@ -24,6 +24,8 @@ referenced from [requirements.md](../requirements.md),
 | [0005](0005-spec-aligned-content-retrieval.md) | Authoritative, cheapest-first specification retrieval | Accepted | REQ-N1 |
 | [0006](0006-machine-checked-traceability.md) | Machine-checked traceability with a `spec-check` drift gate | Accepted | REQ-N8 |
 | [0007](0007-website-in-separate-repository.md) | The public website lives in its own repository | Accepted | REQ-N10 |
+| [0008](0008-provider-neutral-modelling-platform.md) | Provider-neutral modelling platform | Accepted | REQ-F11–F14, REQ-N11–N12 |
+| [0009](0009-native-identity-and-tenant-boundaries.md) | Native identity and tenant boundaries | Accepted | REQ-N11, REQ-F12 |
 
 ## Writing a new ADR
 

@@ -66,3 +66,7 @@ Back up filesystem snapshots consistently while writes are stopped or under thei
 Changing the provider does not migrate existing data. Export artifacts through `model_artifact_get`, then import their exact content through the destination provider. Preserve original revision/provenance in metadata; filesystem revision identifiers are not Git SHAs. Do not commit filesystem snapshot internals as native Designer files. Retain the old volume until the reviewed migration is verified.
 
 Record artifact type, human version, source CKM/version/hash, declared dependencies, requirement IDs and decision references. Never invent an author, version, approval or validation result. See the [shared Git workflow](workflows/shared-git-models.md) and [Designer integration](ARCHETYPE_DESIGNER_INTEGRATION.md).
+
+## Native identity namespaces
+
+[OIDC deployments](OIDC.md) select storage only from verified issuer/tenant claims. Filesystem and local Git caches use private namespace directories. Hosted Git requires distinct configured remotes per tenant; unknown mappings fail closed. API-key deployments retain their existing shared repository. Authentication changes do not automatically migrate or expose existing model data.

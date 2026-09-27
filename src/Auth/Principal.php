@@ -19,6 +19,11 @@ final readonly class Principal
     ) {
     }
 
+    public static function tenantNamespace(string $issuer, string $tenant): string
+    {
+        return hash('sha256', json_encode([$issuer, $tenant], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
     /** @param list<string> $roles */
     public function hasRole(array $roles): bool
     {

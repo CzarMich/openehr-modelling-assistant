@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
+  "active_phase": 1,
+  "active_capability": "hosted-git",
+  "statuses": [
+    "IMPLEMENTED",
+    "PARTIAL",
+    "NOT IMPLEMENTED",
+    "BLOCKED EXTERNALLY"
+  ],
+  "capabilities": [
+    {
+      "id": "mcp-core",
+      "status": "IMPLEMENTED",
+      "scope": "MCP HTTP/stdio, discovery, prompts, resources",
+      "implementation": "public/index.php",
+      "evidence": "docs/evidence/http-smoke.json"
+    },
+    {
+      "id": "mcp-conformance",
+      "status": "PARTIAL",
+      "scope": "Product protocol probes pass; official suite retains synthetic-feature expected failures",
+      "implementation": "docs/evidence/mcp-conformance.txt",
+      "evidence": "docs/evidence/mcp-conformance.txt"
+    },
+    {
+      "id": "ckm",
+      "status": "PARTIAL",
+      "scope": "Named CKM retrieval works; authenticated sources and federated search missing",
+      "implementation": "src/Apis/CkmClient.php",
+      "evidence": "docs/evidence/live-smoke.json"
+    },
+    {
+      "id": "filesystem",
+      "status": "IMPLEMENTED",
+      "scope": "Persistent snapshots, history and compare-and-swap revisions",
+      "implementation": "src/Integrations/Repository/FileSystemRepository.php",
+      "evidence": "tests/Enterprise/RepositoryAndGovernanceTest.php"
+    },
+    {
+      "id": "git",
+      "status": "IMPLEMENTED",
+      "scope": "Native files, remote synchronization, branches, history and conflicts",
+      "implementation": "src/Integrations/Repository/GitModelRepository.php",
+      "evidence": "tests/Enterprise/GitRepositoryTest.php"
+    },
+    {
+      "id": "hosted-git",
+      "status": "NOT IMPLEMENTED",
+      "scope": "Provider-specific discovery, reviews and protected-branch metadata",
+      "implementation": "src/Domain/Repository/GitRepository.php",
+      "evidence": null
+    },
+    {
+      "id": "sharepoint",
+      "status": "NOT IMPLEMENTED",
+      "scope": "Graph repository, authentication, versions and conditional writes",
+      "implementation": "src/Integrations/Repository/RepositoryFactory.php",
+      "evidence": null
+    },
+    {
+      "id": "oidc",
+      "status": "IMPLEMENTED",
+      "scope": "Native discovery/JWKS, RS256/time/audience checks, scoped draft writes and issuer/tenant/session isolation; full project RBAC remains later work",
+      "implementation": "src/Auth/OidcAuthenticator.php",
+      "evidence": "docs/evidence/oidc-live-acceptance.json"
+    },
+    {
+      "id": "browser-chat",
+      "status": "IMPLEMENTED",
+      "scope": "Separate optional MCP client; not a core provider dependency",
+      "implementation": "chat/src/server.mjs",
+      "evidence": "docs/evidence/browser-chat-live.json"
+    },
+    {
+      "id": "terminology",
+      "status": "PARTIAL",
+      "scope": "Local valuesets and FHIR lookup/validation/expansion; ConceptMap and native binding work missing",
+      "implementation": "src/Domain/Terminology/TerminologyProvider.php",
+      "evidence": "tests/Enterprise/TerminologyProviderTest.php"
+    },
+    {
+      "id": "binding",
+      "status": "PARTIAL",
+      "scope": "Explicit binding records; native inspection/application and unresolved-choice records missing",
+      "implementation": "src/Domain/Terminology/BindingService.php",
+      "evidence": "tests/Enterprise/TerminologyProviderTest.php"
+    },
+    {
+      "id": "structural-validation",
+      "status": "PARTIAL",
+      "scope": "XML/OET/OPT profiles and ADL header only; separated stages required",
+      "implementation": "src/Validation/ModelValidator.php",
+      "evidence": "tests/Enterprise/ModelValidationTest.php"
+    },
+    {
+      "id": "governance",
+      "status": "PARTIAL",
+      "scope": "Pure state-transition policy; no persisted trusted-human review/audit",
+      "implementation": "src/Domain/Modelling/Governance.php",
+      "evidence": "tests/Enterprise/RepositoryAndGovernanceTest.php"
+    },
+    {
+      "id": "traceability",
+      "status": "PARTIAL",
+      "scope": "Declared coverage only; persistent queryable decision/evidence graph missing",
+      "implementation": "src/Domain/Modelling/Traceability.php",
+      "evidence": "tests/Enterprise/RepositoryAndGovernanceTest.php"
+    },
+    {
+      "id": "qa",
+      "status": "PARTIAL",
+      "scope": "Preflight reports unavailable checks; formal findings/policy checks missing",
+      "implementation": "src/Domain/Modelling/QualityPipeline.php",
+      "evidence": "tests/Enterprise/ModelValidationTest.php"
+    },
+    {
+      "id": "designer-live",
+      "status": "BLOCKED EXTERNALLY",
+      "scope": "Hosted Designer account authorization unavailable; independent Git round trip passed",
+      "implementation": "docs/ARCHETYPE_DESIGNER_INTEGRATION.md",
+      "evidence": "docs/evidence/designer-git-roundtrip.json"
+    },
+    {
+      "id": "copilot-live",
+      "status": "BLOCKED EXTERNALLY",
+      "scope": "No Microsoft tenant acceptance account configured",
+      "implementation": "docs/MICROSOFT_AGENT_INTEGRATION.md",
+      "evidence": null
+    },
+    {
+      "id": "entra-live",
+      "status": "BLOCKED EXTERNALLY",
+      "scope": "Entra-style signed claims and configuration profile tested; live tenant credentials not configured",
+      "implementation": "docs/OIDC.md",
+      "evidence": "tests/Enterprise/OidcAuthenticationTest.php"
+    },
+    {
+      "id": "optional-client-packaging",
+      "status": "PARTIAL",
+      "scope": "PHP core is provider-neutral; make default deployment/build independent of the optional browser provider image",
+      "implementation": "docker-compose.yml",
+      "evidence": null
+    }
+  ],
+  "phases": [
+    {
+      "phase": 1,
+      "scope": "Existing capability completion",
+      "status": "PARTIAL",
+      "capabilities": [
+        "oidc",
+        "hosted-git",
+        "sharepoint",
+        "terminology",
+        "binding",
+        "structural-validation",
+        "governance",
+        "traceability",
+        "qa",
+        "mcp-conformance",
+        "optional-client-packaging"
+      ],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 2,
+      "scope": "Qualified openEHR engine, ADL/AOM/RM, OPT compilation, dependencies and AQL parser",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 3,
+      "scope": "Domain application services, versioned REST/OpenAPI and shared CLI",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 4,
+      "scope": "Vendor-neutral modelling workflows and review preparation",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 5,
+      "scope": "Canonical semantic model tree, inspector, semantic and impact diffs",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 6,
+      "scope": "Project workspace/dashboard, dependency graph and provenance",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 7,
+      "scope": "Repository product model, indexed/cross-source search, import and upstream changes",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 8,
+      "scope": "Reproducible releases, release gates and signed manifests",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 9,
+      "scope": "Capability-aware CDR adapters, controlled deployment and composition validation",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 10,
+      "scope": "Model-aware AQL, path explorer, saved query engineering and tests",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 11,
+      "scope": "Versioned FHIR, HL7 v2, CSV/JSON mappings and deterministic fixtures",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 12,
+      "scope": "Terminology governance, dependency graph, version pinning and drift",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 13,
+      "scope": "Provider-neutral reviews, comments, resolutions and human approval policy",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 14,
+      "scope": "Tenants, organisations, workspaces, teams, RBAC and audit",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 15,
+      "scope": "Unified typed search and optional provider-neutral embeddings",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 16,
+      "scope": "Knowledge packages, schema, safe import/export, lock files and reproducible builds",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 17,
+      "scope": "Conformance framework, real model cases, regression selection and compatibility evidence",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 18,
+      "scope": "Dependency-aware impacts, breaking-change policy and migration evidence",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 19,
+      "scope": "Deployment registry and drift detection without automatic production overwrite",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 20,
+      "scope": "Configurable clinical modelling policies and deterministic evaluation",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 21,
+      "scope": "Controlled extension contracts, configuration schemas and compatibility discovery",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 22,
+      "scope": "Mature MCP schemas, side-effect classes, authorization and dangerous-operation controls",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 23,
+      "scope": "Persistent explicit agent workflows and evidence-based explanations",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 24,
+      "scope": "Reference visual modelling application over public APIs and safe domain edits",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 25,
+      "scope": "Generated human/machine modelling and governance documentation",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 26,
+      "scope": "Structured telemetry, metrics, readiness and correlation without content leakage",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 27,
+      "scope": "Dedicated security review and uniform parsing/network/operation limits",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 28,
+      "scope": "Measured performance, version-aware caching and governed-state invalidation",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 29,
+      "scope": "Tested backup/restore, portable complete workspace and integrity verification",
+      "status": "NOT IMPLEMENTED",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    },
+    {
+      "phase": 30,
+      "scope": "CI/CD acceptance for all implemented adapters and representative conformance fixtures",
+      "status": "PARTIAL",
+      "capabilities": [],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+    }
+  ]
+}

@@ -157,7 +157,7 @@
       ],
       "additionalProperties": false
     },
-    "description": "Create a persistent modelling workspace. Requires deployment write enablement.",
+    "description": "Create a persistent modelling workspace. Requires deployment write enablement and authorized draft-write scope or role in OIDC mode.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -319,7 +319,7 @@
       ],
       "additionalProperties": false
     },
-    "description": "Save a DRAFT artefact with optimistic concurrency. Pass the previous revision when replacing an artefact; null only creates.",
+    "description": "Save a DRAFT artefact with optimistic concurrency and authorized write access. Pass the previous revision when replacing an artefact; null only creates.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,

@@ -20,15 +20,13 @@ final class OidcAuthenticator implements Authenticator
     private ClientInterface $client;
     private CacheInterface $cache;
     private string $cacheKey;
-    private ?string $lastTokenHash = null;
-    private ?Principal $lastPrincipal = null;
 
     public function __construct(private readonly Settings $settings, ?ClientInterface $client = null, ?CacheInterface $cache = null)
     {
-        foreach (['OIDC_ISSUER', 'OIDC_AUDIENCE', 'OIDC_JWKS_URI'] as $key) {
+        foreach (['OIDC_ISSUER', 'OIDC_AUDIENCE'] as $key) {
             if ($settings->get($key) === '') { throw new \InvalidArgumentException('OIDC_CONFIGURATION_REQUIRED'); }
         }
-        $this->client = $client ?? HttpClientFactory::create($settings->get('OIDC_JWKS_URI'), (int) $settings->get('HTTP_TIMEOUT'), $settings);
+        $this->client = $client ?? HttpClientFactory::create($settings->get('OIDC_ISSUER'), (int) $settings->get('HTTP_TIMEOUT'), $settings);
         $this->cache = $cache ?? new Psr16Cache(new FilesystemAdapter('oidc-jwks', 300, APP_DATA_DIR . '/cache'));
         $this->cacheKey = hash('sha256', $settings->get('OIDC_ISSUER') . '|' . $settings->get('OIDC_JWKS_URI'));
     }
@@ -43,9 +41,6 @@ final class OidcAuthenticator implements Authenticator
         $authorization = $request->getHeaderLine('Authorization');
         if (strlen($authorization) > 16384 || !preg_match('/^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/Di', $authorization, $match)) { return null; }
         $token = $match[1];
-        $hash = hash('sha256', $token);
-        if ($this->lastTokenHash === $hash) { return $this->lastPrincipal; }
-        $this->lastTokenHash = $hash; $this->lastPrincipal = null;
         try {
             $header = json_decode(JWT::urlsafeB64Decode(explode('.', $token)[0]), true, 16, JSON_THROW_ON_ERROR);
             if (!is_array($header) || ($header['alg'] ?? null) !== 'RS256' || !is_string($header['kid'] ?? null)
@@ -81,10 +76,10 @@ final class OidcAuthenticator implements Authenticator
             if (!is_string($tenant) || $tenant === '' || strlen($tenant) > 300) { return null; }
             $allowedTenants = $this->settings->csv('OIDC_ALLOWED_TENANTS');
             if ($allowedTenants !== [] && !in_array($tenant, $allowedTenants, true)) { return null; }
-            $amr = $claims['amr'] ?? [];
-            $human = is_array($amr) && array_intersect(array_filter($amr, 'is_string'), ['pwd', 'otp', 'mfa', 'hwk', 'swk', 'fido', 'webauthn']) !== [];
             $identity = hash('sha256', json_encode([$claims['iss'], $tenant, $claims['sub']], JSON_THROW_ON_ERROR));
-            return $this->lastPrincipal = new Principal('oidc:' . $identity, hash('sha256', $tenant), $roles, $scopes, $human);
+            // A bearer token can be delegated to an agent even when its original
+            // authentication used MFA. Human approval requires a separate interactive act.
+            return new Principal('oidc:' . $identity, Principal::tenantNamespace($claims['iss'], $tenant), $roles, $scopes);
         } catch (\Throwable) {
             // Tokens, claims, provider bodies and signing material never reach error responses/logs.
             return null;
@@ -101,11 +96,8 @@ final class OidcAuthenticator implements Authenticator
             $lastRefresh = $this->cache->get($this->cacheKey . '-refresh');
             if (is_int($lastRefresh) && time() - $lastRefresh < 30) { throw new \RuntimeException('OIDC_REFRESH_RATE_LIMITED'); }
             $this->cache->set($this->cacheKey . '-refresh', time(), 30);
-            $response = $this->client->request('GET', $this->settings->get('OIDC_JWKS_URI'), ['headers' => ['Accept' => 'application/json']]);
-            $body = (string) $response->getBody();
-            if ($response->getStatusCode() !== 200 || strlen($body) > 65536) { throw new \RuntimeException('OIDC_JWKS_UNAVAILABLE'); }
-            $document = json_decode($body, true, 16, JSON_THROW_ON_ERROR);
-            if (!is_array($document) || !is_array($document['keys'] ?? null) || !array_is_list($document['keys']) || count($document['keys']) > 100) { throw new \RuntimeException('OIDC_JWKS_INVALID'); }
+            $document = $this->document($this->jwksUri());
+            if (!is_array($document['keys'] ?? null) || !array_is_list($document['keys']) || count($document['keys']) > 100) { throw new \RuntimeException('OIDC_JWKS_INVALID'); }
             $this->cache->set($this->cacheKey, $document, 300);
             $matching = array_values(array_filter($document['keys'], static fn (mixed $key): bool => is_array($key) && ($key['kid'] ?? null) === $kid));
         }
@@ -113,8 +105,63 @@ final class OidcAuthenticator implements Authenticator
         $key = $matching[0];
         if (($key['kty'] ?? null) !== 'RSA' || ($key['alg'] ?? 'RS256') !== 'RS256' || ($key['use'] ?? 'sig') !== 'sig'
             || (isset($key['key_ops']) && (!is_array($key['key_ops']) || !in_array('verify', $key['key_ops'], true)))
-            || !is_string($key['n'] ?? null) || strlen(JWT::urlsafeB64Decode($key['n'])) < 256) { throw new \RuntimeException('OIDC_KEY_REJECTED'); }
+            || !is_string($key['n'] ?? null) || strlen(JWT::urlsafeB64Decode($key['n'])) < 256
+            || strlen(JWT::urlsafeB64Decode($key['n'])) > 1024) { throw new \RuntimeException('OIDC_KEY_REJECTED'); }
         return [$key];
+    }
+
+    private function jwksUri(): string
+    {
+        $pinned = $this->settings->get('OIDC_JWKS_URI');
+        if ($pinned !== '') { return $pinned; }
+        $key = $this->cacheKey . '-discovery';
+        $uri = $this->cache->get($key);
+        if (is_string($uri)) { return $uri; }
+        $issuer = $this->settings->get('OIDC_ISSUER');
+        $metadata = $this->document(rtrim($issuer, '/') . '/.well-known/openid-configuration');
+        if (($metadata['issuer'] ?? null) !== $issuer || !is_string($metadata['jwks_uri'] ?? null)) {
+            throw new \RuntimeException('OIDC_DISCOVERY_INVALID');
+        }
+        $uri = $metadata['jwks_uri'];
+        Settings::validateUrl($uri);
+        // Discovery cannot redirect trust to another host. Administrators can pin
+        // a separately trusted key endpoint explicitly through OIDC_JWKS_URI.
+        if (strtolower((string) parse_url($uri, PHP_URL_HOST)) !== strtolower((string) parse_url($issuer, PHP_URL_HOST))
+            || (parse_url($uri, PHP_URL_PORT) ?: 443) !== (parse_url($issuer, PHP_URL_PORT) ?: 443)) {
+            throw new \RuntimeException('OIDC_DISCOVERY_ORIGIN_REJECTED');
+        }
+        $this->cache->set($key, $uri, 300);
+        return $uri;
+    }
+
+    /** @return array<string, mixed> */
+    private function document(string $uri): array
+    {
+        $response = $this->client->request('GET', $uri, [
+            'headers' => ['Accept' => 'application/json'], 'allow_redirects' => false,
+            'http_errors' => false, 'stream' => true,
+        ]);
+        $stream = $response->getBody();
+        try {
+            $body = '';
+            while (strlen($body) <= 65536) {
+                $chunk = $stream->read(min(8192, 65537 - strlen($body)));
+                if ($chunk === '') {
+                    if ($stream->eof()) { break; }
+                    throw new \RuntimeException('OIDC_RESPONSE_INCOMPLETE');
+                }
+                $body .= $chunk;
+                if ($stream->eof()) { break; }
+            }
+            if ($response->getStatusCode() !== 200 || strlen($body) > 65536) {
+                throw new \RuntimeException('OIDC_DOCUMENT_UNAVAILABLE');
+            }
+            $document = json_decode($body, true, 16, JSON_THROW_ON_ERROR);
+            if (!is_array($document) || array_is_list($document)) { throw new \RuntimeException('OIDC_DOCUMENT_INVALID'); }
+            return $document;
+        } finally {
+            $stream->close();
+        }
     }
 
     /** @param array<string, mixed> $claims */

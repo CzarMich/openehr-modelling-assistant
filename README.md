@@ -33,8 +33,9 @@ CKM, or operate as a terminology server.
 
 There is **no OPT compiler, complete ADL/AQL validator, CDR execution adapter,
 visual modeller, SharePoint storage adapter, hosted Git review API, or operational approval UI**.
-The interfaces and governance policy prepare these extensions. OIDC/Entra token
-verification is an extension point; `AUTH_MODE=oidc` fails closed until implemented.
+The interfaces and governance policy prepare these extensions. Native OIDC bearer
+verification, signed write permissions and tenant storage isolation are implemented;
+see [identity configuration and migration](docs/OIDC.md). Full project RBAC remains separate work.
 See the [capability matrix](CAPABILITIES.md) and [verification report](docs/IMPLEMENTATION_REPORT.md).
 
 ## Chat in your browser
@@ -88,6 +89,8 @@ flowchart TD
     W <--> AIC[Isolated Codex client]
     W -->|Declared modelling tools over MCP| S[openEHR Modelling Assistant]
     M[Copilot Studio, Codex or another MCP client] -->|MCP| S[openEHR Modelling Assistant]
+    S --> ID[Transport identity: local, API key or verified OIDC]
+    ID --> TEN[Signed tenant namespace and write permissions]
     S --> K[Multiple named CKM sources]
     S --> B[Bundled specifications and guides]
     S --> D[Modelling services and structural checks]

@@ -22,6 +22,7 @@ final class Settings
         'OIDC_CLOCK_SKEW' => '60', 'OIDC_MAX_TOKEN_AGE' => '7200', 'OIDC_ALLOWED_CLIENT_IDS' => '',
         'OIDC_REQUIRED_SCOPES' => 'modelling.read', 'OIDC_ROLES_CLAIM' => 'roles', 'OIDC_REQUIRED_ROLES' => '',
         'OIDC_WRITE_ROLES' => 'modeller,administrator', 'OIDC_TENANT_CLAIM' => '', 'OIDC_ALLOWED_TENANTS' => '',
+        'OIDC_TENANT_GIT_REMOTES' => '{}',
         'CKM_API_BASE_URL' => 'https://ckm.openehr.org/ckm/rest/', 'CKM_TIMEOUT' => '15',
         'CKM_SOURCES' => '{}', 'CKM_DEFAULT_SOURCE' => 'default',
         'TERMINOLOGY_FHIR_BASE_URL' => '', 'TERMINOLOGY_BEARER_TOKEN' => '',
@@ -94,6 +95,7 @@ final class Settings
             throw new InvalidArgumentException('Configure one terminology authentication method.');
         }
         $this->ckmSources();
+        $this->tenantGitRemotes();
         if ($this->get('MCP_ALLOWED_HOSTS') === '' || str_contains($this->get('MCP_ALLOWED_HOSTS'), '*')) {
             throw new InvalidArgumentException('MCP_ALLOWED_HOSTS requires explicit hostnames.');
         }
@@ -140,6 +142,30 @@ final class Settings
     public function csv(string $key): array
     {
         return array_values(array_filter(array_map('trim', explode(',', $this->get($key)))));
+    }
+
+    /** Each signed tenant namespace has a distinct remote, never a caller-supplied URL.
+     * @return array<string, string> */
+    public function tenantGitRemotes(): array
+    {
+        try {
+            $remotes = json_decode($this->get('OIDC_TENANT_GIT_REMOTES'), true, 8, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new InvalidArgumentException('Invalid OIDC_TENANT_GIT_REMOTES JSON.');
+        }
+        if (!is_array($remotes) || ($remotes !== [] && array_is_list($remotes)) || count($remotes) > 1000) {
+            throw new InvalidArgumentException('OIDC_TENANT_GIT_REMOTES must be an object.');
+        }
+        foreach ($remotes as $tenant => $remote) {
+            if (!is_string($tenant) || !preg_match('/^[a-f0-9]{64}$/D', $tenant) || !is_string($remote)
+                || $remote === '' || strlen($remote) > 2048 || preg_match('/[\x00-\x20\x7f]/', $remote)) {
+                throw new InvalidArgumentException('Invalid tenant Git mapping.');
+            }
+        }
+        if (count(array_unique($remotes)) !== count($remotes)) {
+            throw new InvalidArgumentException('Tenants require distinct Git remotes.');
+        }
+        return $remotes;
     }
 
     /**

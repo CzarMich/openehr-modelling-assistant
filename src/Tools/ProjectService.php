@@ -37,7 +37,7 @@ final readonly class ProjectService
         return ToolResult::run(fn (): array => ['project' => $this->repository->getProject($project), 'artifacts' => $this->repository->listArtifacts($project)]);
     }
 
-    /** Create a persistent modelling workspace. Requires deployment write enablement.
+    /** Create a persistent modelling workspace. Requires deployment write enablement and authorized draft-write scope or role in OIDC mode.
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'model_project_create', annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
@@ -58,7 +58,7 @@ final readonly class ProjectService
         return ToolResult::run(fn (): array => $this->repository->getArtifact($project, $path, $revision));
     }
 
-    /** Save a DRAFT artefact with optimistic concurrency. Pass the previous revision when replacing an artefact; null only creates.
+    /** Save a DRAFT artefact with optimistic concurrency and authorized write access. Pass the previous revision when replacing an artefact; null only creates.
      *
      * @param array<string, mixed>|null $metadata
      * @return array<string, mixed>

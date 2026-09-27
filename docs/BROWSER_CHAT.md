@@ -88,7 +88,7 @@ npx playwright install --with-deps chromium
 npm run test:browser
 ```
 
-Security tests exercise identity signatures/claims, state replay, group restrictions, sessions, CSRF, cross-user conversation access, tool allowlists, exact write confirmation, cancellation, provider protocol and retention. Browser tests use a clearly separated deterministic fixture and cover sign-in UX, streaming, history, code rendering, write confirmation, cancellation, mobile layout and untrusted markup. The fixture is excluded from the runtime image. Live development verification uses the actual identity provider, Codex account and MCP service; see the implementation report and evidence. Native MCP bearer-token verification is still a separate, unfinished capability.
+Security tests exercise identity signatures/claims, state replay, group restrictions, sessions, CSRF, cross-user conversation access, tool allowlists, exact write confirmation, cancellation, provider protocol and retention. Browser tests use a clearly separated deterministic fixture and cover sign-in UX, streaming, history, code rendering, write confirmation, cancellation, mobile layout and untrusted markup. The fixture is excluded from the runtime image. Live development verification uses the actual identity provider, Codex account and MCP service; see the implementation report and evidence. Native MCP bearer-token verification is a separate [implemented identity adapter](OIDC.md); the browser client retains its explicitly configured upstream credential.
 
 To check the configured container's three-turn concurrency limit with actual provider and read-only MCP calls, run from the repository root:
 

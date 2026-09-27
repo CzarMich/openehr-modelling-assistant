@@ -15,13 +15,20 @@ final class RepositoryFactory
         if ($settings->get('AUTH_MODE') === 'oidc') {
             // Readiness may construct the registry without credentials. Only authenticated
             // requests execute tools; their tenant selects an isolated repository namespace.
-            $tenant = $principal?->tenant ?? 'unauthenticated';
+            $tenant = $principal === null ? 'unauthenticated' : $principal->tenant;
             if (!preg_match('/^(?:[a-f0-9]{64}|unauthenticated)$/D', $tenant)) { throw new \InvalidArgumentException('INVALID_TENANT'); }
             $settings = $settings->with(['MODEL_REPOSITORY_PATH' => rtrim($settings->get('MODEL_REPOSITORY_PATH'), '/') . '/tenants/' . $tenant]);
         }
         if ($settings->get('MODEL_REPOSITORY_PROVIDER') === 'git') {
-            if ($settings->get('AUTH_MODE') === 'oidc' && $settings->get('MODEL_GIT_REMOTE_URL') !== '') {
-                throw new \InvalidArgumentException('OIDC_SHARED_GIT_TENANT_MAPPING_REQUIRED');
+            if ($settings->get('AUTH_MODE') === 'oidc') {
+                $remotes = $settings->tenantGitRemotes();
+                if ($settings->get('MODEL_GIT_REMOTE_URL') !== '' && $remotes === []) {
+                    throw new \InvalidArgumentException('OIDC_TENANT_GIT_REMOTES_REQUIRED');
+                }
+                if ($principal !== null && $remotes !== [] && !isset($remotes[$principal->tenant])) {
+                    throw new \InvalidArgumentException('TENANT_REPOSITORY_NOT_CONFIGURED');
+                }
+                $settings = $settings->with(['MODEL_GIT_REMOTE_URL' => $principal === null ? '' : ($remotes[$principal->tenant] ?? '')]);
             }
             return new GitModelRepository($settings);
         }

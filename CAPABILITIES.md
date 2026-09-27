@@ -20,7 +20,9 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Requirements traceability | PARTIAL | Explicit declared coverage; no clinical/test proof |
 | Governance and QA | PARTIAL | Tested policy boundary and truthful unavailable stages; no persisted approvals |
 | API-key authentication and hardened containers | WORKING | One deployment principal, single tenant; enterprise gateway required |
-| Native inbound OIDC, tenant RBAC | NOT IMPLEMENTED | Deployed mode still fails closed; verifier/roles/tenant work is isolated and not accepted for delivery |
+| Native inbound OIDC | WORKING | Pinned issuer/API audience, discovery/JWKS, RS256 verification, bounded rotation and signed scopes/roles; live identity-provider acceptance, Entra-style fixture coverage |
+| Tenant storage and draft-write authorization | WORKING | Issuer/tenant namespaces, principal-bound sessions, scoped writes and distinct mapped Git remotes; API-key mode remains one service principal |
+| Enterprise project/team RBAC and human approval UI | NOT IMPLEMENTED | Native bearer identity does not prove interactive human approval; project ACLs and governance application remain separate work |
 | Git storage with GitHub/GitLab/other remotes | WORKING | Plain model files, commit history, remote sync, CAS updates; branch/diff adapter methods |
 | Archetype Designer repository layouts | WORKING | Configurable content root; category folders or flat native files; Unicode/spaces preserved; real private Git round trip |
 | Hosted Archetype Designer UI connection | NOT TESTED | Login required; repository integration verified independently, account linking and visual import/export not yet verified |

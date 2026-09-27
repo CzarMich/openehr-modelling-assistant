@@ -25,7 +25,7 @@ use Symfony\Component\Cache\Psr16Cache;
 #[CoversNothing]
 final class OidcAuthenticationTest extends TestCase
 {
-    private static string $private;
+    private static string $private = '';
     private static array $jwk;
 
     public static function setUpBeforeClass(): void
@@ -69,9 +69,9 @@ final class OidcAuthenticationTest extends TestCase
         $request = $this->request($this->claims());
         $identity = $verifier->identity($request);
         self::assertNotNull($identity);
-        self::assertSame(hash('sha256', 'one'), $identity->tenant);
+        self::assertSame(Principal::tenantNamespace('https://identity.example/tenant', 'one'), $identity->tenant);
         self::assertSame(['reader'], $identity->roles);
-        self::assertTrue($identity->human);
+        self::assertFalse($identity->human);
         self::assertStringStartsWith('oidc:', $identity->id);
         self::assertNull((new HttpGuard($this->settings(), $verifier))->check($request));
         self::assertSame($identity->id, $verifier->authenticate($request));
@@ -150,5 +150,109 @@ final class OidcAuthenticationTest extends TestCase
         self::assertSame([], $two->listProjects());
         $this->expectExceptionMessage('PROJECT_NOT_FOUND');
         $two->getProject('private-project');
+    }
+
+    public function test_discovery_verifies_issuer_and_reuses_cached_keys(): void
+    {
+        $settings = $this->settings(['OIDC_JWKS_URI' => '']);
+        $mock = new MockHandler([
+            new Response(200, [], json_encode(['issuer' => $settings->get('OIDC_ISSUER'), 'jwks_uri' => 'https://identity.example/discovered/keys'])),
+            new Response(200, [], json_encode(['keys' => [self::$jwk]])),
+        ]);
+        $requests = [];
+        $handler = HandlerStack::create($mock);
+        $handler->push(\GuzzleHttp\Middleware::history($requests));
+        $verifier = new OidcAuthenticator($settings, new Client(['handler' => $handler]), new Psr16Cache(new ArrayAdapter()));
+        self::assertNotNull($verifier->identity($this->request($this->claims())));
+        self::assertNotNull($verifier->identity($this->request($this->claims(['sub' => 'another-user']))));
+        self::assertCount(2, $requests);
+        self::assertSame('https://identity.example/tenant/.well-known/openid-configuration', (string) $requests[0]['request']->getUri());
+        self::assertSame('https://identity.example/discovered/keys', (string) $requests[1]['request']->getUri());
+        self::assertFalse($requests[0]['options']['allow_redirects']);
+    }
+
+    public function test_discovery_rejects_wrong_issuer_cross_origin_and_malformed_metadata(): void
+    {
+        foreach ([
+            ['issuer' => 'https://wrong.example', 'jwks_uri' => 'https://identity.example/keys'],
+            ['issuer' => 'https://identity.example/tenant', 'jwks_uri' => 'https://untrusted.example/keys'],
+            ['issuer' => 'https://identity.example/tenant', 'jwks_uri' => 'https://identity.example:8443/keys'],
+            ['issuer' => 'https://identity.example/tenant', 'jwks_uri' => 'http://identity.example/keys'],
+            ['issuer' => 'https://identity.example/tenant'],
+        ] as $metadata) {
+            $mock = new MockHandler([new Response(200, [], json_encode($metadata))]);
+            self::assertNull($this->verifier(mock: $mock, settings: $this->settings(['OIDC_JWKS_URI' => '']))->identity($this->request($this->claims())));
+            self::assertSame(0, $mock->count());
+        }
+    }
+
+    public function test_expiry_is_rechecked_when_reusing_a_verifier(): void
+    {
+        $verifier = $this->verifier();
+        $request = $this->request($this->claims());
+        self::assertNotNull($verifier->identity($request));
+        try {
+            JWT::$timestamp = time() + 1000;
+            self::assertNull($verifier->identity($request));
+        } finally {
+            JWT::$timestamp = null;
+        }
+    }
+
+    public function test_clock_skew_is_bounded_and_issuer_changes_isolate_namespaces(): void
+    {
+        self::assertNotNull($this->verifier()->identity($this->request($this->claims(['iat' => time() - 100, 'exp' => time() - 30]))));
+        self::assertNull($this->verifier()->identity($this->request($this->claims(['iat' => time() - 100, 'exp' => time() - 90]))));
+        self::assertNotNull($this->verifier()->identity($this->request($this->claims(['nbf' => time() + 30]))));
+        self::assertNotSame(Principal::tenantNamespace('https://issuer-one.example', 'tenant'), Principal::tenantNamespace('https://issuer-two.example', 'tenant'));
+    }
+
+    public function test_invalid_headers_weak_keys_and_oversized_documents_are_rejected(): void
+    {
+        foreach ([['jku' => 'https://attacker.example/keys'], ['x5u' => 'https://attacker.example/cert'], ['crit' => ['custom']]] as $header) {
+            $token = JWT::encode($this->claims(), self::$private, 'RS256', 'test-key', $header);
+            self::assertNull($this->verifier()->identity(new ServerRequest('POST', 'https://localhost/mcp', ['Authorization' => 'Bearer ' . $token])));
+        }
+        foreach ([new Response(302, ['Location' => 'https://attacker.example'], ''), new Response(200, [], str_repeat(' ', 65537)),
+            new Response(200, [], json_encode(['keys' => [array_replace(self::$jwk, ['n' => JWT::urlsafeB64Encode(str_repeat('a', 128))])]]))] as $response) {
+            self::assertNull($this->verifier(mock: new MockHandler([$response]))->identity($this->request($this->claims())));
+        }
+    }
+
+    public function test_repository_mapping_requires_distinct_remotes(): void
+    {
+        $this->expectExceptionMessage('Tenants require distinct Git remotes');
+        $this->settings(['OIDC_TENANT_GIT_REMOTES' => json_encode([hash('sha256', 'one') => 'git@example.org:shared/models.git', hash('sha256', 'two') => 'git@example.org:shared/models.git'])]);
+    }
+
+    public function test_unmapped_remote_tenant_fails_closed(): void
+    {
+        $settings = $this->settings(['MODEL_REPOSITORY_PROVIDER' => 'git', 'MODEL_REPOSITORY_PATH' => sys_get_temp_dir() . '/oidc-unmapped-' . bin2hex(random_bytes(8)),
+            'OIDC_TENANT_GIT_REMOTES' => json_encode([hash('sha256', 'one') => 'git@example.org:one/models.git'])]);
+        $this->expectExceptionMessage('TENANT_REPOSITORY_NOT_CONFIGURED');
+        RepositoryFactory::create($settings, new Principal('two', hash('sha256', 'two')));
+    }
+
+    public function test_tenants_have_independent_remote_git_history_and_conflicts(): void
+    {
+        $root = sys_get_temp_dir() . '/oidc-git-' . bin2hex(random_bytes(8));
+        mkdir($root, 0700);
+        foreach (['one', 'two'] as $tenant) {
+            $process = new \OpenEHR\Assistant\Integrations\Repository\GitProcess($root, 10);
+            self::assertSame(0, $process->run(['init', '--bare', '--initial-branch=main', $root . '/' . $tenant . '.git'])['code']);
+        }
+        $settings = $this->settings(['MODEL_REPOSITORY_PROVIDER' => 'git', 'MODEL_REPOSITORY_PATH' => $root . '/cache', 'MODEL_GIT_SYNC_SECONDS' => '0',
+            'OIDC_TENANT_GIT_REMOTES' => json_encode([hash('sha256', 'one') => $root . '/one.git', hash('sha256', 'two') => $root . '/two.git'])]);
+        $one = RepositoryFactory::create($settings, new Principal('one', hash('sha256', 'one')));
+        $two = RepositoryFactory::create($settings, new Principal('two', hash('sha256', 'two')));
+        $one->createProject('private-project', 'Private', '');
+        $saved = $one->saveArtifact('private-project', 'requirements/one.txt', 'Only tenant one', [], null);
+        self::assertSame([], $two->listProjects());
+        $again = RepositoryFactory::create($settings->with(['MODEL_REPOSITORY_PATH' => $root . '/fresh-cache']), new Principal('one', hash('sha256', 'one')));
+        self::assertSame('Only tenant one', $again->getArtifact('private-project', 'requirements/one.txt')['content']);
+        self::assertCount(1, $again->history('private-project', 'requirements/one.txt'));
+        $again->saveArtifact('private-project', 'requirements/one.txt', 'New revision', [], $saved['revision']);
+        $this->expectExceptionMessage('REVISION_CONFLICT');
+        $one->saveArtifact('private-project', 'requirements/one.txt', 'Stale revision', [], $saved['revision']);
     }
 }

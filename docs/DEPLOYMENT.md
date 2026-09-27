@@ -14,7 +14,7 @@ operations need access to their configured services. Bundled resources work offl
 | Local workstation | stdio or loopback HTTP | `none`, development only | Docker named volume or local mounted directory |
 | Automated tests | isolated containers and mocked dependencies | dedicated test key for HTTP auth tests | disposable project root |
 | Integration/sandbox | HTTPS gateway; controlled outbound connections | API key; separate machine key to terminology | backed-up dedicated volume |
-| Enterprise controlled network | HTTPS ingress/API gateway, private service network | organisation-reviewed API key/gateway setup; native OIDC adapter still required for direct bearer validation | dedicated storage and backup policy |
+| Enterprise controlled network | HTTPS ingress/API gateway, private service network | organisation-reviewed API key or native OIDC with configured API audience/scopes | dedicated storage and backup policy |
 | Fully disconnected | stdio or local HTTP, bundled knowledge and filesystem/local Git projects | local policy | offline filesystem or Git with an empty remote; live CKM/terminology unavailable |
 
 Container verification uses Linux amd64, PHP 8.4 and Docker Compose. macOS/Windows
@@ -60,9 +60,9 @@ application inputs; Alpine package security updates are resolved at build time.
    access all projects in that deployment; per-user/project RBAC is not implemented.
 9. Run the independent MCP smoke tests, then the Microsoft tenant acceptance scenarios.
 
-The native `oidc` mode is deliberately unavailable: it refuses startup. Implement an
-`Auth/Authenticator` adapter that validates signatures, issuer, audience, time claims,
-scopes, JWKS rotation and stable principal identity, then wire it in before using it.
+Native `oidc` mode validates issuer discovery, signatures, API audience, time claims,
+scopes, roles and signing-key rotation. See [OIDC configuration and migration](OIDC.md)
+for tenant namespaces, separate Git remotes and independent live acceptance.
 An authenticating gateway may protect the API-key endpoint, but must keep its upstream
 key secret and strip incoming client keys. This does not make the app a native OAuth server.
 

@@ -8,7 +8,7 @@ Every input is a closed JSON object: unknown top-level fields are rejected with 
 
 Legacy retrieval tools retain their original text/resource or structured search results. New model/project/terminology tools return `success`, `result`, and `error`. `success:true` means the operation returned a report; inspect its `status`, `valid`, `warnings` and executed checks before claiming validation. Failures use `{ "success": false, "result": null, "error": { "code": "REVISION_CONFLICT", "message": "The artefact changed. Read the current revision before retrying.", "retryable": false } }`. Upstream dependency errors do not expose credentials or raw error bodies.
 
-`model_artifact_save` always creates a DRAFT revision. Only project creation/artifact saving write persistent state and both require deployment write enablement. No tool approves/releases a model. Read-only tools may contact configured external servers. See [capabilities](../CAPABILITIES.md) for partial or unavailable checks.
+`model_artifact_save` always creates a DRAFT revision. Only project creation/artifact saving write persistent state and both require deployment write enablement and, in OIDC mode, an authorized draft-write scope or role. No tool approves/releases a model. Read-only tools may contact configured external servers. See [capabilities](../CAPABILITIES.md) for partial or unavailable checks.
 
 ## `ckm_archetype_get`
 
@@ -1092,7 +1092,7 @@ Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVER
 
 ## `model_artifact_save`
 
-Save a DRAFT artefact with optimistic concurrency. Pass the previous revision when replacing an artefact; null only creates.
+Save a DRAFT artefact with optimistic concurrency and authorized write access. Pass the previous revision when replacing an artefact; null only creates.
 
 External dependency: none.
 
@@ -1102,6 +1102,14 @@ Input schema:
 {
   "type": "object",
   "properties": {
+    "metadata": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "default": null,
+      "additionalProperties": true
+    },
     "project": {
       "type": "string"
     },
@@ -1111,22 +1119,6 @@ Input schema:
     "content": {
       "type": "string",
       "maxLength": 2097152
-    },
-    "metadata": {
-      "type": [
-        "array",
-        "null"
-      ],
-      "default": null,
-      "definition": {
-        "type": [
-          "object",
-          "null"
-        ],
-        "additionalProperties": true,
-        "default": null
-      },
-      "items": {}
     },
     "expectedRevision": {
       "type": [
@@ -1302,7 +1294,7 @@ Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVER
 
 ## `model_project_create`
 
-Create a persistent modelling workspace. Requires deployment write enablement.
+Create a persistent modelling workspace. Requires deployment write enablement and authorized draft-write scope or role in OIDC mode.
 
 External dependency: none.
 

@@ -2,6 +2,8 @@
 
 The user has authorized autonomous implementation, testing, documentation, GitHub delivery and deployment of the partial/unimplemented capabilities in `CAPABILITIES.md`. Continue after each successful delivery. Do not relabel an incomplete capability as working.
 
+The expanded A–Z mandate is now tracked in [the completion audit](COMPLETION_AUDIT.md) and [machine-readable execution queue](COMPLETION_QUEUE.json). That phase ordering supersedes the shorter historical stage list below: complete existing capability gaps before integrating the qualified modelling engine, then deliver shared APIs, workflows and the subsequent product capabilities.
+
 ## Delivered in the Git stage
 
 - Filesystem and generic Git providers, including GitHub/GitLab remotes, native files, history, remote concurrency and offline operation.

@@ -58,12 +58,13 @@ These are repository-specific acceptance steps, not claims of an executed tenant
 
 ## Entra/OIDC and proxies
 
-The `Authenticator` interface is outside the domain. Native OIDC verification and
-OAuth discovery/registration are **NOT IMPLEMENTED**; `AUTH_MODE=oidc` refuses startup.
-`OIDC_ISSUER`, `OIDC_AUDIENCE` and `OIDC_JWKS_URI` reserve the relevant configuration.
-An Entra deployment needs a real verifier, correct API audience/scopes and the consuming
-client's registered application. Do not enter made-up tenant IDs or choose dynamic
-OAuth discovery against this API-key server. A gateway can authenticate enterprise
+The `Authenticator` interface is outside the domain. Native OIDC access-token
+verification is implemented, including issuer metadata discovery, JWKS, signatures,
+audience/time validation, scopes, roles and tenant isolation. See [OIDC](OIDC.md)
+for the Entra profile and migration. Register the actual API and consuming client;
+use their real tenant-specific issuer, API audience and permissions. Automatic MCP
+protected-resource discovery/client registration remain separate work, so preconfigure
+the OAuth connection. Existing API-key deployments do not become OAuth endpoints automatically. A gateway can authenticate enterprise
 users and hold the upstream service key under the controls in [security](SECURITY.md).
 
 Preserve Host and MCP session/protocol headers through the HTTPS gateway. Allow the
@@ -92,7 +93,7 @@ and authentication. Do not assume a tenant can reach a workstation's localhost.
 | Remote MCP and API-key authentication | WORKING | Repository integration tests; see execution report |
 | Microsoft discovery and execution | NOT TESTED | Requires the target tenant |
 | HTTPS gateway deployment | NOT TESTED | Local verification uses loopback HTTP |
-| Native OIDC/Entra verifier | NOT IMPLEMENTED | Interface and fail-closed configuration prepared |
+| Native OIDC verifier | IMPLEMENTED | Live identity-provider acceptance and Entra-style signed fixture tests; live Entra tenant acceptance still required |
 | CKM/template/AQL through EY Copilot | NOT TESTED | Exact acceptance steps above |
 
 Final enterprise deployment requires the organisation's architecture and security review.

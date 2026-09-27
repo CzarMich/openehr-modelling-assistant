@@ -69,6 +69,9 @@ jobs:
       - name: Dependency audit
         run: composer audit
 
+      - name: Exercise isolated OIDC authentication and authorization over HTTP
+        run: scripts/test-oidc-container.sh
+
       - name: Preserve protocol evidence
         if: always()
         uses: actions/upload-artifact@v4
