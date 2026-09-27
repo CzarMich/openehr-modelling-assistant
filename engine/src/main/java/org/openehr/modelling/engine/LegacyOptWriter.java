@@ -22,6 +22,9 @@ final class LegacyOptWriter {
     final String language;
     private int nodes;
     private LegacyArchetype currentSource;
+    private LegacyReferences references;
+    private final Set<CObject> writing = Collections.newSetFromMap(new IdentityHashMap<>());
+    final List<Map<String, String>> referenceActions = new ArrayList<>();
 
     LegacyOptWriter(String language, MetaModel rm) {
         this.language = language; this.rm = rm;
@@ -32,6 +35,7 @@ final class LegacyOptWriter {
 
     Element root(LegacyArchetype source, String elementName) {
         currentSource = source;
+        references = new LegacyReferences(source);
         if (source.syntax().specialization_section() != null) throw new EngineException("ENGINE_ADL14_SPECIALIZATION_UNSUPPORTED");
         if (source.syntax().rules_section() != null) throw new EngineException("ENGINE_ADL14_RULES_UNSUPPORTED");
         if (!"openehr".equalsIgnoreCase(source.model().getArchetypeId().getRmPublisher())
@@ -51,6 +55,13 @@ final class LegacyOptWriter {
     }
 
     private void complex(Element element, CObject object, C_complex_objectContext syntax) {
+        if (!writing.add(object)) throw new EngineException("ENGINE_INTERNAL_REFERENCE_CYCLE");
+        if (writing.size() > 64) throw new EngineException("ENGINE_NODE_DEPTH_LIMIT");
+        try { complexBody(element, object, syntax); }
+        finally { writing.remove(object); }
+    }
+
+    private void complexBody(Element element, CObject object, C_complex_objectContext syntax) {
         type(element, "C_COMPLEX_OBJECT");
         common(element, object.getRmTypeName(), object.getNodeId(), object.getOccurrences());
         if (!rm.typeNameExists(object.getRmTypeName())) throw new EngineException("ENGINE_RM_TYPE_INVALID");
@@ -113,6 +124,24 @@ final class LegacyOptWriter {
 
     private void nonPrimitive(Element target, CObject model, C_non_primitive_objectContext syntax) {
         if (syntax.c_complex_object() != null) { complex(target, model, syntax.c_complex_object()); return; }
+        if (syntax.c_complex_object_proxy() != null && model instanceof CComplexObjectProxy proxy) {
+            var resolved = references.resolve(proxy);
+            if (!rm.rmTypesConformant(resolved.model().getRmTypeName(), proxy.getRmTypeName()))
+                throw new EngineException("ENGINE_INTERNAL_REFERENCE_TYPE_INVALID");
+            complex(target, resolved.model(), resolved.syntax());
+            var original = syntax.c_complex_object_proxy();
+            if (original.AT_CODE() != null) one(target, "node_id", true).setTextContent(original.AT_CODE().getText());
+            // ADL 1.4 inherits occurrences unless the referring syntax explicitly overrides it.
+            if (original.c_occurrences() != null) {
+                multiplicity(proxy.getOccurrences(), null);
+                Element range = one(target, "occurrences", true);
+                while (range.hasChildNodes()) range.removeChild(range.getFirstChild());
+                interval(range, proxy.getOccurrences());
+            }
+            referenceActions.add(Map.of("code", "ADL14_INTERNAL_REFERENCE_EXPANDED", "location", proxy.getPath(),
+                    "value", proxy.getTargetPath(), "archetype", currentSource.identifier()));
+            return;
+        }
         if (syntax.archetype_slot() != null && model instanceof ArchetypeSlot slot) {
             type(target, "ARCHETYPE_SLOT");
             common(target, model.getRmTypeName(), model.getNodeId(), model.getOccurrences());

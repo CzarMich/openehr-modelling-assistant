@@ -188,7 +188,7 @@
     {
       "id": "openehr-engine",
       "status": "PARTIAL",
-      "scope": "Native ADL 2/OPT 2 compilation and AQL parsing; project builds pin revisions and save native output/evidence atomically. Legacy OET/OPT 1.4 and broader qualification remain.",
+      "scope": "Native ADL 2/OPT 2 compilation, bounded OET/ADL 1.4 to OPT 1.4 XML, exact-revision builds and AQL parsing. Complete legacy AOM semantics and broader qualification remain.",
       "implementation": "src/Application/NativeModels.php",
       "evidence": "docs/evidence/ci-engine-smoke.json"
     },
@@ -216,7 +216,7 @@
     {
       "id": "legacy-opt14",
       "status": "PARTIAL",
-      "scope": "Explicit nested OET/ADL 1.4 compilation to OPT 1.4 XML, narrowing rules, original typed bindings, output schema/RM structure and exact-revision DRAFT build evidence; full OET/AOM semantics remain incomplete",
+      "scope": "Explicit nested OET/ADL 1.4 compilation, original internal references, RM attribute narrowing, typed bindings, output schema/RM structure and exact-revision DRAFT build evidence; full OET/AOM semantics remain incomplete",
       "implementation": "engine/src/main/java/org/openehr/modelling/engine/LegacyTemplateCompiler.java",
       "evidence": "docs/evidence/legacy-compiler-verification.json"
     }
@@ -246,9 +246,14 @@
     {
       "phase": 2,
       "scope": "Qualified openEHR engine, ADL/AOM/RM, OPT compilation, dependencies and AQL parser",
-      "status": "NOT IMPLEMENTED",
-      "capabilities": [],
-      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation"
+      "status": "PARTIAL",
+      "capabilities": [
+        "native-opt2",
+        "legacy-opt14",
+        "openehr-engine"
+      ],
+      "gate": "tests, static analysis, container, protocol/security/contract checks and matching documentation",
+      "evidence": "docs/evidence/ci-engine-examples-smoke.json"
     },
     {
       "phase": 3,

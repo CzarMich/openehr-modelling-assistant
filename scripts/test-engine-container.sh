@@ -17,3 +17,5 @@ trap cleanup EXIT
 address=$("${compose[@]}" port ingress 8343)
 python3 "$ENGINE_TEST_REPO/scripts/engine-fixture-smoke.py" --url "http://$address/mcp" --writes --catalogue "$ENGINE_TEST_REPO/docs/evidence/tool-catalogue.json" \
   --evidence "${1:-$ENGINE_TEST_REPO/docs/evidence/ci-engine-smoke.json}"
+python3 "$ENGINE_TEST_REPO/scripts/engine-example-smoke.py" --url "http://$address/mcp" \
+  --evidence "$ENGINE_TEST_REPO/docs/evidence/ci-engine-examples-smoke.json"

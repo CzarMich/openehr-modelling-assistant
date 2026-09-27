@@ -108,4 +108,34 @@ class LegacyTemplateCompilerTest {
         assertTrue(result.content().contains("<upper>0</upper>"));
         rejected("ENGINE_REQUIRED_SLOT_UNFILLED", oet, replace(deps, 0, "occurrences matches {0..*}", "occurrences matches {1..*}"));
     }
+
+    @Test void constrainsExistingAndOmittedOpenRmAttributesWithoutBypassingSlots() throws Exception {
+        String oet = NativeEngineTest.fixture("legacy/nested.oet").replace("/content[at0001]", "/content");
+        var deps = dependencies();
+        String constrained = deps.getFirst().content();
+        int start = constrained.indexOf("    COMPOSITION[at0000]");
+        int end = constrained.indexOf("\nontology", start);
+        assertTrue(start > 0 && end > start);
+        String source = constrained.substring(0, start) + "    COMPOSITION[at0000] matches {*}" + constrained.substring(end);
+        var open = new ArrayList<>(deps);
+        open.set(0, new Request.Dependency(deps.getFirst().identifier(), source, NativeEngine.sha256(source)));
+        var result = new LegacyTemplateCompiler().compile(oet, open);
+        LegacyOptProfile.inspect(result.content());
+        assertTrue(result.actions().stream().anyMatch(a -> a.get("code").equals("RM_UNCONSTRAINED_ATTRIBUTE_NARROWED")));
+        var root = SafeXml.one(SafeXml.parse(result.content()).getDocumentElement(), "definition", true);
+        var content = LegacyTemplateCompiler.resolve(root, "/content");
+        assertEquals(0, LegacyTemplateCompiler.lower(SafeXml.one(content, "existence", true)));
+        assertEquals("true", SafeXml.text(SafeXml.one(content, "cardinality", true), "is_ordered"));
+        var explicit = replace(open, 0, "COMPOSITION[at0000] matches {*}",
+                "COMPOSITION[at0000] matches { content cardinality matches {0..*; unordered} matches {*} }");
+        String existing = new LegacyTemplateCompiler().compile(oet, explicit).content();
+        LegacyOptProfile.inspect(existing);
+        var explicitContent = LegacyTemplateCompiler.resolve(SafeXml.one(SafeXml.parse(existing).getDocumentElement(), "definition", true), "/content");
+        assertEquals(1, LegacyTemplateCompiler.lower(SafeXml.one(explicitContent, "existence", true)));
+        assertEquals("false", SafeXml.text(SafeXml.one(explicitContent, "cardinality", true), "is_ordered"));
+        rejected("ENGINE_RM_ATTRIBUTE_INVALID", oet.replace("path=\"/content\"", "path=\"/imaginary\""), open);
+        rejected("ENGINE_RM_CHILD_TYPE_INVALID", oet.replace("path=\"/content\"", "path=\"/context\""), open);
+        // An explicit slot remains restrictive. Its failed match cannot become an unconstrained placement.
+        rejected("ENGINE_SLOT_NO_MATCH", oet, replace(deps, 0, "openEHR-EHR-.*", "openEHR-EHR-OBSERVATION.*"));
+    }
 }

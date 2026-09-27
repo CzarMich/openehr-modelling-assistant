@@ -21,7 +21,7 @@ final class NativeEngine {
         result.put("schema_version", 1);
         result.put("operation", request.operation());
         result.put("content_sha256", sha256(request.content()));
-        result.put("engine", Map.of("adapter", "1.1.0", "archie", ARCHIE_VERSION, "aql", SDK_VERSION));
+        result.put("engine", Map.of("adapter", "1.2.0", "archie", ARCHIE_VERSION, "aql", SDK_VERSION));
         result.put("clinical_approval", false);
         List<Map<String, Object>> findings = new ArrayList<>();
         result.put("findings", findings);
