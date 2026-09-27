@@ -13,6 +13,7 @@ trap cleanup EXIT
 address=$("${compose[@]}" port ingress 8343)
 evidence=${1:-$GOVERNANCE_TEST_REPO/docs/evidence/ci-governance-smoke.json}
 python3 "$GOVERNANCE_TEST_REPO/scripts/governance-fixture-smoke.py" --url "http://$address" --state "$governance_test_state" --evidence "$evidence"
-"${compose[@]}" restart app
-"${compose[@]}" up -d --wait
+"${compose[@]}" up -d --force-recreate --wait
+# A recreated ingress may receive a different ephemeral host port.
+address=$("${compose[@]}" port ingress 8343)
 python3 "$GOVERNANCE_TEST_REPO/scripts/governance-fixture-smoke.py" --url "http://$address" --state "$governance_test_state" --evidence "$evidence" --resume
