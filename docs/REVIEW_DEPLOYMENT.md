@@ -64,3 +64,7 @@ Chat and model governance share the same authenticated browser session. The revi
 Assign the explicit `modelling-administrator` identity-provider role to a platform owner. The default role map grants this role modeller, reviewer, approver and publisher permissions. Custom `GOVERNANCE_ROLE_MAP` configurations must add their administrator claim explicitly. Include the assigned role in the signed ID-token claim selected by `CHAT_REVIEW_ROLES_CLAIM`. A username such as `admin`, or an unrelated identity-provider administration role, does not grant platform permissions by itself. Role changes take effect after the browser signs in again.
 
 An authenticated account without a mapped governance role receives `403 GOVERNANCE_ROLE_REQUIRED`. Invalid or expired identity assertions receive `401 INTERACTIVE_REVIEW_AUTHENTICATION_REQUIRED`. This keeps permission problems distinct from authentication problems. Administrators use the same exact-revision, validation, independent-human and lifecycle checks as other reviewers; agent/API credentials cannot acquire human approval authority.
+
+## PostgreSQL and optional retrieval cache
+
+See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.

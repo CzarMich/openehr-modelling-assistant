@@ -75,3 +75,5 @@ Native OPT compilation, full ADL/AQL validation, CDR execution, full project/tea
 | **REQ-F19** | Support source-bound CKM service authentication and bounded federated discovery with explicit source/version provenance, failures, result-window limits and no credential disclosure or source substitution. | `ckm_federated_search`, `CkmClient`, shared knowledge port/application service |
 
 | **REQ-F20** | Negotiate supported MCP revisions, advertise only delivered capabilities and continuously verify actual HTTP/stdio discovery, prompts, resources, completion, errors and security boundaries. | MCP adapter and isolated product/official acceptance |
+
+| **REQ-N13** | Support PostgreSQL governance with atomic, hash-preserving migration and optional bounded, tenant/revision-scoped model caching that cannot override authorization or audit authority. | AuditStore, immutable model reads and real service acceptance |

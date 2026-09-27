@@ -146,3 +146,7 @@ Terminology binding plans deploy with the core service and require no engine, ex
 ## Human review workspace
 
 Follow [review deployment](REVIEW_DEPLOYMENT.md) to enable the OIDC review workspace, dedicated browser/core assertion keys and persistent governance volume. It supports development, staging and production without an LLM account or terminology server. The default browser image target is `reviews`; opt in to `MODELLING_BROWSER_TARGET=chat` before enabling conversational chat. Preserve the governance volume during upgrades and back it up independently of model repository snapshots. Live clinical approval remains blocked until qualified validation is implemented; fixtures do not override that gate.
+
+## PostgreSQL and optional retrieval cache
+
+See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.

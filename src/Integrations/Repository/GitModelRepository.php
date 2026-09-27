@@ -11,6 +11,7 @@ use OpenEHR\Assistant\Domain\Repository\HostedRepositoryProvider;
 /** Plain model files in Git; atomic commits and non-force pushes are the persistence boundary. */
 final class GitModelRepository implements HostedGitRepository
 {
+    private \OpenEHR\Assistant\Integrations\Cache\ModelReadCache $cache;
     private string $directory;
     private string $branch;
     private string $reviewTarget;
@@ -68,10 +69,17 @@ final class GitModelRepository implements HostedGitRepository
         } else {
             $environment['GIT_SSH_COMMAND'] = 'ssh -F /dev/null -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10';
         }
+        $this->cache = new \OpenEHR\Assistant\Integrations\Cache\ModelReadCache(
+            $settings,
+            'git:' . $this->directory . ':' . $this->remote . ':' . $this->branch . ':' . $this->contentPrefix
+        );
         $this->process = new GitProcess($this->directory, (int) $settings->get('MODEL_GIT_TIMEOUT'), $environment);
     }
 
-    public function hosting(): ?HostedRepositoryProvider { return $this->provider; }
+    public function hosting(): ?HostedRepositoryProvider
+    {
+        return $this->provider;
+    }
 
     public function capabilities(): array
     {
@@ -86,7 +94,9 @@ final class GitModelRepository implements HostedGitRepository
         return $this->locked(false, function (): array {
             $ids = [];
             foreach (array_keys($this->tree) as $path) {
-                if (!str_starts_with($path, $this->contentPrefix)) { continue; }
+                if (!str_starts_with($path, $this->contentPrefix)) {
+                    continue;
+                }
                 $path = substr($path, strlen($this->contentPrefix));
                 if ($path === '.modelling/project.json' || $this->logicalPath($path) !== null) {
                     $ids['default'] = true;
@@ -110,8 +120,12 @@ final class GitModelRepository implements HostedGitRepository
             throw new \InvalidArgumentException('Invalid project name or description.');
         }
         return $this->locked(true, function () use ($id, $name, $description): array {
-            try { $this->project($id); } catch (\RuntimeException $error) {
-                if ($error->getMessage() !== 'PROJECT_NOT_FOUND') { throw $error; }
+            try {
+                $this->project($id);
+            } catch (\RuntimeException $error) {
+                if ($error->getMessage() !== 'PROJECT_NOT_FOUND') {
+                    throw $error;
+                }
                 $now = gmdate(DATE_ATOM);
                 $data = ['id' => $id, 'name' => $name, 'description' => $description, 'status' => 'ACTIVE',
                     'created_at' => $now, 'updated_at' => $now];
@@ -126,8 +140,11 @@ final class GitModelRepository implements HostedGitRepository
     {
         return $this->locked(true, function () use ($id, $expectedRevision): array {
             $project = $this->project($id);
-            if ($project['revision'] !== $expectedRevision) { throw new \RuntimeException('REVISION_CONFLICT'); }
-            $project['status'] = 'ARCHIVED'; $project['updated_at'] = gmdate(DATE_ATOM);
+            if ($project['revision'] !== $expectedRevision) {
+                throw new \RuntimeException('REVISION_CONFLICT');
+            }
+            $project['status'] = 'ARCHIVED';
+            $project['updated_at'] = gmdate(DATE_ATOM);
             unset($project['revision'], $project['provider']);
             $this->commit([$this->projectPath($id) => $this->json($project)], 'Archive modelling project ' . $id);
             return $this->project($id);
@@ -137,11 +154,17 @@ final class GitModelRepository implements HostedGitRepository
     public function listArtifacts(string $project): array
     {
         return $this->locked(false, function () use ($project): array {
-            $this->project($project); $prefix = $this->prefix($project); $items = [];
+            $this->project($project);
+            $prefix = $this->prefix($project);
+            $items = [];
             foreach (array_keys($this->tree) as $fullPath) {
-                if (!str_starts_with($fullPath, $prefix)) { continue; }
+                if (!str_starts_with($fullPath, $prefix)) {
+                    continue;
+                }
                 $path = $this->logicalPath(substr($fullPath, strlen($prefix)));
-                if ($path !== null) { $items[] = $this->artifact($project, $path, $this->requiredHead()); }
+                if ($path !== null) {
+                    $items[] = $this->artifact($project, $path, $this->requiredHead());
+                }
             }
             return $items;
         });
@@ -169,7 +192,9 @@ final class GitModelRepository implements HostedGitRepository
             $this->activeProject($project);
             $fullPath = $this->storagePath($project, $path);
             $current = isset($this->tree[$fullPath]) ? $this->artifact($project, $path, $this->requiredHead())['revision'] : null;
-            if ($current !== $expectedRevision) { throw new \RuntimeException('REVISION_CONFLICT'); }
+            if ($current !== $expectedRevision) {
+                throw new \RuntimeException('REVISION_CONFLICT');
+            }
             $this->commit([$fullPath => $content, $this->metadataPath($project, $path) => $this->json(['metadata' => $metadata])], 'Save model artifact ' . $path);
             return $this->artifact($project, $path, $this->requiredHead());
         });
@@ -181,7 +206,9 @@ final class GitModelRepository implements HostedGitRepository
         $this->locked(true, function () use ($project, $path, $expectedRevision): null {
             $this->activeProject($project);
             $artifact = $this->artifact($project, $path, $this->requiredHead());
-            if ($artifact['revision'] !== $expectedRevision) { throw new \RuntimeException('REVISION_CONFLICT'); }
+            if ($artifact['revision'] !== $expectedRevision) {
+                throw new \RuntimeException('REVISION_CONFLICT');
+            }
             $this->commit([$this->storagePath($project, $path) => null, $this->metadataPath($project, $path) => null], 'Delete model artifact ' . $path);
             return null;
         });
@@ -193,9 +220,13 @@ final class GitModelRepository implements HostedGitRepository
         return $this->locked(false, function () use ($project, $path): array {
             $this->project($project);
             $output = trim($this->git(['log', '--format=%H', '--max-count=1001', $this->requiredHead(), '--', $this->storagePath($project, $path), $this->metadataPath($project, $path)]));
-            if ($output === '') { return []; }
+            if ($output === '') {
+                return [];
+            }
             $revisions = explode("\n", $output);
-            if (count($revisions) > 1000) { throw new \RuntimeException('GIT_HISTORY_LIMIT'); }
+            if (count($revisions) > 1000) {
+                throw new \RuntimeException('GIT_HISTORY_LIMIT');
+            }
             return array_map(fn (string $revision): array => $this->artifact($project, $path, $revision, true), array_reverse($revisions));
         });
     }
@@ -210,8 +241,12 @@ final class GitModelRepository implements HostedGitRepository
             }
             if ($this->remote !== '') {
                 $existing = $this->process->run($this->arguments(['ls-remote', '--exit-code', '--heads', 'origin', 'refs/heads/' . $name]));
-                if ($existing['code'] === 0) { throw new \RuntimeException('GIT_BRANCH_EXISTS'); }
-                if ($existing['code'] !== 2) { throw new \RuntimeException('GIT_REMOTE_UNAVAILABLE'); }
+                if ($existing['code'] === 0) {
+                    throw new \RuntimeException('GIT_BRANCH_EXISTS');
+                }
+                if ($existing['code'] !== 2) {
+                    throw new \RuntimeException('GIT_REMOTE_UNAVAILABLE');
+                }
                 $this->git(['push', '--porcelain', '--force-with-lease=refs/heads/' . $name . ':', 'origin', $baseRevision . ':refs/heads/' . $name], '', [], 'GIT_PUSH_FAILED');
             }
             $this->git(['update-ref', 'refs/heads/' . $name, $baseRevision, str_repeat('0', 40)]);
@@ -222,7 +257,8 @@ final class GitModelRepository implements HostedGitRepository
     public function diff(string $baseRevision, string $headRevision): array
     {
         return $this->locked(false, function () use ($baseRevision, $headRevision): array {
-            $this->assertReachable($baseRevision); $this->assertReachable($headRevision);
+            $this->assertReachable($baseRevision);
+            $this->assertReachable($headRevision);
             return ['base_revision' => $baseRevision, 'head_revision' => $headRevision,
                 'patch' => $this->git(['diff', '--no-ext-diff', '--no-textconv', $baseRevision, $headRevision, '--'])];
         });
@@ -258,11 +294,24 @@ final class GitModelRepository implements HostedGitRepository
 
     private function activeProject(string $id): void
     {
-        if ($this->project($id)['status'] !== 'ACTIVE') { throw new \RuntimeException('PROJECT_ARCHIVED'); }
+        if ($this->project($id)['status'] !== 'ACTIVE') {
+            throw new \RuntimeException('PROJECT_ARCHIVED');
+        }
     }
 
     /** @return array<string, mixed> */
     private function artifact(string $project, string $path, string $at, bool $allowDeleted = false): array
+    {
+        // Callers already resolved the repository head and checked project/revision access.
+        // A commit change (including an external push or deletion) selects a new cache key.
+        return $this->cache->remember(
+            json_encode([$project, $path, $at, $allowDeleted], JSON_THROW_ON_ERROR),
+            fn (): array => $this->uncachedArtifact($project, $path, $at, $allowDeleted)
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function uncachedArtifact(string $project, string $path, string $at, bool $allowDeleted): array
     {
         $fullPath = $this->storagePath($project, $path);
         $metadataPath = $this->metadataPath($project, $path);
@@ -270,7 +319,9 @@ final class GitModelRepository implements HostedGitRepository
         $deleted = !isset($tree[$fullPath]);
         $contentAt = $at;
         if ($deleted) {
-            if (!$allowDeleted) { throw new \RuntimeException('ARTIFACT_NOT_FOUND'); }
+            if (!$allowDeleted) {
+                throw new \RuntimeException('ARTIFACT_NOT_FOUND');
+            }
             $parent = $this->process->run($this->arguments(['rev-parse', '--verify', $at . '^']));
             $contentAt = trim($parent['output']);
             if ($parent['code'] !== 0 || !isset($this->validatedTree($contentAt)[$fullPath])) {
@@ -278,7 +329,9 @@ final class GitModelRepository implements HostedGitRepository
             }
         }
         $content = $this->blob($contentAt, $fullPath);
-        if (preg_match('//u', $content) !== 1) { throw new \RuntimeException('GIT_INVALID_TEXT'); }
+        if (preg_match('//u', $content) !== 1) {
+            throw new \RuntimeException('GIT_INVALID_TEXT');
+        }
         $metadata = isset($tree[$metadataPath]) ? json_decode($this->blob($at, $metadataPath), true, 32, JSON_THROW_ON_ERROR) : [];
         $revision = $this->lastChange($at, [$fullPath, $metadataPath]);
         return ['path' => $path, 'content' => $content, 'metadata' => is_array($metadata) && is_array($metadata['metadata'] ?? null) ? $metadata['metadata'] : [],
@@ -290,7 +343,9 @@ final class GitModelRepository implements HostedGitRepository
     private function commit(array $changes, string $message): void
     {
         $index = tempnam($this->directory, 'index-');
-        if ($index === false) { throw new \RuntimeException('GIT_IO_FAILED'); }
+        if ($index === false) {
+            throw new \RuntimeException('GIT_IO_FAILED');
+        }
         unlink($index);
         $environment = ['GIT_INDEX_FILE' => $index];
         try {
@@ -306,17 +361,24 @@ final class GitModelRepository implements HostedGitRepository
             $tree = trim($this->git(['write-tree'], '', $environment));
             $this->validatedTree($tree);
             $arguments = ['commit-tree', $tree];
-            if ($this->head !== null) { $arguments = [...$arguments, '-p', $this->head]; }
+            if ($this->head !== null) {
+                $arguments = [...$arguments, '-p', $this->head];
+            }
             $next = trim($this->git([...$arguments, '-m', $message]));
             if ($this->remote !== '') {
                 // A competing remote writer causes rejection; local HEAD remains unchanged.
                 $this->git(['push', '--porcelain', 'origin', $next . ':refs/heads/' . $this->branch], '', [], 'GIT_PUSH_FAILED');
             }
             $this->git(['update-ref', 'refs/heads/' . $this->branch, $next, $this->head ?? str_repeat('0', 40)]);
-            $this->head = $next; $this->tree = $this->validatedTree($next);
+            $this->head = $next;
+            $this->tree = $this->validatedTree($next);
             file_put_contents($this->directory . '/last-sync', (string) time());
         } finally {
-            foreach ([$index, $index . '.lock'] as $file) { if (is_file($file)) { unlink($file); } }
+            foreach ([$index, $index . '.lock'] as $file) {
+                if (is_file($file)) {
+                    unlink($file);
+                }
+            }
         }
     }
 
@@ -329,10 +391,15 @@ final class GitModelRepository implements HostedGitRepository
         $lockPath = $this->directory . '/repository.lock';
         $this->safeAbsolutePath($lockPath);
         $lock = fopen($lockPath, 'c');
-        if ($lock === false) { throw new \RuntimeException('REPOSITORY_LOCK_FAILED'); }
+        if ($lock === false) {
+            throw new \RuntimeException('REPOSITORY_LOCK_FAILED');
+        }
         $started = microtime(true);
         while (!flock($lock, LOCK_EX | LOCK_NB)) {
-            if (microtime(true) - $started > 30) { fclose($lock); throw new \RuntimeException('REPOSITORY_LOCK_TIMEOUT'); }
+            if (microtime(true) - $started > 30) {
+                fclose($lock);
+                throw new \RuntimeException('REPOSITORY_LOCK_TIMEOUT');
+            }
             usleep(10000);
         }
         try {
@@ -348,22 +415,32 @@ final class GitModelRepository implements HostedGitRepository
             $this->tree = $this->head === null ? [] : $this->validatedTree($this->head);
             return $operation();
         } finally {
-            flock($lock, LOCK_UN); fclose($lock);
+            flock($lock, LOCK_UN);
+            fclose($lock);
         }
     }
 
     private function sync(bool $write): void
     {
-        if ($this->remote === '') { return; }
+        if ($this->remote === '') {
+            return;
+        }
         $existing = $this->process->run($this->arguments(['remote', 'get-url', 'origin']));
-        if ($existing['code'] !== 0) { $this->git(['remote', 'add', 'origin', $this->remote]); }
-        elseif (trim($existing['output']) !== $this->remote) { throw new \RuntimeException('GIT_REMOTE_CHANGED_USE_NEW_PATH'); }
+        if ($existing['code'] !== 0) {
+            $this->git(['remote', 'add', 'origin', $this->remote]);
+        } elseif (trim($existing['output']) !== $this->remote) {
+            throw new \RuntimeException('GIT_REMOTE_CHANGED_USE_NEW_PATH');
+        }
         $stamp = $this->directory . '/last-sync';
         $this->safeAbsolutePath($stamp);
-        if (!$write && is_file($stamp) && time() - (int) file_get_contents($stamp) < $this->syncSeconds) { return; }
+        if (!$write && is_file($stamp) && time() - (int) file_get_contents($stamp) < $this->syncSeconds) {
+            return;
+        }
         $remote = $this->process->run($this->arguments(['ls-remote', '--exit-code', '--heads', 'origin', 'refs/heads/' . $this->branch]));
         if ($remote['code'] === 2) {
-            if ($this->head !== null) { throw new \RuntimeException('GIT_REMOTE_BRANCH_REMOVED'); }
+            if ($this->head !== null) {
+                throw new \RuntimeException('GIT_REMOTE_BRANCH_REMOVED');
+            }
         } elseif ($remote['code'] !== 0) {
             throw new \RuntimeException('GIT_REMOTE_UNAVAILABLE');
         } else {
@@ -383,14 +460,20 @@ final class GitModelRepository implements HostedGitRepository
     private function validatedTree(string $revision): array
     {
         $output = $this->git(['ls-tree', '-rlz', '--full-tree', $revision]);
-        $files = []; $total = 0;
+        $files = [];
+        $total = 0;
         foreach (explode("\0", $output) as $record) {
-            if ($record === '') { continue; }
+            if ($record === '') {
+                continue;
+            }
             if (!preg_match('/^(100644|100755) blob [a-f0-9]+ +([0-9]+)\t([^\x00-\x1f\x7f]+)$/D', $record, $match)) {
                 throw new \RuntimeException('GIT_UNSAFE_TREE');
             }
-            $size = (int) $match[2]; $total += $size;
-            if ($size > 2097152 || $total > 33554432 || count($files) >= 10000) { throw new \RuntimeException('GIT_TREE_SIZE_LIMIT'); }
+            $size = (int) $match[2];
+            $total += $size;
+            if ($size > 2097152 || $total > 33554432 || count($files) >= 10000) {
+                throw new \RuntimeException('GIT_TREE_SIZE_LIMIT');
+            }
             $files[$match[3]] = ['mode' => $match[1], 'size' => $size];
         }
         return $files;
@@ -415,21 +498,37 @@ final class GitModelRepository implements HostedGitRepository
         }
     }
 
-    private function requiredHead(): string { return $this->head ?? throw new \RuntimeException('PROJECT_NOT_FOUND'); }
-    private function projectPath(string $id): string { return $this->prefix($id) . '.modelling/project.json'; }
-    private function metadataPath(string $id, string $path): string { return $this->prefix($id) . '.modelling/artifacts/' . hash('sha256', $path) . '.json'; }
+    private function requiredHead(): string
+    {
+        return $this->head ?? throw new \RuntimeException('PROJECT_NOT_FOUND');
+    }
+    private function projectPath(string $id): string
+    {
+        return $this->prefix($id) . '.modelling/project.json';
+    }
+    private function metadataPath(string $id, string $path): string
+    {
+        return $this->prefix($id) . '.modelling/artifacts/' . hash('sha256', $path) . '.json';
+    }
     private function prefix(string $id): string
     {
-        if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/D', $id)) { throw new \InvalidArgumentException('INVALID_PROJECT_ID'); }
+        if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/D', $id)) {
+            throw new \InvalidArgumentException('INVALID_PROJECT_ID');
+        }
         return $this->contentPrefix . ($id === 'default' ? '' : 'projects/' . $id . '/');
     }
     private function logicalPath(string $relative): ?string
     {
         if ($this->flatLayout) {
-            if (str_starts_with($relative, 'archetypes/') || str_starts_with($relative, 'templates/')) { return null; }
+            if (str_starts_with($relative, 'archetypes/') || str_starts_with($relative, 'templates/')) {
+                return null;
+            }
             if (!str_contains($relative, '/')) {
-                if (preg_match('/\\.(adl|adls|adlf|a\\.json)$/D', $relative)) { $relative = 'archetypes/' . $relative; }
-                elseif (preg_match('/\\.(t\\.json|oet|opt)$/D', $relative)) { $relative = 'templates/' . $relative; }
+                if (preg_match('/\\.(adl|adls|adlf|a\\.json)$/D', $relative)) {
+                    $relative = 'archetypes/' . $relative;
+                } elseif (preg_match('/\\.(t\\.json|oet|opt)$/D', $relative)) {
+                    $relative = 'templates/' . $relative;
+                }
             }
         }
         return $this->isArtifactPath($relative) ? $relative : null;
@@ -454,7 +553,12 @@ final class GitModelRepository implements HostedGitRepository
             && !str_contains($path, '\\') && !str_contains($path, '%') && !str_contains($path, '//')
             && !preg_match('~(^|/)\\.{1,2}(/|$)~D', $path) && !str_ends_with($path, '/');
     }
-    private function artifactPath(string $path): void { if (!$this->isArtifactPath($path)) { throw new \InvalidArgumentException('INVALID_ARTIFACT_PATH'); } }
+    private function artifactPath(string $path): void
+    {
+        if (!$this->isArtifactPath($path)) {
+            throw new \InvalidArgumentException('INVALID_ARTIFACT_PATH');
+        }
+    }
     private function branchName(string $name): void
     {
         if (!preg_match('~^[A-Za-z0-9][A-Za-z0-9_./-]{0,119}$~D', $name) || str_contains($name, '..') || str_contains($name, '//') || str_ends_with($name, '/') || str_ends_with($name, '.lock')) {
@@ -463,8 +567,13 @@ final class GitModelRepository implements HostedGitRepository
     }
     private function validateRemote(string $remote): void
     {
-        if ($remote === '') { return; }
-        if (str_starts_with($remote, '/')) { $this->safeAbsolutePath($remote); return; }
+        if ($remote === '') {
+            return;
+        }
+        if (str_starts_with($remote, '/')) {
+            $this->safeAbsolutePath($remote);
+            return;
+        }
         $parts = parse_url($remote);
         if ($parts === false || !in_array($parts['scheme'] ?? '', ['https', 'ssh'], true) || empty($parts['host'])
             || isset($parts['pass'], $parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])
@@ -474,27 +583,43 @@ final class GitModelRepository implements HostedGitRepository
     }
     private function safeAbsolutePath(string $path): void
     {
-        if (!str_starts_with($path, '/') || preg_match('/[\x00-\x1f\x7f]/', $path)) { throw new \InvalidArgumentException('INVALID_REPOSITORY_PATH'); }
+        if (!str_starts_with($path, '/') || preg_match('/[\x00-\x1f\x7f]/', $path)) {
+            throw new \InvalidArgumentException('INVALID_REPOSITORY_PATH');
+        }
         $current = '';
         foreach (explode('/', $path) as $part) {
-            if ($part === '') { continue; }
-            if ($part === '.' || $part === '..') { throw new \InvalidArgumentException('INVALID_REPOSITORY_PATH'); }
+            if ($part === '') {
+                continue;
+            }
+            if ($part === '.' || $part === '..') {
+                throw new \InvalidArgumentException('INVALID_REPOSITORY_PATH');
+            }
             $current .= '/' . $part;
-            if (is_link($current)) { throw new \InvalidArgumentException('REPOSITORY_SYMLINK_FORBIDDEN'); }
+            if (is_link($current)) {
+                throw new \InvalidArgumentException('REPOSITORY_SYMLINK_FORBIDDEN');
+            }
         }
     }
     /** @param array<string, mixed> $value */
-    private function json(array $value): string { return json_encode($value, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n"; }
+    private function json(array $value): string
+    {
+        return json_encode($value, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n";
+    }
     /** @param list<string> $arguments
      * @return list<string> */
-    private function arguments(array $arguments): array { return ['--git-dir=' . $this->directory . '/objects.git', ...$arguments]; }
+    private function arguments(array $arguments): array
+    {
+        return ['--git-dir=' . $this->directory . '/objects.git', ...$arguments];
+    }
     /** @param list<string> $arguments
      * @param array<string, string> $environment */
     private function git(array $arguments, string $input = '', array $environment = [], string $error = 'GIT_OPERATION_FAILED'): string
     {
         $command = $arguments[0] === 'init' ? $arguments : $this->arguments($arguments);
         $result = $this->process->run($command, $input, $environment);
-        if ($result['code'] !== 0) { throw new \RuntimeException($error); }
+        if ($result['code'] !== 0) {
+            throw new \RuntimeException($error);
+        }
         return $result['output'];
     }
 }

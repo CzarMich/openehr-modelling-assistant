@@ -37,3 +37,7 @@ CKM credentials are per-source deployment service identities. Secret files are d
 The MCP wire gate tests allowed and forbidden origins, hosts, malformed payloads, finite bodies and terminated sessions. Only explicit nonproduction loopback HTTP browser origins are accepted; production origins and outbound destinations still require HTTPS. See [MCP protocol](MCP_PROTOCOL.md).
 
 Browser chat and model governance share one verified human session. Review browsing and decision freshness have separate bounded lifetimes; the explicit platform-administrator role maps to all governance roles. See [review deployment](REVIEW_DEPLOYMENT.md#one-browser-identity-for-chat-and-governance).
+
+## PostgreSQL and optional retrieval cache
+
+See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.

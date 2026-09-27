@@ -13,7 +13,7 @@ final class FileSnapshotStore implements SnapshotStore
 {
     private readonly string $root;
 
-    public function __construct(string $root)
+    public function __construct(string $root, private readonly ?\OpenEHR\Assistant\Integrations\Cache\ModelReadCache $cache = null)
     {
         if (!str_starts_with($root, '/') || str_contains($root, "\0")) {
             throw new InvalidArgumentException('Repository root must be an absolute path.');
@@ -68,11 +68,15 @@ final class FileSnapshotStore implements SnapshotStore
         if (filesize($path) > 33554432) {
             throw new RuntimeException('PROJECT_SIZE_LIMIT');
         }
-        $state = json_decode((string) file_get_contents($path), true, 64, JSON_THROW_ON_ERROR);
-        if (!is_array($state) || !isset($state['project'], $state['artifacts'], $state['history'])) {
-            throw new RuntimeException('REPOSITORY_INVALID_SNAPSHOT');
-        }
-        return $state;
+        $raw = (string) file_get_contents($path);
+        $decode = static function () use ($raw): array {
+            $state = json_decode($raw, true, 64, JSON_THROW_ON_ERROR);
+            if (!is_array($state) || !isset($state['project'], $state['artifacts'], $state['history'])) {
+                throw new RuntimeException('REPOSITORY_INVALID_SNAPSHOT');
+            }
+            return $state;
+        };
+        return $this->cache?->remember($id . ':' . hash('sha256', $raw), $decode) ?? $decode();
     }
 
     /**

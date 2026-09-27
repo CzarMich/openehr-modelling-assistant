@@ -84,3 +84,7 @@ The [terminology catalogue](TERMINOLOGY_CATALOGUE.md) stores versioned code syst
 `requirements/traceability.json` stores the versioned [project requirements graph](REQUIREMENTS_TRACEABILITY.md). It uses the same artifact revision/history and conditional-write contract on filesystem, Git and SharePoint. Source nodes pin project-local artifacts; review/validation nodes refer to the separately protected governance ledger. Moving a model repository alone does not migrate its ledger. Graph reads revalidate direct file/Git edits and recompute source freshness; graph assertions never override authoritative lifecycle policy.
 
 `model_project_qa` checks an exact retained model revision against the current repository and its recorded provenance/requirement/audit trail. Filesystem, Git and SharePoint share the same contract. It reports stale revisions and makes no repository writes. See [Validation and QA](VALIDATION_AND_QA.md).
+
+## PostgreSQL and optional retrieval cache
+
+See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.

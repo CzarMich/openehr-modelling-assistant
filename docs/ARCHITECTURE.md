@@ -15,7 +15,7 @@ flowchart TB
     BFF -->|Request-bound interactive assertion| REST[Versioned review REST adapter]
     REST --> Governance[ModelGovernance application service]
     MCP -->|Prepare and request review| Governance
-    Governance --> Ledger[Protected append-only SQLite ledger]
+    Governance --> Ledger[PostgreSQL audit ledger; SQLite compatibility]
     Governance --> Repository
     Governance --> Validation
     MCP --> Auth[Transport identity: local, API key or OIDC]
@@ -31,6 +31,7 @@ flowchart TB
     Trace --> Anchors[Exact XML or JSON document anchors]
     Trace -->|Validation and review event hashes| Ledger
     Repository --> Snap[Shared snapshot revision and history semantics]
+    Repository --> Cache[Optional Valkey cache: tenant and immutable revision keys]
     Snap --> FS[Filesystem locks and atomic snapshots]
     Snap --> SP[SharePoint immutable files and conditional index]
     Repository --> Git[Git adapter: native files, layout mapping and commit revisions]
@@ -77,3 +78,5 @@ The [requirements graph](REQUIREMENTS_TRACEABILITY.md) stores typed requirement/
 The [MCP adapter](MCP_PROTOCOL.md) selects supported protocol revisions and capabilities explicitly. Its wire acceptance is independent of clinical validation and repository policy.
 
 Browser chat and model governance share one verified human session. Review browsing and decision freshness have separate bounded lifetimes; the explicit platform-administrator role maps to all governance roles. See [review deployment](REVIEW_DEPLOYMENT.md#one-browser-identity-for-chat-and-governance).
+
+PostgreSQL is the recommended governance backend. Optional Valkey accelerates repeated model/template reads while source revisions remain authoritative. See [storage and cache deployment](POSTGRES_AND_CACHE.md) for configuration, SQLite migration and recovery.

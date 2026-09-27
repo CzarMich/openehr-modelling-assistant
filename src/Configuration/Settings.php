@@ -23,6 +23,11 @@ final class Settings
         'OIDC_REQUIRED_SCOPES' => 'modelling.read', 'OIDC_ROLES_CLAIM' => 'roles', 'OIDC_REQUIRED_ROLES' => '',
         'OIDC_WRITE_ROLES' => 'modeller,administrator', 'OIDC_TENANT_CLAIM' => '', 'OIDC_ALLOWED_TENANTS' => '',
         'OIDC_TENANT_GIT_REMOTES' => '{}',
+        'GOVERNANCE_DATABASE_DRIVER' => 'sqlite', 'GOVERNANCE_POSTGRES_DSN' => '',
+        'GOVERNANCE_POSTGRES_USER' => 'modelling_app', 'GOVERNANCE_POSTGRES_PASSWORD_FILE' => '',
+        'MODEL_CACHE_DRIVER' => 'none', 'MODEL_CACHE_URL' => 'redis://cache:6379/0',
+        'MODEL_CACHE_PASSWORD_FILE' => '', 'MODEL_CACHE_SIGNING_KEY_FILE' => '',
+        'MODEL_CACHE_TTL' => '300', 'MODEL_CACHE_NAMESPACE' => 'openehr-models-v1',
         'GOVERNANCE_ENABLED' => 'false', 'GOVERNANCE_DATABASE_PATH' => '/data/governance/audit.sqlite',
         'GOVERNANCE_BROWSER_ORIGIN' => '', 'GOVERNANCE_OIDC_ISSUER' => '', 'GOVERNANCE_BROWSER_KEYS' => '{}',
         'GOVERNANCE_SESSION_MAX_AGE' => '900', 'GOVERNANCE_BROWSER_SESSION_MAX_AGE' => '3600',
@@ -59,6 +64,7 @@ final class Settings
         $this->values = array_replace(self::DEFAULTS, $overrides);
         foreach (['MCP_TRANSPORT' => ['stdio', 'streamable-http'], 'AUTH_MODE' => ['none', 'api_key', 'oidc'],
             'APP_ENV' => ['development', 'testing', 'production'],
+            'GOVERNANCE_DATABASE_DRIVER' => ['sqlite', 'postgres'], 'MODEL_CACHE_DRIVER' => ['none', 'redis'],
             'MODEL_GIT_LAYOUT' => ['categories', 'flat'],
             'TERMINOLOGY_CODESYSTEM_VALIDATE_PARAMETER' => ['url', 'system'],
             'LOG_LEVEL' => ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'],
@@ -116,6 +122,7 @@ final class Settings
             || (int) $this->get('GOVERNANCE_BROWSER_SESSION_MAX_AGE') > 3600) {
             throw new InvalidArgumentException('Governance browsing session must cover the decision freshness period and cannot exceed 3600 seconds.');
         }
+        StorageConfiguration::validate($this);
         $this->governanceRoleMap();
         if ($this->governanceBrowserKeys() !== [] && ($this->get('GOVERNANCE_BROWSER_ORIGIN') === '' || $this->get('GOVERNANCE_OIDC_ISSUER') === '')) {
             throw new InvalidArgumentException('Governance browser keys require an explicit browser origin and OIDC issuer.');
@@ -148,7 +155,9 @@ final class Settings
     public function governanceBrowserKeys(): array
     {
         $keys = json_decode($this->get('GOVERNANCE_BROWSER_KEYS'), true, 8, JSON_THROW_ON_ERROR);
-        if (!is_array($keys) || count($keys) > 3) { throw new InvalidArgumentException('INVALID_GOVERNANCE_BROWSER_KEYS'); }
+        if (!is_array($keys) || count($keys) > 3) {
+            throw new InvalidArgumentException('INVALID_GOVERNANCE_BROWSER_KEYS');
+        }
         foreach ($keys as $id => $key) {
             if (!is_string($id) || !preg_match('/^[A-Za-z][A-Za-z0-9_-]{0,63}$/D', $id) || !is_string($key) || !preg_match('/^[a-f0-9]{64,128}$/D', $key)) {
                 throw new InvalidArgumentException('INVALID_GOVERNANCE_BROWSER_KEYS');
@@ -161,10 +170,18 @@ final class Settings
     public function governanceRoleMap(): array
     {
         $map = json_decode($this->get('GOVERNANCE_ROLE_MAP'), true, 8, JSON_THROW_ON_ERROR);
-        if (!is_array($map) || array_diff(array_keys($map), ['modeller', 'reviewer', 'approver', 'publisher']) !== []) { throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP'); }
+        if (!is_array($map) || array_diff(array_keys($map), ['modeller', 'reviewer', 'approver', 'publisher']) !== []) {
+            throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP');
+        }
         foreach ($map as $roles) {
-            if (!is_array($roles) || !array_is_list($roles) || count($roles) > 20) { throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP'); }
-            foreach ($roles as $role) { if (!is_string($role) || $role === '' || strlen($role) > 200) { throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP'); } }
+            if (!is_array($roles) || !array_is_list($roles) || count($roles) > 20) {
+                throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP');
+            }
+            foreach ($roles as $role) {
+                if (!is_string($role) || $role === '' || strlen($role) > 200) {
+                    throw new InvalidArgumentException('INVALID_GOVERNANCE_ROLE_MAP');
+                }
+            }
         }
         return $map;
     }
@@ -192,7 +209,10 @@ final class Settings
     }
 
     /** @param array<string, string> $overrides */
-    public function with(array $overrides): self { return new self(array_replace($this->values, $overrides)); }
+    public function with(array $overrides): self
+    {
+        return new self(array_replace($this->values, $overrides));
+    }
 
     public function get(string $key): string
     {
@@ -243,23 +263,34 @@ final class Settings
     /** @return array<string, array{site_id:string, list_id:string, drive_id:string, folder_id:string}> */
     public function tenantSharePointRepositories(): array
     {
-        try { $map = json_decode($this->get('OIDC_TENANT_SHAREPOINT_REPOSITORIES'), true, 8, JSON_THROW_ON_ERROR); }
-        catch (\JsonException) { throw new InvalidArgumentException('Invalid OIDC_TENANT_SHAREPOINT_REPOSITORIES JSON.'); }
+        try {
+            $map = json_decode($this->get('OIDC_TENANT_SHAREPOINT_REPOSITORIES'), true, 8, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new InvalidArgumentException('Invalid OIDC_TENANT_SHAREPOINT_REPOSITORIES JSON.');
+        }
         if (!is_array($map) || ($map !== [] && array_is_list($map)) || count($map) > 1000) {
             throw new InvalidArgumentException('Invalid SharePoint tenant map.');
         }
-        $lists = []; $folders = [];
+        $lists = [];
+        $folders = [];
         foreach ($map as $tenant => $target) {
             if (!is_string($tenant) || !preg_match('/^[a-f0-9]{64}$/D', $tenant) || !is_array($target)
-                || count($target) !== 4) { throw new InvalidArgumentException('Invalid SharePoint tenant mapping.'); }
+                || count($target) !== 4) {
+                throw new InvalidArgumentException('Invalid SharePoint tenant mapping.');
+            }
             foreach (['site_id', 'list_id', 'drive_id', 'folder_id'] as $field) {
                 if (!is_string($target[$field] ?? null) || !preg_match('/^[A-Za-z0-9][A-Za-z0-9_.!,~-]{0,249}$/D', $target[$field])
-                    || str_contains($target[$field], '..')) { throw new InvalidArgumentException('Invalid SharePoint tenant target.'); }
+                    || str_contains($target[$field], '..')) {
+                    throw new InvalidArgumentException('Invalid SharePoint tenant target.');
+                }
             }
             $list = strtolower($target['site_id'] . '/' . $target['list_id']);
             $folder = $target['drive_id'] . '/' . $target['folder_id'];
-            if (isset($lists[$list]) || isset($folders[$folder])) { throw new InvalidArgumentException('Tenants require distinct SharePoint lists and folders.'); }
-            $lists[$list] = true; $folders[$folder] = true;
+            if (isset($lists[$list]) || isset($folders[$folder])) {
+                throw new InvalidArgumentException('Tenants require distinct SharePoint lists and folders.');
+            }
+            $lists[$list] = true;
+            $folders[$folder] = true;
         }
         return $map;
     }

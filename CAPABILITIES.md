@@ -52,3 +52,5 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Optional client packaging | WORKING | Default browser review image contains no model-provider executable; conversational adapter uses an explicit image target |
 
 Chat and model governance share the verified browser identity. Explicit platform-administrator permissions cover all governance roles; validation and human-review policy still govern transitions. See [review deployment](docs/REVIEW_DEPLOYMENT.md).
+
+PostgreSQL governance storage and optional Valkey/Redis model retrieval caching are implemented. SQLite migration preserves event bytes, hashes and nonce history. Cache invalidation follows authoritative revisions; cache failures fall back to model storage. See [deployment and acceptance](docs/POSTGRES_AND_CACHE.md).
