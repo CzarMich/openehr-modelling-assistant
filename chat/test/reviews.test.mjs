@@ -88,8 +88,24 @@ test("expired or missing interactive session never creates an assertion", async 
     });
     await assert.rejects(() => client.request({}, "GET", "/api/v1/reviews?project=default"), /Sign in again/);
     const old = session();
-    old.reviewIdentity.started -= 901;
+    old.reviewIdentity.started -= 3601;
     await assert.rejects(() => client.request(old, "GET", "/api/v1/reviews?project=default"), /Sign in again/);
+});
+
+test("governance browsing carries the chat session while decisions retain recent-sign-in checks", async () => {
+    let requests = 0;
+    const client = new ReviewClient(config(), async () => {
+        requests++;
+        return new Response('{"items":[]}');
+    });
+    const active = session();
+    active.reviewIdentity.started -= 1800;
+    assert.deepEqual(await client.request(active, "GET", "/api/v1/reviews?project=default"), { items: [] });
+    await assert.rejects(
+        () => client.request(active, "POST", "/api/v1/reviews/" + "b".repeat(64) + "/transitions", {}),
+        /Sign in again/,
+    );
+    assert.equal(requests, 1);
 });
 
 test("review response limits, upstream failure redaction and request purpose remain bounded", async () => {

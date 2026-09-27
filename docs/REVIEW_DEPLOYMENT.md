@@ -19,7 +19,8 @@ The default browser image target is `reviews`; it contains OIDC and review funct
 | `GOVERNANCE_BROWSER_ORIGIN` | empty | Exact public browser origin, without a path or trailing slash |
 | `GOVERNANCE_OIDC_ISSUER` | empty | Exact verified browser identity issuer |
 | `GOVERNANCE_BROWSER_KEYS` | `{}` | JSON object of accepted key identifiers to dedicated random signing keys; up to three keys for rotation |
-| `GOVERNANCE_SESSION_MAX_AGE` | `900` | Maximum browser sign-in age in seconds, 60–3600 |
+| `GOVERNANCE_SESSION_MAX_AGE` | `900` | Maximum sign-in age for decisions in seconds, 60–3600 |
+| `GOVERNANCE_BROWSER_SESSION_MAX_AGE` | `3600` | Maximum sign-in age for reading reviews; at least the decision limit and at most the browser session lifetime |
 | `GOVERNANCE_ROLE_MAP` | role mapping in `.env.example` | Domain role to accepted signed ID-token role values |
 | `MODEL_REPOSITORY_WRITE_ENABLED` | `false` | Required for lifecycle changes as well as model draft writes |
 
@@ -55,3 +56,11 @@ For signing-key rotation, first add the new key identifier/value to the core's a
 Back up model storage and the governance ledger separately. Use SQLite's [consistent online backup](https://www.sqlite.org/backup.html) or [VACUUM INTO procedure](https://www.sqlite.org/lang_vacuum.html), or stop the core before copying the database and its journal state. Do not copy only an active `.sqlite` file while ignoring its WAL. Preserve file permissions and encryption/access policy in backup storage. Restore into an isolated deployment first, verify audit history and hash chains, compare model revisions and keep publication disabled until required qualification checks pass. A ledger backup is not an external signed audit attestation.
 
 The current qualified-engine gap deliberately blocks real clinical approval/publication. The review workspace can record review findings and requests for changes while that gate remains open.
+
+## One browser identity for chat and governance
+
+Chat and model governance share the same authenticated browser session. The review header identifies the signed-in user. Reading reviews uses the browser-session age limit; submitting a decision uses the shorter decision freshness limit. A stale decision session can be refreshed through the existing sign-in flow without changing the selected account.
+
+Assign the explicit `modelling-administrator` identity-provider role to a platform owner. The default role map grants this role modeller, reviewer, approver and publisher permissions. Custom `GOVERNANCE_ROLE_MAP` configurations must add their administrator claim explicitly. Include the assigned role in the signed ID-token claim selected by `CHAT_REVIEW_ROLES_CLAIM`. A username such as `admin`, or an unrelated identity-provider administration role, does not grant platform permissions by itself. Role changes take effect after the browser signs in again.
+
+An authenticated account without a mapped governance role receives `403 GOVERNANCE_ROLE_REQUIRED`. Invalid or expired identity assertions receive `401 INTERACTIVE_REVIEW_AUTHENTICATION_REQUIRED`. This keeps permission problems distinct from authentication problems. Administrators use the same exact-revision, validation, independent-human and lifecycle checks as other reviewers; agent/API credentials cannot acquire human approval authority.

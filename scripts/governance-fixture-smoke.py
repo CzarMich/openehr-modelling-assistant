@@ -84,9 +84,17 @@ else:
     record('interactive route exposes exact source and incomplete validation')
     data = dict(state='REVIEWED', expectedSequence=view['sequence'], comment='Synthetic independent human review.', validationDigest=view['validation_digest'])
     for label, changes in [('wrong audience', {'aud': 'modelling-api'}), ('expired assertion', {'exp': int(time.time()) - 1}),
-                           ('wrong body binding', {'body_sha256': '0' * 64}), ('wrong tenant', {'tenant': 'another'}), ('wrong role', {'roles': ['administrator']})]:
+                           ('wrong body binding', {'body_sha256': '0' * 64}), ('wrong tenant', {'tenant': 'another'})]:
         assert request('POST', target + '/transitions', data, changes=changes)[0] == 401
         record(label + ' rejected')
+    status, error, _ = request('GET', target, changes={'roles': ['administrator']})
+    assert status == 403 and error['error']['code'] == 'GOVERNANCE_ROLE_REQUIRED'
+    record('authenticated account without platform role receives a permission error')
+    owner = {'roles': ['modelling-administrator'], 'session_started': int(time.time()) - 1800}
+    assert request('GET', target, changes=owner)[0] == 200
+    assert request('POST', target + '/transitions', data, changes=owner)[0] == 401
+    assert request('GET', target, changes=dict(owner, session_started=int(time.time()) - 3601))[0] == 401
+    record('platform owner browses with the chat session; stale decisions and expired sessions remain rejected')
     assert request('POST', target + '/transitions', data, extra={'Authorization': '', 'X-API-Key': 'z' * 64})[0] == 401
     record('ordinary model API key cannot attest an interactive human')
     status, reviewed, signed = request('POST', target + '/transitions', data)

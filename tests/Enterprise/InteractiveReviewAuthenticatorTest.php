@@ -46,7 +46,9 @@ final class InteractiveReviewAuthenticatorTest extends TestCase
         $actor = $auth->authenticate($request); self::assertNotNull($actor); self::assertTrue($actor->human);
         self::assertSame(['reviewer', 'approver'], $actor->roles); self::assertSame('shared', $actor->tenant);
         self::assertNull($auth->authenticate($request));
-        $ordinaryAdmin = $auth->authenticate($this->request(['roles' => ['administrator']])); self::assertNull($ordinaryAdmin);
+        $ordinaryAdmin = $auth->authenticate($this->request(['roles' => ['administrator']])); self::assertNotNull($ordinaryAdmin); self::assertSame([], $ordinaryAdmin->roles);
+        $platformAdmin = $auth->authenticate($this->request(['roles' => ['modelling-administrator']])); self::assertNotNull($platformAdmin);
+        self::assertSame(['modeller', 'reviewer', 'approver', 'publisher'], $platformAdmin->roles);
     }
     public function test_oidc_actor_identity_and_tenant_match_native_bearer_subject_without_granting_bearer_human_status(): void
     {
@@ -64,7 +66,7 @@ final class InteractiveReviewAuthenticatorTest extends TestCase
             [['sub' => '']], [['exp' => 1]], [['iat' => 1]], [['exp' => time() + 86400]], [['iat' => time() + 86400]],
             [['session_started' => time() - 86400]], [['session_started' => time() + 86400]], [['method' => 'GET']],
             [['target' => '/mcp']], [['body_sha256' => str_repeat('0', 64)]], [['jti' => 'bad']], [['tenant' => 'another']],
-            [['roles' => 'modelling-approver']], [['roles' => ['approver']]], [['roles' => array_fill(0, 101, 'modelling-approver')]]];
+            [['roles' => 'modelling-approver']], [['roles' => array_fill(0, 101, 'modelling-approver')]]];
     }
     #[DataProvider('invalidClaims')]
     public function test_wrong_audience_time_identity_roles_and_request_binding_fail_closed(array $claims): void

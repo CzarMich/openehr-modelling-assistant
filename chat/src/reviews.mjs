@@ -10,7 +10,8 @@ export class ReviewClient {
             throw Object.assign(new Error("Model review is not configured."), { status: 503 });
         const identity = session.reviewIdentity;
         const now = Math.floor(Date.now() / 1000);
-        if (!identity || now - identity.started > this.config.reviewSessionSeconds)
+        const maximumAge = method === "GET" ? this.config.sessionSeconds : this.config.reviewSessionSeconds;
+        if (!identity || now - identity.started > maximumAge)
             throw Object.assign(new Error("Sign in again before reviewing a model."), { status: 401 });
         if (!/^\/api\/v1\/reviews(?:\?|\/[a-f0-9]{64}(?:\/transitions)?$|$)/.test(target))
             throw new Error("Invalid review operation");
@@ -61,7 +62,9 @@ export class ReviewClient {
             const safe = typeof code === "string" && /^[A-Z_]{1,100}$/.test(code) ? code : "REVIEW_SERVICE_FAILED";
             const messages = {
                 INTERACTIVE_REVIEW_AUTHENTICATION_REQUIRED:
-                    "A configured review role and a recent sign-in are required.",
+                    "Your review sign-in needs to be refreshed. Use Refresh sign-in to continue with the same account.",
+                GOVERNANCE_ROLE_REQUIRED:
+                    "Your signed-in account has no model governance role. A platform administrator can assign one; refresh sign-in after the role changes.",
                 GOVERNANCE_REVISION_CONFLICT: "Another decision was recorded. Reload the review before continuing.",
                 GOVERNANCE_SOURCE_CHANGED: "The source changed. Prepare a review for the new revision.",
                 GOVERNANCE_VALIDATION_REQUIRED: "Required validation checks have not passed.",

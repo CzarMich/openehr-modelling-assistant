@@ -101,6 +101,7 @@ test("binding plan confirmation includes both source and plan revisions", async 
 test("human review shows exact evidence, confirms the decision, and blocks incomplete approval", async ({ page }) => {
     await login(page);
     await page.goto("/chat/reviews");
+    await expect(page.locator("#signed-in-user")).toContainText("Signed in as");
     await page.getByRole("button", { name: "templates/review.oet · REVIEW_REQUESTED" }).click();
     await expect(page.locator("#identity")).toContainText("source-review-revision");
     await expect(page.locator("#validation-status")).toContainText("approval and publication are blocked");

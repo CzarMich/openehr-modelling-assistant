@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Share browser identity across chat and model governance with explicit platform-owner permissions.
+
+
 - Verified MCP protocol profile, negotiated clients and HTTP/stdio acceptance.
 
 - Add source-specific CKM authentication and bounded federated model discovery.

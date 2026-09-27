@@ -25,8 +25,8 @@ final class Settings
         'OIDC_TENANT_GIT_REMOTES' => '{}',
         'GOVERNANCE_ENABLED' => 'false', 'GOVERNANCE_DATABASE_PATH' => '/data/governance/audit.sqlite',
         'GOVERNANCE_BROWSER_ORIGIN' => '', 'GOVERNANCE_OIDC_ISSUER' => '', 'GOVERNANCE_BROWSER_KEYS' => '{}',
-        'GOVERNANCE_SESSION_MAX_AGE' => '900',
-        'GOVERNANCE_ROLE_MAP' => '{"modeller":["modelling-modeller"],"reviewer":["modelling-reviewer"],"approver":["modelling-approver"],"publisher":["modelling-publisher"]}',
+        'GOVERNANCE_SESSION_MAX_AGE' => '900', 'GOVERNANCE_BROWSER_SESSION_MAX_AGE' => '3600',
+        'GOVERNANCE_ROLE_MAP' => '{"modeller":["modelling-modeller","modelling-administrator"],"reviewer":["modelling-reviewer","modelling-administrator"],"approver":["modelling-approver","modelling-administrator"],"publisher":["modelling-publisher","modelling-administrator"]}',
         'CKM_API_BASE_URL' => 'https://ckm.openehr.org/ckm/rest/', 'CKM_TIMEOUT' => '15',
         'CKM_SOURCES' => '{}', 'CKM_DEFAULT_SOURCE' => 'default', 'CKM_AUTH' => '{}', 'CKM_FEDERATION_TIMEOUT' => '30',
         'TERMINOLOGY_FHIR_BASE_URL' => '', 'TERMINOLOGY_BEARER_TOKEN' => '',
@@ -111,6 +111,10 @@ final class Settings
         }
         if (!ctype_digit($this->get('GOVERNANCE_SESSION_MAX_AGE')) || (int) $this->get('GOVERNANCE_SESSION_MAX_AGE') < 60 || (int) $this->get('GOVERNANCE_SESSION_MAX_AGE') > 3600) {
             throw new InvalidArgumentException('Governance session maximum age must be 60..3600 seconds.');
+        }
+        if (!ctype_digit($this->get('GOVERNANCE_BROWSER_SESSION_MAX_AGE')) || (int) $this->get('GOVERNANCE_BROWSER_SESSION_MAX_AGE') < (int) $this->get('GOVERNANCE_SESSION_MAX_AGE')
+            || (int) $this->get('GOVERNANCE_BROWSER_SESSION_MAX_AGE') > 3600) {
+            throw new InvalidArgumentException('Governance browsing session must cover the decision freshness period and cannot exceed 3600 seconds.');
         }
         $this->governanceRoleMap();
         if ($this->governanceBrowserKeys() !== [] && ($this->get('GOVERNANCE_BROWSER_ORIGIN') === '' || $this->get('GOVERNANCE_OIDC_ISSUER') === '')) {

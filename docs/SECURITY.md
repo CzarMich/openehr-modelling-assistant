@@ -35,3 +35,5 @@ Document QA never fetches schema hints or executes supplied XML/JSON/path conten
 CKM credentials are per-source deployment service identities. Secret files are deployment-selected, read-only mounts; agents cannot provide paths or arbitrary destination URLs. Authentication profiles reject unsafe headers, duplicate JSON keys and redirects. Discovery/results never contain secrets or raw upstream errors. Inbound user identity does not automatically delegate private CKM entitlements. See [CKM sources](CKM_SOURCES.md).
 
 The MCP wire gate tests allowed and forbidden origins, hosts, malformed payloads, finite bodies and terminated sessions. Only explicit nonproduction loopback HTTP browser origins are accepted; production origins and outbound destinations still require HTTPS. See [MCP protocol](MCP_PROTOCOL.md).
+
+Browser chat and model governance share one verified human session. Review browsing and decision freshness have separate bounded lifetimes; the explicit platform-administrator role maps to all governance roles. See [review deployment](REVIEW_DEPLOYMENT.md#one-browser-identity-for-chat-and-governance).

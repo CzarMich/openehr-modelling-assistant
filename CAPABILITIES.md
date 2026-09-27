@@ -50,3 +50,5 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Visual editor | NOT IMPLEMENTED | Architecture prepared |
 | General REST application API and CLI | PARTIAL | Versioned review API/OpenAPI implemented; remaining model application endpoints and shared CLI follow |
 | Optional client packaging | WORKING | Default browser review image contains no model-provider executable; conversational adapter uses an explicit image target |
+
+Chat and model governance share the verified browser identity. Explicit platform-administrator permissions cover all governance roles; validation and human-review policy still govern transitions. See [review deployment](docs/REVIEW_DEPLOYMENT.md).

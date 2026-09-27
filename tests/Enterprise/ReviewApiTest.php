@@ -63,6 +63,25 @@ final class ReviewApiTest extends TestCase
         return new ServerRequest($method, 'https://models.example' . $target, ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'], $body);
     }
     private function target(): string { return '/api/v1/reviews/' . $this->view['subject']; }
+    public function test_chat_session_reads_governance_without_decision_freshness_bypass(): void
+    {
+        $old = ['session_started' => time() - 1800, 'roles' => ['modelling-administrator']];
+        self::assertSame(200, $this->api->handle($this->request('GET', $this->target(), replace: $old))->getStatusCode());
+        self::assertSame(401, $this->api->handle($this->request('POST', $this->target() . '/transitions', $this->input(), $old))->getStatusCode());
+        self::assertSame(401, $this->api->handle($this->request('GET', $this->target(), replace: ['session_started' => time() - 3601]))->getStatusCode());
+        $noRole = $this->api->handle($this->request('GET', $this->target(), replace: ['roles' => ['administrator']]));
+        self::assertSame(403, $noRole->getStatusCode());
+        self::assertStringContainsString('GOVERNANCE_ROLE_REQUIRED', (string) $noRole->getBody());
+    }
+    public function test_platform_administrator_has_all_governance_roles_without_skipping_lifecycle(): void
+    {
+        $owner = ['roles' => ['modelling-administrator']];
+        self::assertSame(403, $this->api->handle($this->request('POST', $this->target() . '/transitions', $this->input('PUBLISHED'), $owner))->getStatusCode());
+        $response = $this->api->handle($this->request('POST', $this->target() . '/transitions', $this->input(), $owner));
+        self::assertSame(200, $response->getStatusCode());
+        $this->view = json_decode((string) $response->getBody(), true, 64, JSON_THROW_ON_ERROR);
+        self::assertSame(200, $this->api->handle($this->request('POST', $this->target() . '/transitions', $this->input('APPROVED'), $owner))->getStatusCode());
+    }
     private function input(string $state = 'REVIEWED'): array
     {
         return ['state' => $state, 'expectedSequence' => $this->view['sequence'], 'comment' => 'Synthetic human review.', 'validationDigest' => $this->view['validation_digest']];
