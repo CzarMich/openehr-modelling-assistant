@@ -54,6 +54,10 @@ For read-only live acceptance, run `php scripts/terminology-smoke.php` inside th
 
 Tool names and existing positional arguments remain compatible. Optional arguments add edition, language and page control. Expansion count/offset bounds are enforced rather than silently clamped; count zero is supported. Repeated parameter values are now lists, and malformed duplicate singleton results fail closed. Local code-system checks previously compared against the value-set edition; provide `code_system_version` when pinning a local system edition. Existing unpinned local membership checks remain valid.
 
+## Managed project catalogue
+
+Use the [project terminology catalogue](TERMINOLOGY_CATALOGUE.md) for versioned local CodeSystem, multi-system ValueSet and ConceptMap records, or explicit external references, with repository history and conditional draft writes. Catalogue operations work offline for local content. The following original value-set/binding records remain supported for compatibility.
+
 ## Explicit records
 
 A local value set can be stored at `terminology/valuesets/feeding.json`:

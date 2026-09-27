@@ -2670,6 +2670,835 @@ Output schema:
 
 Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
 
+## `terminology_catalogue_expand`
+
+Expand explicit project value-set members with bounded paging; external references preserve provider version/coverage evidence.
+
+External dependency: configured FHIR terminology provider when an external source is selected.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "valueSet": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "count": {
+      "type": "integer",
+      "default": 50,
+      "minimum": 0,
+      "maximum": 500
+    },
+    "offset": {
+      "type": "integer",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "language": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "filter": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "valueSet"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_catalogue_expand",
+  "arguments": {
+    "project": "neonatal-care",
+    "valueSet": "https://example.org/sets/feeding",
+    "version": "1"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_catalogue_get`
+
+Read a project terminology resource by canonical and optional edition. Multiple editions require an explicit version; historical reads also require that version.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "code_system",
+        "value_set",
+        "concept_map"
+      ]
+    },
+    "canonical": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "revision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "kind",
+    "canonical"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_catalogue_get",
+  "arguments": {
+    "project": "neonatal-care",
+    "kind": "code_system",
+    "canonical": "https://example.org/local/feeding",
+    "version": "1"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_catalogue_lookup`
+
+Look up a code in a versioned project CodeSystem. Local resources work offline; explicit external references use the optional configured provider.
+
+External dependency: configured FHIR terminology provider when an external source is selected.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "system": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "language": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "system",
+    "code"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_catalogue_lookup",
+  "arguments": {
+    "project": "neonatal-care",
+    "system": "https://example.org/local/feeding",
+    "code": "mixed"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_catalogue_save`
+
+Save a versioned DRAFT local CodeSystem, ValueSet, ConceptMap or external reference in the project repository. Provenance is required; expectedRevision is required when replacing a record. This does not approve clinical content.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "record": {
+      "type": "object"
+    },
+    "expectedRevision": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "record"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_catalogue_save",
+  "arguments": {
+    "project": "neonatal-care",
+    "record": {
+      "kind": "code_system",
+      "canonical": "https://example.org/local/feeding",
+      "version": "1",
+      "name": "Feeding",
+      "provenance": {
+        "source": "Organisation-authored local draft"
+      },
+      "concepts": [
+        {
+          "code": "mixed",
+          "display": "Mixed feeding"
+        }
+      ]
+    }
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_catalogue_search`
+
+Deterministic project terminology search over names/descriptions and exact canonical identifiers. Invalid records remain explicit QA findings.
+
+External dependency: none.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "kind": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "enum": [
+        "code_system",
+        "value_set",
+        "concept_map",
+        null
+      ]
+    },
+    "canonical": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "query": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "count": {
+      "type": "integer",
+      "default": 50,
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 10000
+    }
+  },
+  "required": [
+    "project"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_catalogue_search",
+  "arguments": {
+    "project": "neonatal-care",
+    "query": "feeding"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_catalogue_translate`
+
+Read project ConceptMap candidates. Conditions, ambiguous targets and unconfirmed source editions remain explicit; no mapping is automatically applied.
+
+External dependency: configured FHIR terminology provider when an external source is selected.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "conceptMap": {
+      "type": "string"
+    },
+    "system": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "codeSystemVersion": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "targetSystem": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "conceptMap",
+    "system",
+    "code"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_catalogue_translate",
+  "arguments": {
+    "project": "neonatal-care",
+    "conceptMap": "https://example.org/maps/feeding",
+    "system": "https://example.org/local/feeding",
+    "code": "mixed"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
+## `terminology_catalogue_validate`
+
+Validate code-system or explicit value-set membership in the project catalogue, keeping resource and code-system editions separate. Draft checks do not confer clinical approval.
+
+External dependency: configured FHIR terminology provider when an external source is selected.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "system": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string"
+    },
+    "valueSet": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "version": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "codeSystemVersion": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "display": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    "language": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "project",
+    "system",
+    "code"
+  ],
+  "additionalProperties": false
+}
+```
+
+Example `tools/call` parameters:
+
+```json
+{
+  "name": "terminology_catalogue_validate",
+  "arguments": {
+    "project": "neonatal-care",
+    "system": "https://example.org/local/feeding",
+    "code": "mixed",
+    "version": "1"
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "success",
+    "result",
+    "error"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
+```
+
+Interpretation and errors: [terminology](TERMINOLOGY.md). Provider failures return NOT_EXECUTED; version confirmation and code membership are separate results.
+
 ## `terminology_diff`
 
 Compare value-set concepts semantically; report changes without automatically replacing codes.

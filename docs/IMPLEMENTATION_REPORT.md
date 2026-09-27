@@ -4,7 +4,7 @@
 
 The standalone project is named **openEHR Modelling Assistant**, with repository `CzarMich/openehr-modelling-assistant` and directory `/home/hyq/workspace/openehr-modelling-assistant`. Original MIT copyright and attribution remain intact. The application is independent of the CDR checkout, upstream hosting, client plugins, model-provider SDKs and a CDR.
 
-The implementation exposes 40 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
+The implementation exposes 47 MCP tools, preserves all 14 original prompts, 91 concrete resources and three resource templates, and keeps the bundled guides, BMM definitions, examples and terminology. It adds configurable branding, named CKM sources, provider-neutral projects with persistent revisions, bounded validation/diff/draft OET services, explicit terminology/value-set/binding records and a local/FHIR provider boundary. See the complete [capability matrix](../CAPABILITIES.md) and [generated tool catalogue](MCP_TOOLS.md).
 
 ## Incremental changes
 
@@ -99,3 +99,11 @@ The optional FHIR adapter supports ConceptMap translation, canonical CodeSystem/
 [Production-container contracts](evidence/terminology-contract-smoke.json) exercise these operations through MCP and authenticated HTTPS. [Development acceptance](evidence/terminology-development-acceptance.json) and [server acceptance](evidence/terminology-server-acceptance.json) record actual provider support independently. Missing server search endpoints or an unavailable live ConceptMap are not converted into successful acceptance. Native binding application and a managed terminology catalogue remain queued. See [terminology configuration, response interpretation and migration](TERMINOLOGY.md).
 
 The separately requested ICD-10-GM code was also probed with the authorized service principals: [development result](evidence/terminology-development-requested-dataset.json) and [server result](evidence/terminology-server-requested-dataset.json). Dataset visibility depends on principal and namespace; these probes do not establish availability for browser users. The successful core acceptance uses a code and expansion visible to the service principal.
+
+## Project terminology catalogue
+
+The application catalogue stores CodeSystem, multi-system ValueSet and ConceptMap records through every repository provider. It preserves canonical/edition identity, provenance, historical revisions and conditional draft writes. Pure local operations support explicit code membership, fragments, Unicode case rules, multilingual designations, bounded expansion and review-only mapping candidates. External references pin their recorded edition and never fall back to invented local success.
+
+Repository contracts exercise filesystem, Git and stateful SharePoint storage. Actual MCP container checks cover offline operation, versions, candidate review and stale-write rejection. Browser saves require exact-record confirmation. Invalid external edits remain QA findings. The [catalogue guide](TERMINOLOGY_CATALOGUE.md) documents schema, limits, migration and repeatable checks; native model binding application and terminology approval/publication remain separate work.
+
+[Catalogue verification](evidence/catalogue-verification.json), [Git MCP evidence](evidence/catalogue-git-smoke.json), [filesystem MCP evidence](evidence/catalogue-filesystem-smoke.json) and [SharePoint MCP evidence](evidence/catalogue-sharepoint-smoke.json) retain execution results. These are synthetic storage/protocol checks; they do not constitute clinical review or live SharePoint tenant acceptance.

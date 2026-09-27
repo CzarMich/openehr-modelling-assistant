@@ -118,7 +118,7 @@ def main():
         client.rpc("notifications/initialized", notify=True)
         record("initialize", init["serverInfo"])
         tools = client.listing("tools/list", "tools")
-        expected = {'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
+        expected = {'terminology_catalogue_save', 'terminology_catalogue_get', 'terminology_catalogue_search', 'terminology_catalogue_lookup', 'terminology_catalogue_validate', 'terminology_catalogue_expand', 'terminology_catalogue_translate', 'model_repository_info', 'model_repository_branches', 'model_repository_diff', 'model_branch_create', 'model_review_request', 'model_review_get', 'ckm_sources', 'ckm_archetype_search', 'ckm_archetype_get', 'ckm_template_search', 'ckm_template_get', 'guide_search', 'guide_get', 'guide_adl_idiom_lookup', 'examples_search', 'examples_get', 'type_specification_search', 'type_specification_get', 'terminology_resolve', 'model_projects', 'model_project_get', 'model_project_create', 'model_artifact_get', 'model_artifact_save', 'model_artifact_history', 'model_requirements_coverage', 'model_validate', 'model_diff', 'template_build_oet', 'model_qa', 'terminology_capabilities', 'terminology_lookup', 'terminology_validate_code', 'terminology_expand', 'terminology_translate', 'terminology_resource_search', 'terminology_resource_get', 'terminology_binding_validate', 'terminology_diff', 'terminology_manifest'}
         assert expected <= {t['name'] for t in tools}, 'Required tool missing from discovery'
         assert len({t['name'] for t in tools}) == len(tools)
         assert all(t['inputSchema'].get('additionalProperties') is False for t in tools)
@@ -185,6 +185,26 @@ def main():
             if repository.get('hosting') is None:
                 client.tool('model_review_request', {'branch':'acceptance/test','title':'Synthetic review'}, error=True)
                 record('unconfigured hosted review rejected')
+            system, value_set, concept_map = 'https://example.org/local/fixture', 'https://example.org/sets/fixture', 'https://example.org/maps/fixture'
+            common = {'name':'Synthetic terminology', 'provenance':{'source':'Independent MCP fixture'}}
+            cs = dict(common, kind='code_system', canonical=system, version='cs-1', concepts=[{'code':'x','display':'Synthetic X'}])
+            saved = client.tool('terminology_catalogue_save', {'project':project, 'record':cs})
+            vs = dict(common, kind='value_set', canonical=value_set, version='vs-2', concepts=[{'system':system,'version':'cs-1','code':'x','display':'Synthetic X'}])
+            client.tool('terminology_catalogue_save', {'project':project, 'record':vs})
+            mapping = dict(common, kind='concept_map', canonical=concept_map, version='map-3', mappings=[{'source':{'system':system,'version':'cs-1','code':'x'},'target':{'system':'urn:oid:1.2.3','code':'y'},'relationship':'equivalent'}])
+            client.tool('terminology_catalogue_save', {'project':project, 'record':mapping})
+            assert client.tool('terminology_catalogue_lookup', {'project':project,'system':system,'code':'x'})['valid'] is True
+            assert client.tool('terminology_catalogue_validate', {'project':project,'system':system,'code':'x','valueSet':value_set,'version':'vs-2','codeSystemVersion':'cs-1'})['valid'] is True
+            assert client.tool('terminology_catalogue_expand', {'project':project,'valueSet':value_set})['complete'] is True
+            candidates = client.tool('terminology_catalogue_translate', {'project':project,'conceptMap':concept_map,'system':system,'code':'x'})
+            assert candidates['mapping_found'] and candidates['requires_review'] and candidates['applied'] is False
+            assert client.tool('terminology_catalogue_search', {'project':project})['total'] == 3
+            cs['description'] = 'Updated fixture description'
+            client.tool('terminology_catalogue_save', {'project':project,'record':cs,'expectedRevision':saved['revision']})
+            client.tool('terminology_catalogue_save', {'project':project,'record':cs,'expectedRevision':saved['revision']},error=True)
+            old = client.tool('terminology_catalogue_get', {'project':project,'kind':'code_system','canonical':system,'version':'cs-1','revision':saved['revision']})
+            assert 'description' not in old['resource'] and old['clinical_approval'] is False
+            record('offline terminology catalogue, versions, mapping review and revision conflicts')
         if args.live_ckm:
             for name, arguments in [('ckm_archetype_search', {'keyword':'body weight','maxResults':2}),
                                     ('ckm_archetype_get', {'identifier':'openEHR-EHR-OBSERVATION.body_weight.v2','format':'adl'}),

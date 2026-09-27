@@ -10,7 +10,7 @@ use OpenEHR\Assistant\Configuration\Settings;
 use OpenEHR\Assistant\Domain\Terminology\TerminologyProvider;
 
 /** FHIR is an adapter format. No FHIR resource classes enter the modelling domain. */
-final readonly class FhirTerminologyProvider implements TerminologyProvider
+final readonly class FhirTerminologyProvider implements TerminologyProvider, \OpenEHR\Assistant\Domain\Terminology\MappingProvider
 {
     private ?Client $client;
     private string $endpoint;

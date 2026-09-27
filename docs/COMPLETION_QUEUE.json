@@ -2,7 +2,7 @@
   "schema_version": 1,
   "baseline_revision": "295cb60f212b2f79a90f9943d71bded26d9adbb1",
   "active_phase": 1,
-  "active_capability": "terminology",
+  "active_capability": "binding",
   "statuses": [
     "IMPLEMENTED",
     "PARTIAL",
@@ -76,9 +76,16 @@
     {
       "id": "terminology",
       "status": "PARTIAL",
-      "scope": "Local snapshots plus FHIR lookup/validation/expansion/translation and canonical discovery; managed catalogue and native bindings remain",
+      "scope": "Managed versioned local CodeSystem/ValueSet/ConceptMap catalogue, offline operations and optional FHIR protocol; native binding and terminology governance remain",
       "implementation": "src/Domain/Terminology/TerminologyProvider.php",
-      "evidence": "docs/evidence/terminology-contract-smoke.json"
+      "evidence": "tests/Enterprise/TerminologyCatalogueTest.php"
+    },
+    {
+      "id": "terminology-catalogue",
+      "status": "IMPLEMENTED",
+      "scope": "Project CodeSystem/ValueSet/ConceptMap records, revision history and offline operations on all repository providers",
+      "implementation": "src/Application/TerminologyCatalogue.php",
+      "evidence": "docs/evidence/catalogue-sharepoint-smoke.json"
     },
     {
       "id": "binding",

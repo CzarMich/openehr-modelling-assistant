@@ -8,7 +8,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Branding and named CKM selection | WORKING | Administrator-configured HTTPS sources; same CKM REST contract |
 | Existing CKM, guide, examples, terminology and type tools | WORKING | Upstream features retained |
 | Persistent projects, artifacts, metadata and history | WORKING | Filesystem/SharePoint snapshots or plain files in Git; expected revisions and opt-in writes |
-| Local value sets, lookup and code membership | WORKING | Explicit codes, independent value-set/system versions and language designations; inactive codes rejected |
+| Project terminology catalogue | WORKING | Versioned local CodeSystem, multi-system ValueSet and ConceptMap records; repository revisions, deterministic search and explicit external references |
+| Local terminology operations | WORKING | Offline lookup, membership, expansion and review-only mapping candidates; independent editions, language, fragment and hierarchy rules |
 | Modelling without terminology server or bindings | WORKING | Authenticated Git persistence, local checks and empty terminology manifests verified over HTTPS |
 | External FHIR terminology (optional) | WORKING | Capabilities, multilingual lookup, code/value-set validation, bounded expansion and version evidence; provider-dependent datasets |
 | FHIR ConceptMap translation | WORKING | Explicit map and source coding; repeated candidates retained, human review required, no automatic application |

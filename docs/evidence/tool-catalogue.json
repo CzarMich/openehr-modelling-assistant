@@ -14,6 +14,660 @@
     }
   },
   {
+    "name": "terminology_catalogue_save",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "record": {
+          "type": "object"
+        },
+        "expectedRevision": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "record"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Save a versioned DRAFT local CodeSystem, ValueSet, ConceptMap or external reference in the project repository. Provenance is required; expectedRevision is required when replacing a record. This does not approve clinical content.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_catalogue_get",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "code_system",
+            "value_set",
+            "concept_map"
+          ]
+        },
+        "canonical": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "revision": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "kind",
+        "canonical"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Read a project terminology resource by canonical and optional edition. Multiple editions require an explicit version; historical reads also require that version.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_catalogue_search",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "kind": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null,
+          "enum": [
+            "code_system",
+            "value_set",
+            "concept_map",
+            null
+          ]
+        },
+        "canonical": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "query": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "count": {
+          "type": "integer",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 100
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 10000
+        }
+      },
+      "required": [
+        "project"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Deterministic project terminology search over names/descriptions and exact canonical identifiers. Invalid records remain explicit QA findings.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_catalogue_lookup",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "language": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "system",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Look up a code in a versioned project CodeSystem. Local resources work offline; explicit external references use the optional configured provider.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_catalogue_validate",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "valueSet": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "version": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "codeSystemVersion": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "display": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "language": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "system",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Validate code-system or explicit value-set membership in the project catalogue, keeping resource and code-system editions separate. Draft checks do not confer clinical approval.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_catalogue_expand",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "valueSet": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "count": {
+          "type": "integer",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 500
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "language": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "filter": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "valueSet"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Expand explicit project value-set members with bounded paging; external references preserve provider version/coverage evidence.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "terminology_catalogue_translate",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "conceptMap": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "codeSystemVersion": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        },
+        "targetSystem": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "project",
+        "conceptMap",
+        "system",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "description": "Read project ConceptMap candidates. Conditions, ambiguous targets and unconfirmed source editions remain explicit; no mapping is automatically applied.",
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "success",
+        "result",
+        "error"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "result": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "model_projects",
     "inputSchema": {
       "type": "object",

@@ -97,3 +97,5 @@ docker exec -i openehr-modelling-dev-chat-1 node --input-type=module < chat/test
 ```
 
 This probe uses the configured provider account and reports successful turns and container task limits without printing conversation content or credentials. The container allows 512 tasks; each provider process limits its Tokio and Rayon worker pools to two threads. This avoids exhausting the process/thread allowance on hosts with many CPU cores.
+
+The MCP client bounds a complete response at 16 MiB, including both structured and text representations. This permits bounded catalogue/model records without truncating the protocol result; streaming is cancelled above the limit. Tool outputs remain untrusted input to the assistant, and writes still require exact-change confirmation.

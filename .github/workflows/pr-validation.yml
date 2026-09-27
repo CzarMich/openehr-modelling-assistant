@@ -21,7 +21,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: curl, dom, json, simplexml
+          extensions: curl, dom, json, mbstring, simplexml
           coverage: none
 
       - name: Install dependencies

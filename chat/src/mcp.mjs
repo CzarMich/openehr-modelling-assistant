@@ -3,6 +3,7 @@ export const WRITE_TOOLS = new Set([
     "model_artifact_save",
     "model_branch_create",
     "model_review_request",
+    "terminology_catalogue_save",
 ]);
 export const READ_TOOLS = new Set([
     "ckm_sources",
@@ -41,6 +42,12 @@ export const READ_TOOLS = new Set([
     "terminology_binding_validate",
     "terminology_diff",
     "terminology_manifest",
+    "terminology_catalogue_get",
+    "terminology_catalogue_search",
+    "terminology_catalogue_lookup",
+    "terminology_catalogue_validate",
+    "terminology_catalogue_expand",
+    "terminology_catalogue_translate",
 ]);
 export class McpClient {
     constructor(config, signal) {
@@ -73,7 +80,7 @@ export class McpClient {
             const { done, value } = await reader.read();
             if (done) break;
             size += value.length;
-            if (size > 2097152) {
+            if (size > 16 * 1024 * 1024) {
                 await reader.cancel();
                 throw new Error("Modelling response too large");
             }
