@@ -19,6 +19,9 @@ final class Settings
         'MCP_ALLOWED_HOSTS' => 'localhost,127.0.0.1,[::1]', 'CORS_ALLOWED_ORIGINS' => '',
         'AUTH_MODE' => 'none', 'AUTH_API_KEY' => '', 'AUTH_API_KEY_HEADER' => 'X-API-Key',
         'OIDC_ISSUER' => '', 'OIDC_AUDIENCE' => '', 'OIDC_JWKS_URI' => '',
+        'OIDC_CLOCK_SKEW' => '60', 'OIDC_MAX_TOKEN_AGE' => '7200', 'OIDC_ALLOWED_CLIENT_IDS' => '',
+        'OIDC_REQUIRED_SCOPES' => 'modelling.read', 'OIDC_ROLES_CLAIM' => 'roles', 'OIDC_REQUIRED_ROLES' => '',
+        'OIDC_WRITE_ROLES' => 'modeller,administrator', 'OIDC_TENANT_CLAIM' => '', 'OIDC_ALLOWED_TENANTS' => '',
         'CKM_API_BASE_URL' => 'https://ckm.openehr.org/ckm/rest/', 'CKM_TIMEOUT' => '15',
         'CKM_SOURCES' => '{}', 'CKM_DEFAULT_SOURCE' => 'default',
         'TERMINOLOGY_FHIR_BASE_URL' => '', 'TERMINOLOGY_BEARER_TOKEN' => '',
@@ -59,6 +62,10 @@ final class Settings
         }
         if (!ctype_digit($this->get('MODEL_GIT_SYNC_SECONDS')) || (int) $this->get('MODEL_GIT_SYNC_SECONDS') > 300 || (int) $this->get('MODEL_GIT_TIMEOUT') > 120) {
             throw new InvalidArgumentException('Git sync must be 0..300 seconds and timeout 1..120 seconds.');
+        }
+        if (!ctype_digit($this->get('OIDC_CLOCK_SKEW')) || (int) $this->get('OIDC_CLOCK_SKEW') > 120
+            || !ctype_digit($this->get('OIDC_MAX_TOKEN_AGE')) || (int) $this->get('OIDC_MAX_TOKEN_AGE') < 60 || (int) $this->get('OIDC_MAX_TOKEN_AGE') > 86400) {
+            throw new InvalidArgumentException('Invalid OIDC clock or token age configuration.');
         }
         if ((int) $this->get('MCP_PORT') > 65535) {
             throw new InvalidArgumentException('MCP_PORT must be <= 65535.');
@@ -119,6 +126,9 @@ final class Settings
         }
         return new self($values);
     }
+
+    /** @param array<string, string> $overrides */
+    public function with(array $overrides): self { return new self(array_replace($this->values, $overrides)); }
 
     public function get(string $key): string
     {

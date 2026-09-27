@@ -8,13 +8,14 @@ use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;
 use OpenEHR\Assistant\Configuration\Settings;
+use OpenEHR\Assistant\Auth\AccessPolicy;
 use OpenEHR\Assistant\Domain\Repository\ModelRepository;
 use OpenEHR\Assistant\Domain\Modelling\Traceability;
 use OpenEHR\Assistant\Helpers\ToolResult;
 
 final readonly class ProjectService
 {
-    public function __construct(private ModelRepository $repository, private Settings $settings, private Traceability $traceability)
+    public function __construct(private ModelRepository $repository, private Settings $settings, private Traceability $traceability, private ?AccessPolicy $access = null)
     {
     }
 
@@ -100,8 +101,6 @@ final readonly class ProjectService
 
     private function assertWrites(): void
     {
-        if ($this->settings->get('MODEL_REPOSITORY_WRITE_ENABLED') !== 'true') {
-            throw new \RuntimeException('WRITES_DISABLED');
-        }
+        ($this->access ?? new AccessPolicy($this->settings))->assertModelWrite();
     }
 }
