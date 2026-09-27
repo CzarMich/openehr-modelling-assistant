@@ -22,6 +22,7 @@ final class Settings
         'OIDC_CLOCK_SKEW' => '60', 'OIDC_MAX_TOKEN_AGE' => '7200', 'OIDC_ALLOWED_CLIENT_IDS' => '',
         'OIDC_REQUIRED_SCOPES' => 'modelling.read', 'OIDC_ROLES_CLAIM' => 'roles', 'OIDC_REQUIRED_ROLES' => '',
         'OIDC_WRITE_ROLES' => 'modeller,administrator', 'OIDC_TENANT_CLAIM' => '', 'OIDC_ALLOWED_TENANTS' => '',
+        'PROJECT_RBAC_ENABLED' => 'false',
         'OIDC_TENANT_GIT_REMOTES' => '{}',
         'GOVERNANCE_DATABASE_DRIVER' => 'sqlite', 'GOVERNANCE_POSTGRES_DSN' => '',
         'GOVERNANCE_POSTGRES_USER' => 'modelling_app', 'GOVERNANCE_POSTGRES_PASSWORD_FILE' => '',
@@ -90,7 +91,7 @@ final class Settings
         if ((int) $this->get('MCP_PORT') > 65535) {
             throw new InvalidArgumentException('MCP_PORT must be <= 65535.');
         }
-        foreach (['HTTP_SSL_VERIFY', 'MODEL_REPOSITORY_WRITE_ENABLED', 'GOVERNANCE_ENABLED'] as $key) {
+        foreach (['HTTP_SSL_VERIFY', 'MODEL_REPOSITORY_WRITE_ENABLED', 'GOVERNANCE_ENABLED', 'PROJECT_RBAC_ENABLED'] as $key) {
             if (!in_array($this->get($key), ['true', 'false'], true)) {
                 throw new InvalidArgumentException("$key must be true or false.");
             }
@@ -100,6 +101,9 @@ final class Settings
         }
         if ($this->get('AUTH_MODE') === 'api_key' && strlen($this->get('AUTH_API_KEY')) < 32) {
             throw new InvalidArgumentException('AUTH_API_KEY must contain at least 32 characters.');
+        }
+        if ($this->get('PROJECT_RBAC_ENABLED') === 'true' && $this->get('AUTH_MODE') !== 'oidc') {
+            throw new InvalidArgumentException('PROJECT_RBAC_ENABLED requires AUTH_MODE=oidc.');
         }
         if (!preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $this->get('AUTH_API_KEY_HEADER')) || !preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $this->get('TERMINOLOGY_API_KEY_HEADER'))) {
             throw new InvalidArgumentException('Invalid AUTH_API_KEY_HEADER.');

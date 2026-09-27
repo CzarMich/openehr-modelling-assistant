@@ -152,6 +152,58 @@ final class OidcAuthenticationTest extends TestCase
         $two->getProject('private-project');
     }
 
+    public function test_project_scopes_filter_reads_and_enforce_writes_at_repository_boundary(): void
+    {
+        $root = sys_get_temp_dir() . '/oidc-projects-' . bin2hex(random_bytes(8));
+        $settings = $this->settings(['MODEL_REPOSITORY_PATH' => $root, 'PROJECT_RBAC_ENABLED' => 'true']);
+        $tenant = hash('sha256', 'tenant');
+        $admin = RepositoryFactory::create($settings, new Principal('admin', $tenant, [], ['projects:admin']));
+        $admin->createProject('allowed', 'Allowed', '');
+        $admin->createProject('denied', 'Denied', '');
+        $reader = RepositoryFactory::create($settings, new Principal('reader', $tenant, ['reader'], ['project:allowed:read']));
+        self::assertSame(['allowed'], array_column($reader->listProjects(), 'id'));
+        self::assertSame('allowed', $reader->getProject('allowed')['id']);
+        $this->expectExceptionMessage('PROJECT_PERMISSION_REQUIRED');
+        $reader->getProject('denied');
+    }
+
+    public function test_verified_oidc_scope_claim_grants_only_the_named_project(): void
+    {
+        $root = sys_get_temp_dir() . '/oidc-project-claims-' . bin2hex(random_bytes(8));
+        $settings = $this->settings(['MODEL_REPOSITORY_PATH' => $root, 'PROJECT_RBAC_ENABLED' => 'true']);
+        $identity = $this->verifier(settings: $settings)->identity($this->request($this->claims(['scope' => 'modelling.read project:allowed:read'])));
+        self::assertNotNull($identity);
+        self::assertContains('project:allowed:read', $identity->scopes);
+        $admin = RepositoryFactory::create($settings, new Principal('admin', $identity->tenant, [], ['projects:admin']));
+        $admin->createProject('allowed', 'Allowed', '');
+        $admin->createProject('denied', 'Denied', '');
+        $scoped = RepositoryFactory::create($settings, $identity);
+        self::assertSame(['allowed'], array_column($scoped->listProjects(), 'id'));
+    }
+
+    public function test_project_read_scope_cannot_write_and_write_scope_grants_project_access(): void
+    {
+        $root = sys_get_temp_dir() . '/oidc-project-write-' . bin2hex(random_bytes(8));
+        $settings = $this->settings(['MODEL_REPOSITORY_PATH' => $root, 'PROJECT_RBAC_ENABLED' => 'true']);
+        $tenant = hash('sha256', 'tenant');
+        RepositoryFactory::create($settings, new Principal('admin', $tenant, [], ['projects:admin']))->createProject('p', 'P', '');
+        $reader = RepositoryFactory::create($settings, new Principal('reader', $tenant, ['reader'], ['project:p:read']));
+        try {
+            $reader->saveArtifact('p', 'templates/a.oet', '<template/>', [], null);
+            self::fail('Read-only project grant wrote an artifact.');
+        } catch (\RuntimeException $error) {
+            self::assertSame('PROJECT_PERMISSION_REQUIRED', $error->getMessage());
+        }
+        $writer = RepositoryFactory::create($settings, new Principal('writer', $tenant, ['modeller'], ['project:p:write']));
+        self::assertNotSame('', $writer->saveArtifact('p', 'templates/a.oet', '<template/>', [], null)['revision']);
+    }
+
+    public function test_project_rbac_requires_verified_oidc_mode(): void
+    {
+        $this->expectExceptionMessage('PROJECT_RBAC_ENABLED requires AUTH_MODE=oidc.');
+        new Settings(['PROJECT_RBAC_ENABLED' => 'true']);
+    }
+
     public function test_discovery_verifies_issuer_and_reuses_cached_keys(): void
     {
         $settings = $this->settings(['OIDC_JWKS_URI' => '']);

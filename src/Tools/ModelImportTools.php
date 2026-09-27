@@ -35,6 +35,7 @@ final readonly class ModelImportTools
     #[Schema(properties: ['sourceClaims' => ['type' => ['object', 'null'], 'additionalProperties' => false, 'default' => null,
         'properties' => ['source_system' => ['type' => 'string', 'maxLength' => 1000], 'tool_version' => ['type' => 'string', 'maxLength' => 1000],
             'external_identifier' => ['type' => 'string', 'maxLength' => 1000], 'external_revision' => ['type' => 'string', 'maxLength' => 1000],
+            'external_status' => ['type' => 'string', 'maxLength' => 1000],
             'exported_at' => ['type' => 'string', 'maxLength' => 30], 'licence' => ['type' => 'string', 'maxLength' => 1000], 'copyright' => ['type' => 'string', 'maxLength' => 1000]]]], additionalProperties: false)]
     #[McpTool(name: 'model_artifact_import', annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
     public function import(

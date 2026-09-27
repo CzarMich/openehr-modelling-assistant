@@ -37,6 +37,18 @@ final readonly class ValueSet
                     throw new InvalidArgumentException('Concept status flags must be booleans.');
                 }
             }
+            if (isset($concept['parents'])) {
+                if (!is_array($concept['parents']) || !array_is_list($concept['parents']) || count($concept['parents']) > 50) {
+                    throw new InvalidArgumentException('Concept parents must be a bounded list.');
+                }
+                $parents = [];
+                foreach ($concept['parents'] as $parent) {
+                    if (!is_string($parent) || $parent === '' || strlen($parent) > 500 || isset($parents[$parent])) {
+                        throw new InvalidArgumentException('Concept parents must be unique non-empty codes.');
+                    }
+                    $parents[$parent] = true;
+                }
+            }
             $designations = $concept['designation'] ?? [];
             if (!is_array($designations) || !array_is_list($designations) || count($designations) > 100) {
                 throw new InvalidArgumentException('Concept designations must be a bounded list.');

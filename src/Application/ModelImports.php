@@ -150,7 +150,7 @@ final readonly class ModelImports
      * @return array<string, string> */
     private static function claims(array $claims): array
     {
-        $allowed = ['source_system', 'tool_version', 'external_identifier', 'external_revision', 'exported_at', 'licence', 'copyright'];
+        $allowed = ['source_system', 'tool_version', 'external_identifier', 'external_revision', 'external_status', 'exported_at', 'licence', 'copyright'];
         if (array_diff(array_keys($claims), $allowed) !== []) {
             throw new \InvalidArgumentException('IMPORT_SOURCE_CLAIMS_INVALID');
         }

@@ -73,6 +73,15 @@ final readonly class InteractiveReviewAuthenticator
                     return null;
                 }
             }
+            $projectScopes = $claims['project_scopes'] ?? [];
+            if (!is_array($projectScopes) || !array_is_list($projectScopes) || count($projectScopes) > 100) {
+                return null;
+            }
+            foreach ($projectScopes as $scope) {
+                if (!is_string($scope) || !preg_match('/^(?:projects:admin|projects:create|project:[A-Za-z0-9._-]{1,100}:(?:read|write))$/D', $scope)) {
+                    return null;
+                }
+            }
             $roles = [];
             foreach ($this->settings->governanceRoleMap() as $role => $accepted) {
                 if (array_intersect($rawRoles, $accepted) !== []) {
@@ -108,7 +117,8 @@ final readonly class InteractiveReviewAuthenticator
                 $tenant,
                 $roles,
                 true,
-                'interactive_oidc'
+                'interactive_oidc',
+                $projectScopes
             );
             $this->audit->consumeNonce($claims['jti'], $claims['exp']);
             return $actor;

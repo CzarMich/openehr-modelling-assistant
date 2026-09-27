@@ -149,7 +149,7 @@ final class ModelValidator
                     $text .= $child->wholeText;
                 }
             }
-            $result[$key] = ['attributes' => $attributes, 'text' => trim($text)];
+            $result[$key] = ['element' => $element->localName, 'attributes' => $attributes, 'text' => trim($text)];
             foreach ($element->childNodes as $child) {
                 if ($child instanceof DOMElement) {
                     $walk($child, $key);
@@ -174,8 +174,82 @@ final class ModelValidator
                 $changed[$path] = ['before' => $value, 'after' => $b[$path]];
             }
         }
-        return ['scope' => 'xml_structure_attributes_and_leaf_values', 'added' => array_diff_key($b, $a),
-            'removed' => array_diff_key($a, $b), 'changed' => $changed,
-            'limitations' => ['Not full openEHR semantic equivalence; renamed placements appear as removal and addition.']];
+        $added = array_diff_key($b, $a);
+        $removed = array_diff_key($a, $b);
+        $semanticDifferences = [];
+        foreach ($added as $path => $value) {
+            $semanticDifferences[] = ['change' => 'added', 'location' => $path, 'dimension' => $this->semanticDimension($value['element'], '', $value['text']), 'before' => null, 'after' => $value];
+        }
+        foreach ($removed as $path => $value) {
+            $semanticDifferences[] = ['change' => 'removed', 'location' => $path, 'dimension' => $this->semanticDimension($value['element'], '', $value['text']), 'before' => $value, 'after' => null];
+        }
+        foreach ($changed as $path => $delta) {
+            $beforeValue = $delta['before'];
+            $afterValue = $delta['after'];
+            $attributes = array_unique(array_merge(array_keys($beforeValue['attributes']), array_keys($afterValue['attributes'])));
+            foreach ($attributes as $attribute) {
+                $attribute = (string) $attribute;
+                $old = $beforeValue['attributes'][$attribute] ?? null;
+                $new = $afterValue['attributes'][$attribute] ?? null;
+                if ($old !== $new) {
+                    $semanticDifferences[] = ['change' => 'modified', 'location' => $path, 'field' => $attribute,
+                        'dimension' => $this->semanticDimension($afterValue['element'], $attribute, (string) ($new ?? $old)), 'before' => $old, 'after' => $new];
+                }
+            }
+            if ($beforeValue['text'] !== $afterValue['text']) {
+                $semanticDifferences[] = ['change' => 'modified', 'location' => $path, 'field' => 'text',
+                    'dimension' => $this->semanticDimension($afterValue['element'], 'text', $afterValue['text']),
+                    'before' => $beforeValue['text'], 'after' => $afterValue['text']];
+            }
+            if ($beforeValue['element'] !== $afterValue['element']) {
+                $semanticDifferences[] = ['change' => 'modified', 'location' => $path, 'field' => 'element',
+                    'dimension' => 'structure', 'before' => $beforeValue['element'], 'after' => $afterValue['element']];
+            }
+        }
+        return ['scope' => 'bounded_xml_semantic_projection', 'status' => 'PARTIAL', 'added' => $added,
+            'removed' => $removed, 'changed' => $changed, 'semantic_differences' => $semanticDifferences,
+            'limitations' => ['This projection classifies explicit XML changes but does not resolve inherited constraints, dependencies, or prove full openEHR semantic equivalence.', 'Renamed placements appear as removal and addition.']];
+    }
+
+    private function semanticDimension(string $element, string $field, string $value): string
+    {
+        $name = strtolower($element . ' ' . $field);
+        if (preg_match('/(^|\s|_)(language|lang)(_|\s|$)/', $name)) {
+            return 'languages';
+        }
+        if (str_contains($name, 'terminology') || str_contains($name, 'value_set') || str_contains($name, 'code_phrase') || str_contains($name, 'code_string')) {
+            return 'terminology_bindings';
+        }
+        if (str_contains($name, 'slot') || str_contains($name, 'archetype_ref') || str_contains($name, 'include')) {
+            return 'slots_and_dependencies';
+        }
+        if (str_contains($name, 'annotation') || str_contains($name, 'comment')) {
+            return 'annotations';
+        }
+        if (str_contains($name, 'description') || in_array(strtolower($element), ['name', 'purpose', 'use', 'misuse', 'keywords'], true)) {
+            return 'descriptions';
+        }
+        if (str_contains($name, 'occurrence') || str_contains($name, 'cardinality') || preg_match('/(^|\s)(min|max|lower|upper)(\s|$)/', $name)) {
+            return 'occurrences_and_cardinalities';
+        }
+        if (str_contains($name, 'unit')) {
+            return 'units';
+        }
+        if (str_contains($name, 'path')) {
+            return 'paths';
+        }
+        if (str_contains($name, 'archetype_id') || str_contains($name, 'template_id') || str_contains($name, 'identifier')) {
+            return 'archetype_identifiers';
+        }
+        if (str_contains($name, 'node_id') || preg_match('/\bat[0-9]{4,}\b/', $value)) {
+            return 'node_identifiers';
+        }
+        if (str_contains($name, 'rm_type') || str_contains($name, 'xsi:type')) {
+            return 'rm_types';
+        }
+        if (str_starts_with(strtolower($element), 'c_') || str_contains($name, 'constraint') || str_contains($name, 'rule')) {
+            return 'constraints';
+        }
+        return 'structure_or_unclassified';
     }
 }

@@ -49,7 +49,22 @@ final class ModelValidationTest extends TestCase
         $validator = new ModelValidator();
         $same = str_replace('min="0" max="1"', 'max="1" min="0"', self::OET);
         self::assertSame([], $validator->diff(self::OET, $same)['changed']);
-        self::assertCount(1, $validator->diff(self::OET, str_replace('min="0"', 'min="1"', self::OET))['changed']);
+        $diff = $validator->diff(self::OET, str_replace('min="0"', 'min="1"', self::OET));
+        self::assertCount(1, $diff['changed']);
+        self::assertSame('PARTIAL', $diff['status']);
+        self::assertSame('occurrences_and_cardinalities', $diff['semantic_differences'][0]['dimension']);
+    }
+
+    public function test_semantic_diff_classifies_terminology_and_language_changes(): void
+    {
+        $validator = new ModelValidator();
+        $before = '<template><languages><language>en</language></languages><terminology><value_set id="one"/></terminology></template>';
+        $after = '<template><languages><language>nl</language></languages><terminology><value_set id="two"/></terminology></template>';
+        $diff = $validator->diff($before, $after);
+        $dimensions = array_column($diff['semantic_differences'], 'dimension');
+        self::assertContains('languages', $dimensions);
+        self::assertContains('terminology_bindings', $dimensions);
+        self::assertSame('bounded_xml_semantic_projection', $diff['scope']);
     }
 
     public function test_adl_preflight_distinguishes_invalid_identifiers_and_partial_validation(): void

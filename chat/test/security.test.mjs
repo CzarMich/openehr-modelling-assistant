@@ -418,18 +418,30 @@ test("retention removes stale conversations even when their owners do not return
     assert.equal(f.store.get("active-user", recent.id).id, recent.id);
 });
 
-test("review identity retains only signed OIDC subject, tenant and configured roles", async () => {
-    const f = oidcFixture({ roles: ["modelling-reviewer"], organisation: "hospital-a" });
+test("review identity retains signed OIDC subject, tenant, roles and bounded project scopes", async () => {
+    const f = oidcFixture({
+        roles: ["modelling-reviewer"],
+        organisation: "hospital-a",
+        project_scopes: ["project:alpha:read"],
+    });
     f.auth.config.reviewEnabled = true;
     f.auth.config.reviewTenantClaim = "organisation";
     await f.auth.callback(f.req, f.res);
     const saved = [...f.auth.sessions.values()][0].reviewIdentity;
     assert.deepEqual(saved.roles, ["modelling-reviewer"]);
+    assert.deepEqual(saved.projectScopes, ["project:alpha:read"]);
     assert.equal(saved.tenant, "hospital-a");
     assert.equal(saved.issuer, "https://identity.example/realm");
     assert.equal(typeof saved.subject, "string");
     assert.equal(typeof saved.started, "number");
     assert.equal(JSON.stringify(f.headers).includes("modelling-reviewer"), false);
+});
+
+test("malformed project scopes cannot establish an interactive review identity", async () => {
+    const f = oidcFixture({ project_scopes: ["project:*:read"] });
+    f.auth.config.reviewEnabled = true;
+    await assert.rejects(() => f.auth.callback(f.req, f.res));
+    assert.equal(f.auth.sessions.size, 0);
 });
 
 test("malformed review roles cannot establish an interactive approval identity", async () => {

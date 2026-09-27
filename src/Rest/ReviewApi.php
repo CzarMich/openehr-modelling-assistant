@@ -41,7 +41,8 @@ final readonly class ReviewApi
             return $this->error(403, 'GOVERNANCE_ROLE_REQUIRED');
         }
         try {
-            $identity = new Principal($actor->id, $actor->tenant, $actor->roles, ['governance.write'], true, 'interactive_oidc');
+            $identity = new Principal($actor->id, $actor->tenant, $actor->roles,
+                [...$actor->projectScopes, 'governance.write'], true, 'interactive_oidc');
             $service = new ModelGovernance(
                 RepositoryFactory::create($this->settings, $identity),
                 $this->audit,

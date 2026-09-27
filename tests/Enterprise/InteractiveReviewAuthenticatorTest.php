@@ -50,6 +50,13 @@ final class InteractiveReviewAuthenticatorTest extends TestCase
         $platformAdmin = $auth->authenticate($this->request(['roles' => ['modelling-administrator']])); self::assertNotNull($platformAdmin);
         self::assertSame(['modeller', 'reviewer', 'approver', 'publisher'], $platformAdmin->roles);
     }
+    public function test_signed_project_scopes_are_retained_for_repository_authorization(): void
+    {
+        $auth = new InteractiveReviewAuthenticator($this->settings(), new SqliteAuditStore(':memory:'));
+        $actor = $auth->authenticate($this->request(['project_scopes' => ['project:alpha:read', 'project:beta:write']]));
+        self::assertNotNull($actor);
+        self::assertSame(['project:alpha:read', 'project:beta:write'], $actor->projectScopes);
+    }
     public function test_oidc_actor_identity_and_tenant_match_native_bearer_subject_without_granting_bearer_human_status(): void
     {
         $settings = $this->settings(['AUTH_MODE' => 'oidc', 'OIDC_ISSUER' => self::ISSUER, 'OIDC_AUDIENCE' => 'modelling-api',
@@ -66,7 +73,9 @@ final class InteractiveReviewAuthenticatorTest extends TestCase
             [['sub' => '']], [['exp' => 1]], [['iat' => 1]], [['exp' => time() + 86400]], [['iat' => time() + 86400]],
             [['session_started' => time() - 86400]], [['session_started' => time() + 86400]], [['method' => 'GET']],
             [['target' => '/mcp']], [['body_sha256' => str_repeat('0', 64)]], [['jti' => 'bad']], [['tenant' => 'another']],
-            [['roles' => 'modelling-approver']], [['roles' => array_fill(0, 101, 'modelling-approver')]]];
+            [['roles' => 'modelling-approver']], [['roles' => array_fill(0, 101, 'modelling-approver')]],
+            [['project_scopes' => 'project:alpha:read']], [['project_scopes' => ['project:*:read']]],
+            [['project_scopes' => array_fill(0, 101, 'project:alpha:read')]]];
     }
     #[DataProvider('invalidClaims')]
     public function test_wrong_audience_time_identity_roles_and_request_binding_fail_closed(array $claims): void

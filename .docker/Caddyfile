@@ -20,7 +20,7 @@
     handle / {
         reverse_proxy chat:8350
     }
-    @mcp path /mcp /health /ready /api/v1/reviews /api/v1/reviews/*
+    @mcp path /mcp /health /ready /api/v1/reviews /api/v1/reviews/* /api/v1/projects /api/v1/projects/* /api/v1/artifacts /api/v1/artifact-history
     handle @mcp {
         reverse_proxy app:9000 {
             transport fastcgi {

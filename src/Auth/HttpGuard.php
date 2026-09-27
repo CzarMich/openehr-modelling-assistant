@@ -33,7 +33,7 @@ final readonly class HttpGuard
         if ($request->getMethod() === 'OPTIONS') {
             return new Response(204, [
                 'Access-Control-Allow-Origin' => $origin,
-                'Access-Control-Allow-Methods' => 'POST, GET, DELETE',
+                'Access-Control-Allow-Methods' => 'POST, GET, PUT, DELETE',
                 'Access-Control-Allow-Headers' => 'Content-Type, Accept, Authorization, ' . $this->settings->get('AUTH_API_KEY_HEADER') . ', Mcp-Session-Id, MCP-Protocol-Version',
                 'Vary' => 'Origin',
             ]);

@@ -24,6 +24,7 @@ export class ReviewClient {
             sub: identity.subject,
             tenant: identity.tenant,
             roles: identity.roles,
+            project_scopes: identity.projectScopes || [],
             session_started: identity.started,
             iat: now,
             exp: now + 60,

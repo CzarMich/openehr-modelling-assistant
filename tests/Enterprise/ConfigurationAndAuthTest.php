@@ -64,7 +64,9 @@ final class ConfigurationAndAuthTest extends TestCase
         self::assertSame(403, $guard->check($request->withHeader('Host', 'localhost,evil.example'))->getStatusCode());
         self::assertSame(403, $guard->check($request->withHeader('Origin', 'https://evil.example'))->getStatusCode());
         self::assertSame(413, $guard->check(new ServerRequest('POST', 'http://localhost/mcp', ['X-API-Key' => $key], str_repeat('a', 101)))->getStatusCode());
-        self::assertSame(204, $guard->check($request->withMethod('OPTIONS')->withoutHeader('X-API-Key')->withHeader('Origin', 'https://client.example'))->getStatusCode());
+        $preflight = $guard->check($request->withMethod('OPTIONS')->withoutHeader('X-API-Key')->withHeader('Origin', 'https://client.example'));
+        self::assertSame(204, $preflight->getStatusCode());
+        self::assertStringContainsString('PUT', $preflight->getHeaderLine('Access-Control-Allow-Methods'));
     }
 
     public function test_no_auth_and_oidc_do_not_open_a_production_endpoint(): void

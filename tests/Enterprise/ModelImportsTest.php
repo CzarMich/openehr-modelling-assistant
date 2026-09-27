@@ -70,7 +70,7 @@ final class ModelImportsTest extends TestCase
         $service = $this->service();
         $inspection = $service->inspect($filename, base64_encode($bytes), $type);
         self::assertCount(0, $this->repository->listArtifacts('default'));
-        $claims = ['source_system' => 'Archetype Designer', 'external_revision' => 'unverified-12'];
+        $claims = ['source_system' => 'Archetype Designer', 'external_revision' => 'unverified-12', 'external_status' => 'RELEASED'];
         $first = $service->import('default', $filename, base64_encode($bytes), $type, $claims);
         self::assertSame('STORED_UNREVIEWED', $first['status']);
         self::assertSame('VERIFIED', $first['original_integrity']);
@@ -78,6 +78,8 @@ final class ModelImportsTest extends TestCase
         self::assertFalse($first['clinical_approval']);
         self::assertSame('NOT_EXECUTED', $first['validation']);
         self::assertSame('CALLER_DECLARED', $first['claim_assurance']);
+        self::assertSame('RELEASED', $first['source_claims']['external_status']);
+        self::assertSame('STORED_UNREVIEWED', $first['status']);
         self::assertSame($inspection, $first['inspection']);
         self::assertSame('verified-test-service', $first['importing_actor']['id']);
         self::assertFalse($first['importing_actor']['human']);

@@ -100,10 +100,38 @@ final readonly class BindingService
                 $replacements[] = ['code' => (string) $code, 'suggestion' => $concept['replacement']];
             }
         }
+        $hierarchy = $this->hierarchyDiff($a, $b);
         return ['system' => $before->system, 'before_version' => $before->version, 'after_version' => $after->version,
             'added' => array_values(array_diff_key($b, $a)), 'removed' => array_values(array_diff_key($a, $b)),
             'changed' => $changed, 'inactive' => $inactive, 'replacements' => $replacements,
-            'hierarchy' => 'NOT_EXECUTED', 'review_required' => true, 'codes_replaced_automatically' => false];
+            'hierarchy' => $hierarchy, 'review_required' => true, 'codes_replaced_automatically' => false];
+    }
+
+    /** @param array<string, array<string, mixed>> $before
+     * @param array<string, array<string, mixed>> $after
+     * @return array<string, mixed> */
+    private function hierarchyDiff(array $before, array $after): array
+    {
+        $beforeComplete = $before !== [] && array_reduce($before, static fn (bool $carry, array $concept): bool => $carry && array_key_exists('parents', $concept), true);
+        $afterComplete = $after !== [] && array_reduce($after, static fn (bool $carry, array $concept): bool => $carry && array_key_exists('parents', $concept), true);
+        if (!$beforeComplete || !$afterComplete) {
+            return ['status' => 'NOT_COMPARABLE', 'reason' => 'Explicit parent relationships are required for every concept in both versions.'];
+        }
+        $edges = static function (array $concepts): array {
+            $result = [];
+            foreach ($concepts as $code => $concept) {
+                foreach ($concept['parents'] as $parent) {
+                    $result[json_encode([(string) $code, $parent], JSON_THROW_ON_ERROR)] = ['child' => (string) $code, 'parent' => $parent];
+                }
+            }
+            ksort($result);
+            return $result;
+        };
+        $oldEdges = $edges($before);
+        $newEdges = $edges($after);
+        return ['status' => 'COMPARED_DECLARED_RELATIONSHIPS', 'added' => array_values(array_diff_key($newEdges, $oldEdges)),
+            'removed' => array_values(array_diff_key($oldEdges, $newEdges)), 'review_required' => true,
+            'scope' => 'explicit_parent_edges_only'];
     }
 
     /**

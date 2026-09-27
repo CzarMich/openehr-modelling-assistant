@@ -32,6 +32,7 @@ export function loadConfig(env = process.env) {
         reviewKeyId: env.CHAT_REVIEW_KEY_ID || "active",
         reviewRolesClaim: env.CHAT_REVIEW_ROLES_CLAIM || "roles",
         reviewTenantClaim: env.CHAT_REVIEW_TENANT_CLAIM || "",
+        reviewProjectScopesClaim: env.CHAT_REVIEW_PROJECT_SCOPES_CLAIM || "project_scopes",
         reviewSessionSeconds: Number(env.CHAT_REVIEW_SESSION_MAX_AGE || 900),
         reviewApiOrigin: new URL(env.CHAT_MCP_URL || "http://ingress:8343/mcp").origin,
         model: env.CHAT_MODEL || "gpt-6-sol",
@@ -64,7 +65,7 @@ export function loadConfig(env = process.env) {
         config.reviewSessionSeconds > 3600
     )
         throw new Error("Invalid review session maximum age");
-    for (const claim of [config.reviewRolesClaim, config.reviewTenantClaim])
+    for (const claim of [config.reviewRolesClaim, config.reviewTenantClaim, config.reviewProjectScopesClaim])
         if (claim && !/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/.test(claim)) throw new Error("Invalid review claim path");
     return Object.freeze(config);
 }

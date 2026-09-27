@@ -132,4 +132,21 @@ final class TerminologyProviderTest extends TestCase
         self::assertCount(1, $manifest['terminology_dependencies']);
         self::assertSame(['REQ-1'], $manifest['terminology_dependencies'][0]['requirements']);
     }
+
+    public function test_terminology_diff_compares_explicit_hierarchy_edges_without_inference(): void
+    {
+        $service = new BindingService(new FhirTerminologyProvider(new Settings()));
+        $before = new ValueSet('set', 'https://example.org/local', '1', [
+            ['code' => 'root', 'display' => 'Root', 'parents' => []],
+            ['code' => 'child', 'display' => 'Child', 'parents' => ['root']],
+        ]);
+        $after = new ValueSet('set', 'https://example.org/local', '2', [
+            ['code' => 'root', 'display' => 'Root', 'parents' => []],
+            ['code' => 'child', 'display' => 'Child', 'parents' => []],
+        ]);
+        $hierarchy = $service->diff($before, $after)['hierarchy'];
+        self::assertSame('COMPARED_DECLARED_RELATIONSHIPS', $hierarchy['status']);
+        self::assertSame([['child' => 'child', 'parent' => 'root']], $hierarchy['removed']);
+        self::assertSame([], $hierarchy['added']);
+    }
 }

@@ -103,10 +103,20 @@ export class Auth {
                     .reduce((value, key) => (value && Object.hasOwn(value, key) ? value[key] : undefined), claims);
             const roles = claim(this.config.reviewRolesClaim) ?? [];
             const tenant = this.config.reviewTenantClaim ? claim(this.config.reviewTenantClaim) : claims.iss;
+            const projectScopes = claim(this.config.reviewProjectScopesClaim) ?? [];
             if (
                 !Array.isArray(roles) ||
                 roles.length > 100 ||
                 roles.some((role) => typeof role !== "string" || role.length > 200) ||
+                !Array.isArray(projectScopes) ||
+                projectScopes.length > 100 ||
+                projectScopes.some(
+                    (scope) =>
+                        typeof scope !== "string" ||
+                        !/^(?:projects:admin|projects:create|project:[A-Za-z0-9._-]{1,100}:(?:read|write))$/.test(
+                            scope,
+                        ),
+                ) ||
                 typeof tenant !== "string" ||
                 !tenant ||
                 tenant.length > 300
@@ -117,6 +127,7 @@ export class Auth {
                 subject: claims.sub,
                 tenant,
                 roles,
+                projectScopes,
                 started: Math.floor(Date.now() / 1000),
             };
         }

@@ -39,11 +39,12 @@ Existing `CHAT_PUBLIC_URL`, `CHAT_OIDC_ISSUER`, `CHAT_OIDC_CLIENT_ID`, `CHAT_OID
 | `CHAT_REVIEW_KEY_ID` | `active` | Identifier matching `GOVERNANCE_BROWSER_KEYS` |
 | `CHAT_REVIEW_ROLES_CLAIM` | `roles` | Dot-separated signed ID-token role claim, for example `realm_access.roles` |
 | `CHAT_REVIEW_TENANT_CLAIM` | empty | Signed tenant claim when using native core OIDC tenant isolation |
+| `CHAT_REVIEW_PROJECT_SCOPES_CLAIM` | `project_scopes` | Dot-separated signed ID-token claim containing bounded per-project read/write grants |
 | `CHAT_REVIEW_SESSION_MAX_AGE` | `900` | Browser-side maximum sign-in age; match the core policy |
 | `CHAT_ENABLED` | `false` | Conversational chat; may remain false for human review |
 | `MODELLING_BROWSER_TARGET` | `reviews` | Compose build target; use `chat` only when its provider adapter is needed |
 
-Configure the identity provider's confidential browser client with redirect URI `<browser-origin>/chat/auth/callback`, authorization-code flow and PKCE. Ensure the selected role claim is included in the **signed ID token**, not only in the access token or user-info response. For Keycloak, a protocol mapper/client scope can expose assigned roles; for Entra or another OIDC provider, use its equivalent application-role claim. Keep engineering/admin permissions separate from clinical approver assignments.
+Configure the identity provider's confidential browser client with redirect URI `<browser-origin>/chat/auth/callback`, authorization-code flow and PKCE. Ensure selected role and project-scope claims are included in the **signed ID token**, not only in the access token or user-info response. Project grants use `project:<id>:read` or `project:<id>:write`; wildcard grants are rejected. For Keycloak, a protocol mapper/client scope can expose assigned roles and project grants; for Entra or another OIDC provider, use its equivalent claims. Keep engineering/admin permissions separate from clinical approver assignments.
 
 In core `AUTH_MODE=oidc`, the browser issuer must match `OIDC_ISSUER`; the tenant claim and allowed tenants must match the core policy. Signed browser identity resolves to the same subject/tenant namespace as native bearer authentication. Existing per-tenant Git/SharePoint mappings continue to apply. API-key/local deployments use one shared repository namespace; browser users still have distinct authenticated actor identities.
 

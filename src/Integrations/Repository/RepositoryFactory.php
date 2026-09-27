@@ -35,7 +35,7 @@ final class RepositoryFactory
                 }
                 $settings = $settings->with(['MODEL_GIT_REMOTE_URL' => $principal === null ? '' : ($remotes[$principal->tenant] ?? '')]);
             }
-            return new GitModelRepository($settings, Hosted\HostedProviderFactory::create($settings));
+            return self::scope(new GitModelRepository($settings, Hosted\HostedProviderFactory::create($settings)), $settings, $principal);
         }
         if ($settings->get('MODEL_REPOSITORY_PROVIDER') === 'sharepoint') {
             if ($settings->get('AUTH_MODE') === 'oidc') {
@@ -45,11 +45,22 @@ final class RepositoryFactory
                 $settings = $settings->with(['SHAREPOINT_SITE_ID' => $target['site_id'], 'SHAREPOINT_LIST_ID' => $target['list_id'],
                     'SHAREPOINT_DRIVE_ID' => $target['drive_id'], 'SHAREPOINT_FOLDER_ID' => $target['folder_id']]);
             }
-            return new SharePointRepository($settings);
+            return self::scope(new SharePointRepository($settings), $settings, $principal);
         }
-        return new FileSystemRepository(
+        return self::scope(new FileSystemRepository(
             $settings->get('MODEL_REPOSITORY_PATH'),
             new \OpenEHR\Assistant\Integrations\Cache\ModelReadCache($settings, 'filesystem:' . $settings->get('MODEL_REPOSITORY_PATH'))
-        );
+        ), $settings, $principal);
+    }
+
+    private static function scope(ModelRepository $repository, Settings $settings, ?Principal $principal): ModelRepository
+    {
+        if ($settings->get('PROJECT_RBAC_ENABLED') !== 'true') {
+            return $repository;
+        }
+        if ($principal === null) {
+            throw new \RuntimeException('PROJECT_RBAC_IDENTITY_REQUIRED');
+        }
+        return new ProjectScopedRepository($repository, $principal);
     }
 }

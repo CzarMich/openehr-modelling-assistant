@@ -13,6 +13,7 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 - [Browser chat](BROWSER_CHAT.md): user workflow, sign-in, model/provider setup, deployment, privacy and verification.
 
 - [Native OIDC and tenant migration](OIDC.md)
+- [Versioned model REST API and shared CLI](MODEL_API.md) with the [OpenAPI contract](openapi/models.json)
 - [A–Z completion audit](COMPLETION_AUDIT.md) and [execution queue](COMPLETION_QUEUE.json)
 
 [Hosted Git repositories](HOSTED_REPOSITORIES.md) documents GitHub/GitLab API capabilities, deployment credentials and draft review acceptance.

@@ -35,6 +35,7 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `OIDC_ROLES_CLAIM` | `roles` | Signed role-array claim, with dotted paths such as realm_access.roles. |
 | `OIDC_REQUIRED_ROLES` | empty | Required signed roles, useful for application-only access. |
 | `OIDC_WRITE_ROLES` | `modeller,administrator` | Roles allowing draft writes; modelling.write scope also permits writes. |
+| `PROJECT_RBAC_ENABLED` | `false` | Enable repository-wide per-project authorization; requires OIDC. Tokens need `project:<id>:read` or `project:<id>:write`; `projects:admin` grants project administration. |
 | `OIDC_TENANT_CLAIM` | empty | Signed tenant claim; empty treats the issuer as one tenant. |
 | `OIDC_ALLOWED_TENANTS` | empty | Optional explicit signed-tenant allowlist. |
 | `OIDC_TENANT_GIT_REMOTES` | `{}` | Tenant namespace hashes mapped to distinct Git remotes; see [OIDC migration](OIDC.md). |

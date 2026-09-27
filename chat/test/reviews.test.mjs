@@ -21,6 +21,7 @@ function session() {
             subject: "alice",
             tenant: "https://identity.example",
             roles: ["modelling-reviewer"],
+            projectScopes: ["project:alpha:read"],
             started: Math.floor(Date.now() / 1000),
         },
     };
@@ -66,6 +67,7 @@ test("browser assertions bind exact request and verified session claims with a s
     assert.equal(claims.sub, "alice");
     assert.equal(claims.aud, "openehr-modelling-review");
     assert.deepEqual(claims.roles, ["modelling-reviewer"]);
+    assert.deepEqual(claims.project_scopes, ["project:alpha:read"]);
     assert.equal(claims.target, target);
     assert.equal(claims.method, "POST");
     assert.equal(claims.body_sha256, createHash("sha256").update(options.body).digest("hex"));

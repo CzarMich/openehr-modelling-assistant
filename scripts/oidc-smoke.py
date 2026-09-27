@@ -12,6 +12,7 @@ import os
 import time
 import urllib.error
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location("mcp_smoke", Path(__file__).with_name("mcp-smoke.py"))
@@ -41,6 +42,22 @@ def main():
                                   "clientInfo": {"name": "oidc-acceptance", "version": "1.0"}})
         client.rpc("notifications/initialized", notify=True)
 
+    def model_api(method, path, bearer, payload=None):
+        base = f"{target.scheme}://{target.netloc}"
+        body = None if payload is None else json.dumps(payload).encode()
+        request = urllib.request.Request(base + path, data=body, method=method,
+            headers={"Authorization": "Bearer " + bearer, "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return response.status, json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            body = error.read()
+            try:
+                result = json.loads(body)
+            except json.JSONDecodeError:
+                result = {"response_excerpt": body[:300].decode("utf-8", errors="replace")}
+            return error.code, result
+
     try:
         clients = {}
         for name in ("WRITER", "READER", "OTHER_TENANT"):
@@ -58,9 +75,25 @@ def main():
         writer.tool("model_project_create", {"id": project, "name": "Synthetic OIDC acceptance"})
         first = writer.tool("model_artifact_save", {"project": project, "path": "requirements/test.txt", "content": "Synthetic OIDC fixture"})
         assert writer.tool("model_artifact_get", {"project": project, "path": "requirements/test.txt"})["content"] == "Synthetic OIDC fixture"
-        writer.tool("model_artifact_save", {"project": project, "path": "requirements/test.txt", "content": "Revised synthetic fixture", "expectedRevision": first["revision"]})
+        updated = writer.tool("model_artifact_save", {"project": project, "path": "requirements/test.txt", "content": "Revised synthetic fixture", "expectedRevision": first["revision"]})
         writer.tool("model_artifact_save", {"project": project, "path": "requirements/test.txt", "content": "Stale fixture", "expectedRevision": first["revision"]}, error=True)
         record("Authorised draft writes, persistence and stale-revision rejection")
+        status, listing = model_api("GET", "/api/v1/projects", os.environ["OIDC_SMOKE_WRITER_TOKEN"])
+        assert status == 200 and project in {item["id"] for item in listing["projects"]}
+        status, artifact = model_api("GET", "/api/v1/artifacts?" + urllib.parse.urlencode({"project": project, "path": "requirements/test.txt"}),
+                        os.environ["OIDC_SMOKE_WRITER_TOKEN"])
+        assert status == 200 and artifact["content"] == "Revised synthetic fixture"
+        status, saved = model_api("PUT", "/api/v1/artifacts?" + urllib.parse.urlencode({"project": project, "path": "requirements/test.txt"}),
+                      os.environ["OIDC_SMOKE_WRITER_TOKEN"],
+                      {"content": "REST synthetic fixture", "expectedRevision": updated["revision"]})
+        assert status == 200 and saved["content"] == "REST synthetic fixture"
+        status, conflict = model_api("PUT", "/api/v1/artifacts?" + urllib.parse.urlencode({"project": project, "path": "requirements/test.txt"}),
+                         os.environ["OIDC_SMOKE_WRITER_TOKEN"],
+                         {"content": "Stale REST fixture", "expectedRevision": updated["revision"]})
+        assert status == 409 and conflict["error"]["code"] == "REVISION_CONFLICT"
+        status, hidden = model_api("GET", "/api/v1/projects/" + project, os.environ["OIDC_SMOKE_OTHER_TENANT_TOKEN"])
+        assert status == 404 and hidden["error"]["code"] == "PROJECT_NOT_FOUND"
+        record("Authenticated REST project/artifact operations, writes, stale revision and tenant isolation")
         assert project not in {p["id"] for p in other.tool("model_projects")["projects"]}
         other.tool("model_artifact_get", {"project": project, "path": "requirements/test.txt"}, error=True)
         record("Different signed tenants cannot list or read each other's models")

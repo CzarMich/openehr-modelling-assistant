@@ -68,7 +68,8 @@ try {
         $request = (new ServerRequestCreator($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory))->fromGlobals()
             ->withHeader('Host', (string) ($_SERVER['HTTP_HOST'] ?? ''));
         $path = $request->getUri()->getPath();
-        if (!in_array($path, ['/mcp', '/health', '/ready'], true) && !str_starts_with($path, '/api/v1/reviews')) {
+        $modelApiPath = str_starts_with($path, '/api/v1/projects') || in_array($path, ['/api/v1/artifacts', '/api/v1/artifact-history'], true);
+        if (!in_array($path, ['/mcp', '/health', '/ready'], true) && !str_starts_with($path, '/api/v1/reviews') && !$modelApiPath) {
             http_response_code(404);
             exit;
         }
@@ -100,6 +101,13 @@ try {
             }
             $principal = $guard->principal($request) ?? throw new RuntimeException('AUTHENTICATION_REQUIRED');
             $identity = $oidc?->identity($request);
+        }
+        if ($modelApiPath) {
+            $response = (new \OpenEHR\Assistant\Rest\ModelApi($settings, RepositoryFactory::create($settings, $identity), new AccessPolicy($settings, $identity)))->handle($request);
+            http_response_code($response->getStatusCode());
+            foreach ($response->getHeaders() as $name => $values) { foreach ($values as $value) { header($name . ': ' . $value, false); } }
+            echo $response->getBody();
+            exit;
         }
     }
 
