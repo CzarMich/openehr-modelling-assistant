@@ -161,6 +161,9 @@ final readonly class CkmService
                     'Accept' => 'application/json',
                 ],
             ]);
+            if ($response->getStatusCode() !== 200) {
+                throw new ToolCallException('CKM_UNAVAILABLE: unexpected search response status.');
+            }
             $data = json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);
             $this->assertCkmRowList($data, 'archetype');
             $this->logger->info('Found CKM Archetypes', ['keyword' => $keyword, 'count' => count($data)]);
@@ -291,6 +294,9 @@ final readonly class CkmService
                     'Accept' => $contentType,
                 ],
             ]);
+            if ($response->getStatusCode() !== 200) {
+                throw new ToolCallException('CKM_UNAVAILABLE: unexpected retrieval response status.');
+            }
             $data = trim($response->getBody()->getContents());
             $this->logger->info('CKM Archetype retrieved successfully', ['cid' => $cid, 'format' => $archetypeFormat, 'status' => $response->getStatusCode()]);
             return TextContent::code($data);
@@ -322,7 +328,7 @@ final readonly class CkmService
      *   Determines if the search should match all provided keywords (true) or any of them (false); defaults to true.
      *
      *
-     * @return array<string,mixed>
+     * @return array{items: list<array<string, string|int>>, total: int}
      *   A list of CKM Template metadata entries.
      *   Entries usually include a Template CID identifier, display name, status, and other descriptive fields.
      *
@@ -390,6 +396,9 @@ final readonly class CkmService
                     'Accept' => 'application/json',
                 ],
             ]);
+            if ($response->getStatusCode() !== 200) {
+                throw new ToolCallException('CKM_UNAVAILABLE: unexpected search response status.');
+            }
             $data = json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);
             $this->assertCkmRowList($data, 'template');
             $this->logger->info('Found CKM Templates', ['keyword' => $keyword, 'count' => count($data)]);
@@ -494,6 +503,9 @@ final readonly class CkmService
                     'Accept' => $contentType,
                 ],
             ]);
+            if ($response->getStatusCode() !== 200) {
+                throw new ToolCallException('CKM_UNAVAILABLE: unexpected retrieval response status.');
+            }
             $data = trim($response->getBody()->getContents());
             $this->logger->info('CKM Template retrieved successfully', ['cid' => $cid, 'format' => $templateFormat, 'status' => $response->getStatusCode()]);
             return TextContent::code($data);

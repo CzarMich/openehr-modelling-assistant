@@ -28,7 +28,7 @@ final class Settings
         'GOVERNANCE_SESSION_MAX_AGE' => '900',
         'GOVERNANCE_ROLE_MAP' => '{"modeller":["modelling-modeller"],"reviewer":["modelling-reviewer"],"approver":["modelling-approver"],"publisher":["modelling-publisher"]}',
         'CKM_API_BASE_URL' => 'https://ckm.openehr.org/ckm/rest/', 'CKM_TIMEOUT' => '15',
-        'CKM_SOURCES' => '{}', 'CKM_DEFAULT_SOURCE' => 'default',
+        'CKM_SOURCES' => '{}', 'CKM_DEFAULT_SOURCE' => 'default', 'CKM_AUTH' => '{}', 'CKM_FEDERATION_TIMEOUT' => '30',
         'TERMINOLOGY_FHIR_BASE_URL' => '', 'TERMINOLOGY_BEARER_TOKEN' => '',
         'TERMINOLOGY_API_KEY' => '', 'TERMINOLOGY_API_KEY_HEADER' => 'X-API-Key',
         'TERMINOLOGY_CODESYSTEM_VALIDATE_PARAMETER' => 'url',
@@ -117,6 +117,13 @@ final class Settings
             throw new InvalidArgumentException('Governance browser keys require an explicit browser origin and OIDC issuer.');
         }
         $this->ckmSources();
+        CkmAuthentication::profiles($this->get('CKM_AUTH'), $this->ckmSources());
+        if ((int) $this->get('CKM_TIMEOUT') > 60) {
+            throw new InvalidArgumentException('CKM_TIMEOUT must be 1..60 seconds.');
+        }
+        if (!ctype_digit($this->get('CKM_FEDERATION_TIMEOUT')) || (int) $this->get('CKM_FEDERATION_TIMEOUT') < 1 || (int) $this->get('CKM_FEDERATION_TIMEOUT') > 60) {
+            throw new InvalidArgumentException('CKM_FEDERATION_TIMEOUT must be 1..60 seconds.');
+        }
         $this->tenantGitRemotes();
         $this->tenantSharePointRepositories();
         if ($this->get('MCP_ALLOWED_HOSTS') === '' || str_contains($this->get('MCP_ALLOWED_HOSTS'), '*')) {
@@ -263,6 +270,9 @@ final class Settings
             throw new InvalidArgumentException('CKM_SOURCES must be an object.');
         }
         $sources = ['default' => $this->get('CKM_API_BASE_URL')] + $sources;
+        if (count($sources) > 32) {
+            throw new InvalidArgumentException('Configure at most 32 named CKM sources.');
+        }
         foreach ($sources as $name => $url) {
             if (!is_string($name) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $name) || !is_string($url)) {
                 throw new InvalidArgumentException('Invalid CKM source name or URL.');

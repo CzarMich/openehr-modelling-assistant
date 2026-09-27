@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Architecturally significant decisions for the openEHR Assistant MCP Server,
+Architecturally significant decisions for the openEHR Modelling Assistant,
 recorded in a lightweight [MADR](https://adr.github.io/madr/) style. Each record
 is immutable once `Accepted`; to change a decision, add a new ADR that
 `Supersedes` it rather than editing history.
@@ -48,3 +48,5 @@ referenced from [requirements.md](../requirements.md),
 - [0016: Versioned requirements graph and evidence boundaries](0016-versioned-requirements-graph-and-evidence-boundaries.md)
 
 - [0017: Staged document validation and project evidence QA](0017-staged-document-validation-and-project-evidence-qa.md)
+
+- [0018: Source-bound CKM authentication and federated discovery](0018-source-bound-ckm-authentication-and-federated-discovery.md)

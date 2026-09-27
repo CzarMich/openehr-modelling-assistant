@@ -29,3 +29,5 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 - [Queryable requirements traceability](REQUIREMENTS_TRACEABILITY.md): versioned requirements, decisions, exact model/evidence references and deterministic queries.
 
 [Validation and project QA](VALIDATION_AND_QA.md) documents parsing/structure/conformance separation, FLAT/STRUCTURED profiles, formal findings and exact repository/evidence checks.
+
+[CKM sources](CKM_SOURCES.md) covers private source credentials, secret rotation, federated result windows and public/isolated acceptance.

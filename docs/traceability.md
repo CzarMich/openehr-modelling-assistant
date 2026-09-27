@@ -84,3 +84,5 @@ the Implementation column is either dead code or an undocumented requirement.
 REQ-F17 connects the persistent project requirement graph to its domain/application/anchor adapters and repository/security contracts; see [requirements traceability](REQUIREMENTS_TRACEABILITY.md) and [ADR-0016](decisions/0016-versioned-requirements-graph-and-evidence-boundaries.md).
 
 REQ-F18 maps staged document checks and exact-revision project QA to their shared services, storage/security contracts and negative tests; see [Validation and QA](VALIDATION_AND_QA.md) and [ADR-0017](decisions/0017-staged-document-validation-and-project-evidence-qa.md).
+
+REQ-F19 maps CKM credentials/federation to its configuration, HTTP/domain/integration services, unit/schema checks and isolated HTTPS acceptance. See [CKM sources](CKM_SOURCES.md).

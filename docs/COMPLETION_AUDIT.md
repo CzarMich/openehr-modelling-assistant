@@ -33,3 +33,5 @@ The governance increment replaces the illustrative transition helper with a pers
 The traceability increment adds a persistent typed graph, exact source/audit references, XML/JSON anchor checks, deterministic why/coverage queries and unresolved/stale findings across all repository providers. Explicit coverage declarations remain separate from executed validation and clinical satisfaction. Native openEHR path semantics belong to the qualified engine phase.
 
 Staged validation and formal project QA now cover the Phase 1 document/evidence scope: XML/JSON parsing, OET/OPT and simplified-data profiles, exact source/provenance/requirement/audit checks and explicit unavailable-check findings. Qualified RM/native-path/dependency semantics remain Phase 2 work. Continue CKM and protocol completion without relabelling unavailable conformance.
+
+The CKM increment adds source-bound service credentials, mounted rotation and bounded federated discovery with distinct version/source identities and explicit failures/truncation. Public international/Norwegian retrieval and isolated authenticated HTTPS contracts pass; private account acceptance needs organisation credentials.

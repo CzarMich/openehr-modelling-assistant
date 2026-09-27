@@ -216,6 +216,19 @@ final class OutputSchemaValidatorTest extends TestCase
         OutputSchemaValidator::assertValid('x', ['type' => 'timestamp']);
     }
 
+    public function test_array_length_bounds_are_enforced_without_an_item_schema(): void
+    {
+        OutputSchemaValidator::assertValid([1], ['type' => 'array', 'minItems' => 1, 'maxItems' => 1]);
+        foreach ([[[], ['minItems' => 1]], [[1, 2], ['maxItems' => 1]], [[], ['maxItems' => -1]], [[], ['minItems' => '1']]] as [$data, $limits]) {
+            try {
+                OutputSchemaValidator::assertValid($data, ['type' => 'array'] + $limits);
+                self::fail('Array length constraint was ignored.');
+            } catch (\InvalidArgumentException) {
+                self::assertTrue(true);
+            }
+        }
+    }
+
     public function test_enum_is_enforced(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -276,3 +276,12 @@ requirements:
     packages: [src/Validation/*.php, src/Domain/Modelling/QualityPipeline.php, src/Application/ProjectQuality.php, src/Tools/QualityTools.php, src/Tools/ModelService.php]
     tests: [tests/Enterprise/StagedValidationTest.php, tests/Enterprise/ProjectQualityTest.php, tests/Enterprise/ModelValidationTest.php, tests/Tools/EnterpriseOutputCases.php]
     adr: ["0017"]
+
+  - id: REQ-F19
+    title: Source-bound CKM service authentication and bounded federated discovery
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Apis/CkmClient.php, src/Configuration/CkmAuthentication.php, src/Domain/Knowledge/*.php, src/Integrations/Knowledge/*.php, src/Application/FederatedCkmSearch.php, src/Tools/CkmFederationTools.php]
+    tests: [tests/Enterprise/CkmFederationTest.php, tests/Clients/CkmClientTest.php, tests/Tools/OutputSchemaConformanceTest.php, scripts/ckm-fixture-smoke.py]
+    adr: ["0018"]

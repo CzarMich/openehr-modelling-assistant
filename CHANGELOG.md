@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add source-specific CKM authentication and bounded federated model discovery.
+
 - Add staged document validation, simplified JSON profiles and exact-revision project QA.
 
 - Add versioned requirements graphs with deterministic rationale queries and exact source/audit evidence.

@@ -5,7 +5,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Capability | Status | Implemented boundary |
 |---|---|---|
 | MCP HTTP and stdio; discovery, prompts and resources | WORKING | Client-neutral SDK protocol; no model SDK |
-| Branding and named CKM selection | WORKING | Administrator-configured HTTPS sources; same CKM REST contract |
+| Branding and named CKM selection | WORKING | Administrator-configured HTTPS sources and source-specific Basic/session/bearer/API-key credentials; same CKM REST contract |
+| Federated CKM discovery | WORKING | Bounded lexical/status ranking, distinct source/version provenance, per-source failures and honest window totals; public international/Norwegian and isolated authenticated acceptance |
 | Existing CKM, guide, examples, terminology and type tools | WORKING | Upstream features retained |
 | Persistent projects, artifacts, metadata and history | WORKING | Filesystem/SharePoint snapshots or plain files in Git; expected revisions and opt-in writes |
 | Project terminology catalogue | WORKING | Versioned local CodeSystem, multi-system ValueSet and ConceptMap records; repository revisions, deterministic search and explicit external references |

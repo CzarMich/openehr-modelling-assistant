@@ -14,7 +14,7 @@ use InvalidArgumentException;
  * the *real* `#[McpTool]` attribute so the two cannot drift.
  *
  * Supported keywords: `type` (object, array, string, integer, number, boolean),
- * `properties`, `required`, `additionalProperties`, `items`, `minimum`, `maximum`,
+ * `properties`, `required`, `additionalProperties`, `items`, `minItems`, `maxItems`, `minimum`, `maximum`,
  * `enum`, `format: uri`, and `description` (ignored — documentation only).
  *
  * Any other keyword raises {@see InvalidArgumentException}. That is the point: silently
@@ -34,6 +34,8 @@ final class OutputSchemaValidator
         'required',
         'additionalProperties',
         'items',
+        'minItems',
+        'maxItems',
         'minimum',
         'maximum',
         'enum',
@@ -172,6 +174,18 @@ final class OutputSchemaValidator
     {
         if (!is_array($data) || !array_is_list($data)) {
             throw new InvalidArgumentException("$path: expected array");
+        }
+        foreach (['minItems', 'maxItems'] as $keyword) {
+            if (!array_key_exists($keyword, $schema)) {
+                continue;
+            }
+            $bound = $schema[$keyword];
+            if (!is_int($bound) || $bound < 0) {
+                throw new InvalidArgumentException("$path: `$keyword` must be a nonnegative integer");
+            }
+            if (($keyword === 'minItems' && count($data) < $bound) || ($keyword === 'maxItems' && count($data) > $bound)) {
+                throw new InvalidArgumentException("$path: array length violates `$keyword`");
+            }
         }
 
         $itemSchema = $schema['items'] ?? null;
