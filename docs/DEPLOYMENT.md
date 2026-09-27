@@ -107,6 +107,8 @@ redirects are disabled. Restrict deployment configuration access and enforce egr
 
 The configured deployment uses `https://openehr-modelling.sandbox.hygeoniq.com/mcp`, with Nginx terminating TLS and forwarding to loopback port 8343. The gateway configuration is `deploy/nginx-vps.conf`. State lives under `/opt/openehr-modelling-assistant`; `config/runtime.env` is secret-managed and is not part of release archives. The named Compose models volume persists across revisions.
 
+Forward the root path to the application too: its landing page includes the browser-chat link. When upgrading an older gateway, remove any exact-root static response that overrides this page. Validate the updated gateway configuration before reloading Nginx.
+
 GitHub validation runs on PRs and main pushes. The deployment workflow follows a successful main validation, transfers the exact Git archive, builds the locked application, waits for health, then runs an authenticated protocol smoke test against the public TLS endpoint. Deployment failure attempts to restore the previous source/image build without removing model data. GitHub requires MODELLING_VPS_SSH_KEY and MODELLING_VPS_KNOWN_HOSTS; the workflow never accepts an unverified SSH host key. Record the full deployed SHA and run `scripts/watch-ci.sh <sha>` after a push, including downstream workflows.
 
 ## Development server with Codex
