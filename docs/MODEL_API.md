@@ -11,6 +11,7 @@ Production requests must pass the normal HTTP authentication, host/origin, body-
 | `GET /api/v1/projects` | List projects visible to the caller and repository capabilities |
 | `POST /api/v1/projects` | Create a project; requires model-write permission and, with project RBAC, `projects:create` or `projects:admin` |
 | `GET /api/v1/projects/{project}` | Read a project and its artifact summaries |
+| `POST /api/v1/projects/{project}/archive` | Archive a project with its current `expectedRevision`; stale revisions return HTTP 409 |
 | `GET /api/v1/artifacts?project=...&path=...&revision=...` | Read the current or exact historical artifact |
 | `PUT /api/v1/artifacts?project=...&path=...` | Create or update a draft artifact with optional `expectedRevision` |
 | `GET /api/v1/artifact-history?project=...&path=...` | Read artifact revision history |

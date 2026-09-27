@@ -40,3 +40,7 @@ Delivery evidence: [baseline](BASELINE_AUDIT.md), [white-label migration](WHITE_
 - [External modelling tool integration](MODELLING_TOOL_INTEGRATION.md) and [Designer compatibility](ARCHETYPE_DESIGNER_COMPATIBILITY.md): verified boundaries and remaining exchange work.
 
 [Manual model imports](MODEL_IMPORTS.md) documents byte-preserving originals, protected platform provenance, supported type detection, configuration and external exchange limits.
+
+## Acknowledgements
+
+This fork was inspired by the work started by [Sebastian Iancu](https://github.com/sebastian-iancu). Thanks to [Lars Fuhrmann](https://github.com/larfuma) for bringing forward the idea for this work, and to [John Meredith](https://github.com/johnmeredith) for being a supportive manager.

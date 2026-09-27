@@ -53,7 +53,7 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | AQL execution, composition validation, CDR deployment | NOT IMPLEMENTED | Separate domain adapter/acceptance work |
 | Copilot Studio tenant connection | NOT TESTED | Current official deployment guide; no tenant available |
 | Visual editor | NOT IMPLEMENTED | Architecture prepared |
-| General REST application API and CLI | PARTIAL | Versioned project/artifact REST endpoints with OpenAPI, optimistic revisions, shared repository authorization, and a Composer model CLI; broader application operations and OIDC-interactive CLI support remain; see [API and CLI guide](docs/MODEL_API.md) and [isolated OIDC acceptance](docs/evidence/model-api-oidc-smoke.json) |
+| General REST application API and CLI | PARTIAL | Versioned project/artifact REST endpoints with OpenAPI, optimistic revisions, project archival, shared repository authorization, and a Composer model CLI; broader application operations and OIDC-interactive CLI support remain; see [API and CLI guide](docs/MODEL_API.md) and [isolated OIDC acceptance](docs/evidence/model-api-oidc-smoke.json) |
 | Optional client packaging | WORKING | Default browser review image contains no model-provider executable; conversational adapter uses an explicit image target |
 
 Chat and model governance share the verified browser identity. Explicit platform-administrator permissions cover all governance roles; validation and human-review policy still govern transitions. See [review deployment](docs/REVIEW_DEPLOYMENT.md).

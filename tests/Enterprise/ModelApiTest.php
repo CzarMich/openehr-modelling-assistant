@@ -85,4 +85,21 @@ final class ModelApiTest extends TestCase
         self::assertSame(403, $this->api->handle($this->request('GET', '/api/v1/projects/p')->withHeader('Host', 'evil.example'))->getStatusCode());
         self::assertSame(415, $this->api->handle($this->request('POST', '/api/v1/projects', ['id' => 'x'], 'text/plain'))->getStatusCode());
     }
+
+    public function test_project_archive_requires_current_revision_and_prevents_later_writes(): void
+    {
+        $project = $this->responseBody('GET', '/api/v1/projects/p')['project'];
+        $revision = $project['revision'];
+        $stale = $this->api->handle($this->request('POST', '/api/v1/projects/p/archive', ['expectedRevision' => 'stale']));
+        self::assertSame(409, $stale->getStatusCode());
+        self::assertSame('REVISION_CONFLICT', json_decode((string) $stale->getBody(), true, 32, JSON_THROW_ON_ERROR)['error']['code']);
+
+        $archived = $this->api->handle($this->request('POST', '/api/v1/projects/p/archive', ['expectedRevision' => $revision]));
+        self::assertSame(200, $archived->getStatusCode());
+        $archivedProject = json_decode((string) $archived->getBody(), true, 32, JSON_THROW_ON_ERROR)['project'];
+        self::assertSame('ARCHIVED', $archivedProject['status']);
+
+        $write = $this->api->handle($this->request('PUT', '/api/v1/artifacts?' . http_build_query(['project' => 'p', 'path' => 'templates/test.oet']), ['content' => '<template/>']));
+        self::assertSame(409, $write->getStatusCode());
+    }
 }

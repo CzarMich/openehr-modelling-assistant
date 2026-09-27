@@ -49,6 +49,16 @@ final readonly class ModelApi
                 && $request->getUri()->getQuery() === '') {
                 return $this->response(200, ['project' => $this->repository->getProject($match[1]), 'artifacts' => $this->repository->listArtifacts($match[1])]);
             }
+            if (preg_match('~^/api/v1/projects/([A-Za-z0-9._-]{1,100})/archive$~D', $path, $match) && $method === 'POST'
+                && $request->getUri()->getQuery() === '') {
+                $input = $this->input($request);
+                if (array_diff(array_keys($input), ['expectedRevision']) !== [] || !is_string($input['expectedRevision'] ?? null)
+                    || $input['expectedRevision'] === '') {
+                    throw new \InvalidArgumentException('INVALID_MODEL_API_INPUT');
+                }
+                $this->access->assertModelWrite();
+                return $this->response(200, ['project' => $this->repository->archiveProject($match[1], $input['expectedRevision'])]);
+            }
             if (($path === '/api/v1/artifacts' || $path === '/api/v1/artifact-history') && in_array($method, ['GET', 'PUT'], true)) {
                 $query = $this->query($request, $path === '/api/v1/artifact-history' ? ['project', 'path'] : ['project', 'path', 'revision']);
                 if (!is_string($query['project'] ?? null) || !is_string($query['path'] ?? null) || $query['project'] === '' || $query['path'] === '') {

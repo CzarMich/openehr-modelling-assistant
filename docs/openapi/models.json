@@ -36,6 +36,14 @@
         "responses": { "200": { "description": "Project and artifact summaries" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" } }
       }
     },
+    "/api/v1/projects/{project}/archive": {
+      "post": {
+        "operationId": "archiveModelProject",
+        "parameters": [{ "in": "path", "name": "project", "required": true, "schema": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "additionalProperties": false, "required": ["expectedRevision"], "properties": { "expectedRevision": { "type": "string", "minLength": 1 } } } } } },
+        "responses": { "200": { "description": "Archived project with its new revision" }, "400": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" } }
+      }
+    },
     "/api/v1/artifacts": {
       "get": {
         "operationId": "getModelArtifact",
