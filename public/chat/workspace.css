@@ -133,12 +133,6 @@ body:not([data-section="chat"]) .sidebar-label {
 .workspace-name {
     font-size: 14px;
 }
-.context-badge {
-    color: #365d83;
-    background: #f2f6fb;
-    border-color: var(--line);
-    font-size: 11px;
-}
 .account {
     font-size: 12px;
 }
@@ -610,9 +604,6 @@ body:not([data-section="chat"]) .sidebar-label {
     .topbar {
         height: 52px;
         padding: 0 16px;
-    }
-    .context-badge {
-        display: none;
     }
     .workspace-name {
         font-size: 12px;

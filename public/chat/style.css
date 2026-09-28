@@ -207,14 +207,6 @@ textarea:focus-visible {
     font-size: 13px;
     font-weight: 600;
 }
-.context-badge {
-    font-size: 10px;
-    letter-spacing: 0.4px;
-    border: 1px solid #dbe4ed;
-    border-radius: 20px;
-    padding: 3px 9px;
-    color: #4b6580;
-}
 .account {
     display: flex;
     gap: 12px;
@@ -595,9 +587,6 @@ textarea::placeholder {
     }
     .topbar {
         padding: 0 25px;
-    }
-    .context-badge {
-        display: none;
     }
     .suggestions {
         gap: 8px;

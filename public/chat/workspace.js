@@ -7,9 +7,9 @@ let session,
     selected,
     loading = false;
 const headings = {
-    chat: ["Clinical modelling", "Drafts & discovery"],
-    models: ["Model repository", "Source & revisions"],
-    governance: ["Model governance", "Evidence & review"],
+    chat: "Clinical modelling",
+    models: "Model repository",
+    governance: "Model governance",
 };
 function activate(name, update = true) {
     if (!headings[name]) name = "chat";
@@ -20,9 +20,8 @@ function activate(name, update = true) {
         tab.tabIndex = active ? 0 : -1;
         $("panel-" + tab.dataset.tab).hidden = !active;
     }
-    $("section-title").textContent = headings[name][0];
-    $("section-context").textContent = headings[name][1];
-    document.title = headings[name][0] + " · openEHR Modelling Assistant";
+    $("section-title").textContent = headings[name];
+    document.title = headings[name] + " · openEHR Modelling Assistant";
     if (update && location.hash !== "#" + name) history.pushState(null, "", "#" + name);
     $("sidebar").classList.remove("open");
     document.dispatchEvent(new CustomEvent("workspace:" + name));

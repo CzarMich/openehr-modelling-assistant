@@ -153,6 +153,8 @@ test("requirements graph writes require exact graph and revision confirmation", 
 
 test("one workspace preserves chat and exact model context across tabs", async ({ page, context }) => {
     await login(page);
+    await expect(page.locator(".context-badge")).toHaveCount(0);
+    await expect(page.locator("#section-title")).toHaveText("Clinical modelling");
     await send(page, "Which CKMs are configured?");
     await expect(page.locator(".message.assistant")).toContainText("Terminology binding is optional.");
     await page.getByRole("tab", { name: "Models", exact: true }).click();
