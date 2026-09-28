@@ -1,5 +1,7 @@
 # Native OIDC authentication
 
+For the end-to-end IdP provisioning, API permission, project access and browser review role setup, see [OIDC authorization and browser review roles](IDENTITY_AND_ACCESS.md).
+
 The HTTP MCP service accepts signed access tokens from a configured OIDC issuer. Identity verification is a transport boundary, independent of modelling services and model providers. Local process authentication and deployment API keys remain available. Browser chat has a separate interactive login and, by default, a shared service key; enabling native OIDC does not silently migrate that client.
 
 ## Trust and configuration

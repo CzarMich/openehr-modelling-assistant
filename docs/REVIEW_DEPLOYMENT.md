@@ -1,5 +1,7 @@
 # Deploying the human review workspace
 
+For the relationship between IdP invitations, signed claims, API scopes, project grants and browser review permissions, see [OIDC authorization and browser review roles](IDENTITY_AND_ACCESS.md).
+
 The review workspace is an optional OIDC browser adapter to the provider-neutral modelling core. It can run without conversational chat, an LLM account, a CDR or an external terminology server. Models still require qualified validation before clinical approval or publication.
 
 ## Environments and storage
