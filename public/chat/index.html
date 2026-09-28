@@ -10,6 +10,7 @@
         <script src="/chat/app.js" type="module"></script>
         <script src="/chat/reviews.js" type="module"></script>
         <script src="/chat/workspace.js" type="module"></script>
+        <script src="/chat/identity.js" type="module"></script>
     </head>
     <body data-section="chat">
         <a class="skip-link" href="#workspace-content">Skip to workspace</a>
@@ -91,6 +92,29 @@
                         </svg>
                         Governance
                     </button>
+                    <button
+                        id="tab-accounts"
+                        role="tab"
+                        aria-controls="panel-accounts"
+                        aria-selected="false"
+                        tabindex="-1"
+                        data-tab="accounts"
+                        hidden
+                    >
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <circle cx="9" cy="8" r="4" />
+                            <path d="M3 21v-2a6 6 0 0 1 12 0v2M16 4.5a4 4 0 0 1 0 7.5M18 15a5 5 0 0 1 3 4.6V21" />
+                        </svg>
+                        Accounts
+                    </button>
                 </nav>
                 <button id="new-chat" class="new-chat" disabled>
                     <span aria-hidden="true">+</span> New conversation
@@ -136,13 +160,106 @@
                             requirement or open an existing project.
                         </p>
                         <div id="login-panel" class="login-panel" hidden>
-                            <a class="primary-button" href="/chat/auth/login"
+                            <a id="oidc-login" class="primary-button" href="/chat/auth/login"
                                 >Sign in to start chatting <span aria-hidden="true">→</span></a
                             >
-                            <p>
+                            <p id="login-description">
                                 Use your organisation account. Your conversations are private to your sign-in; model
                                 repositories may be shared.
                             </p>
+                            <form id="local-login" class="identity-form" hidden>
+                                <h2>Local account</h2>
+                                <label for="local-username">Username</label
+                                ><input id="local-username" autocomplete="username" required />
+                                <label for="local-password">Password</label
+                                ><input id="local-password" type="password" autocomplete="current-password" required />
+                                <label for="local-code">Authenticator code or recovery code</label
+                                ><input id="local-code" autocomplete="one-time-code" />
+                                <button type="submit" class="primary-button">Sign in</button>
+                            </form>
+                            <form id="owner-bootstrap" class="identity-form" hidden>
+                                <h2>Create platform owner</h2>
+                                <label for="bootstrap-token">One-time setup token</label
+                                ><input id="bootstrap-token" autocomplete="off" required />
+                                <label for="bootstrap-username">Username</label
+                                ><input id="bootstrap-username" autocomplete="username" required />
+                                <label for="bootstrap-name">Display name</label
+                                ><input id="bootstrap-name" autocomplete="name" required />
+                                <label for="bootstrap-password">Password (12 or more characters)</label
+                                ><input
+                                    id="bootstrap-password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    minlength="12"
+                                    required
+                                />
+                                <button type="submit" class="primary-button">Create owner account</button>
+                            </form>
+                            <form id="invite-accept" class="identity-form" hidden>
+                                <h2>Accept account invitation</h2>
+                                <label for="invite-username">Username</label
+                                ><input id="invite-username" autocomplete="username" required />
+                                <label for="invite-name">Display name</label
+                                ><input id="invite-name" autocomplete="name" required />
+                                <label for="invite-password">Password (12 or more characters)</label
+                                ><input
+                                    id="invite-password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    minlength="12"
+                                    required
+                                />
+                                <button type="submit" class="primary-button">Create account</button>
+                            </form>
+                            <form id="password-reset" class="identity-form" hidden>
+                                <h2>Reset password</h2>
+                                <label for="reset-password">New password (12 or more characters)</label
+                                ><input
+                                    id="reset-password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    minlength="12"
+                                    required
+                                />
+                                <button type="submit" class="primary-button">Reset password</button>
+                            </form>
+                            <form id="account-recovery" class="identity-form" hidden>
+                                <h2>Recover account</h2>
+                                <label for="recovery-password">New password (12 or more characters)</label
+                                ><input
+                                    id="recovery-password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    minlength="12"
+                                    required
+                                />
+                                <button type="submit" class="primary-button">Reset password and MFA</button>
+                            </form>
+                            <section id="mfa-enrollment" class="identity-form" hidden>
+                                <h2>Set up multi-factor authentication</h2>
+                                <p>Add this secret to an authenticator app, then enter its six-digit code.</p>
+                                <a id="otp-auth-link" class="secondary-button" href="#">Open authenticator app</a>
+                                <p>Manual setup secret: <code id="totp-secret"></code></p>
+                                <form id="mfa-form">
+                                    <label for="mfa-code">Authenticator code</label
+                                    ><input
+                                        id="mfa-code"
+                                        inputmode="numeric"
+                                        autocomplete="one-time-code"
+                                        pattern="[0-9]{6}"
+                                        required
+                                    /><button type="submit" class="primary-button">Verify and continue</button>
+                                </form>
+                            </section>
+                            <section id="recovery-codes" class="identity-form" hidden>
+                                <h2>Save recovery codes</h2>
+                                <p>Each code works once. Store them somewhere private; they will not be shown again.</p>
+                                <pre id="recovery-code-list"></pre>
+                                <button id="finish-recovery-codes" type="button" class="primary-button">
+                                    I saved these codes
+                                </button>
+                            </section>
+                            <p id="identity-auth-notice" role="status" aria-live="polite"></p>
                         </div>
                         <div id="suggestions" class="suggestions">
                             <button
@@ -383,6 +500,83 @@
                             </div>
                         </section>
                     </div>
+                </section>
+                <section
+                    id="panel-accounts"
+                    role="tabpanel"
+                    aria-labelledby="tab-accounts"
+                    class="content-panel"
+                    hidden
+                >
+                    <div class="page-intro">
+                        <p class="eyebrow">ACCESS CONTROL</p>
+                        <h1>Accounts and access</h1>
+                        <p>
+                            Manage local workspace accounts, role assignments, recovery, service credentials and
+                            identity audit history.
+                        </p>
+                    </div>
+                    <p id="identity-admin-notice" role="status" aria-live="polite"></p>
+                    <form id="invite-user-form" class="identity-form identity-admin-form">
+                        <h2>Invite a user</h2>
+                        <label for="new-user-email">Email address</label
+                        ><input id="new-user-email" type="email" autocomplete="email" required />
+                        <fieldset>
+                            <legend>Roles</legend>
+                            <label
+                                ><input type="checkbox" name="invite-role" value="modelling-modeller" checked />
+                                Modeller</label
+                            ><label
+                                ><input type="checkbox" name="invite-role" value="modelling-reviewer" /> Reviewer</label
+                            ><label
+                                ><input type="checkbox" name="invite-role" value="modelling-approver" /> Approver</label
+                            ><label
+                                ><input type="checkbox" name="invite-role" value="modelling-publisher" />
+                                Publisher</label
+                            ><label
+                                ><input type="checkbox" name="invite-role" value="modelling-administrator" />
+                                Administrator</label
+                            >
+                        </fieldset>
+                        <p>
+                            Invite links are created for delivery through your approved channel. The application does
+                            not send email.
+                        </p>
+                        <button type="submit" class="primary-button">Create invitation link</button>
+                    </form>
+                    <div id="identity-link-result" class="identity-link-result" hidden>
+                        <label for="identity-link">One-time link</label
+                        ><textarea id="identity-link" readonly rows="2"></textarea
+                        ><button id="copy-identity-link" type="button" class="secondary-button">Copy link</button>
+                    </div>
+                    <section class="identity-admin-section">
+                        <h2>Workspace users</h2>
+                        <div id="identity-users" aria-live="polite"></div>
+                    </section>
+                    <form id="service-account-form" class="identity-form identity-admin-form">
+                        <h2>Service credential</h2>
+                        <label for="service-account-name">Name</label
+                        ><input id="service-account-name" maxlength="160" required />
+                        <fieldset>
+                            <legend>Scopes</legend>
+                            <label
+                                ><input type="checkbox" name="service-scope" value="modelling.read" checked /> Read
+                                modelling data</label
+                            ><label
+                                ><input type="checkbox" name="service-scope" value="modelling.write" /> Write modelling
+                                data</label
+                            >
+                        </fieldset>
+                        <button type="submit" class="primary-button">Create service credential</button>
+                    </form>
+                    <section class="identity-admin-section">
+                        <h2>Service credentials</h2>
+                        <div id="identity-services"></div>
+                    </section>
+                    <details class="identity-admin-section">
+                        <summary>Identity audit history</summary>
+                        <ol id="identity-audit"></ol>
+                    </details>
                 </section>
             </main>
         </div>

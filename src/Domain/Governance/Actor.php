@@ -18,7 +18,7 @@ final readonly class Actor
         public bool $human = false, public string $method = 'service', array $projectScopes = [])
     {
         if ($id === '' || strlen($id) > 200 || !preg_match('/^(?:shared|[a-f0-9]{64})$/D', $tenant)
-            || ($human && $method !== 'interactive_oidc') || !array_is_list($roles) || count($roles) > 100
+            || ($human && !in_array($method, ['interactive_oidc', 'interactive_local'], true)) || !array_is_list($roles) || count($roles) > 100
             || !array_is_list($projectScopes) || count($projectScopes) > 100) {
             throw new \InvalidArgumentException('INVALID_GOVERNANCE_ACTOR');
         }

@@ -65,6 +65,7 @@ test("browser assertions bind exact request and verified session claims with a s
     assert.deepEqual(decode(header), { alg: "HS256", typ: "openehr-review+jwt", kid: "active" });
     const claims = decode(payload);
     assert.equal(claims.sub, "alice");
+    assert.equal(claims.identity_method, "interactive_oidc");
     assert.equal(claims.aud, "openehr-modelling-review");
     assert.deepEqual(claims.roles, ["modelling-reviewer"]);
     assert.deepEqual(claims.project_scopes, ["project:alpha:read"]);
@@ -82,6 +83,41 @@ test("browser assertions bind exact request and verified session claims with a s
     assert.equal(JSON.stringify(options).includes(c.reviewSigningKey), false);
     assert.equal(Object.hasOwn(options.headers, "Cookie"), false);
     assert.equal(Object.hasOwn(options.headers, "X-API-Key"), false);
+});
+
+test("native local sessions attest a distinct configured issuer and authentication method", async () => {
+    const c = loadConfig({
+        CHAT_REVIEW_ENABLED: "true",
+        CHAT_LOCAL_IDENTITY_ENABLED: "true",
+        CHAT_LOCAL_IDENTITY_ISSUER: "https://models.example/identity/local",
+        CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY: "ab".repeat(32),
+        CHAT_PUBLIC_URL: "https://models.example",
+        CHAT_REVIEW_SIGNING_KEY: "a".repeat(64),
+    });
+    let claims;
+    const client = new ReviewClient(c, async (_url, options) => {
+        const [, payload] = options.headers.Authorization.slice(7).split(".");
+        claims = JSON.parse(Buffer.from(payload, "base64url"));
+        return new Response("{}", { headers: { "Content-Type": "application/json" } });
+    });
+    await client.request(
+        {
+            reviewIdentity: {
+                issuer: c.localIssuer,
+                subject: "local-user-id",
+                tenant: c.localIssuer,
+                roles: ["modelling-reviewer"],
+                projectScopes: [],
+                started: Math.floor(Date.now() / 1000),
+                method: "interactive_local",
+            },
+        },
+        "GET",
+        "/api/v1/reviews?project=default",
+    );
+    assert.equal(claims.identity_issuer, c.localIssuer);
+    assert.equal(claims.identity_method, "interactive_local");
+    assert.equal(claims.tenant, c.localIssuer);
 });
 
 test("expired or missing interactive session never creates an assertion", async () => {

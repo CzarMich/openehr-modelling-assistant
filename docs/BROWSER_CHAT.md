@@ -61,6 +61,9 @@ These settings belong to the optional chat service, not PHP `Settings` or inboun
 | `CHAT_OIDC_ISSUER` | empty | Pinned HTTPS identity issuer |
 | `CHAT_OIDC_CLIENT_ID` | empty | Confidential browser application's client identifier |
 | `CHAT_OIDC_CLIENT_SECRET` | empty | Server-side client credential |
+| `CHAT_LOCAL_IDENTITY_ENABLED` | `false` | Enable native local accounts alongside or instead of OIDC |
+| `CHAT_LOCAL_IDENTITY_ISSUER` | `<browser-origin>/identity/local` | Stable issuer for local review identity; match `GOVERNANCE_LOCAL_IDENTITY_ISSUER` |
+| `CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY` | empty | Separate 32-byte hex secret used to encrypt TOTP seeds; required for native identity |
 | `CHAT_ALLOWED_GROUPS` | empty | Comma-separated allowed signed ID-token groups; empty admits issuer users |
 | `CHAT_MCP_URL` | `http://ingress:8343/mcp` | Fixed modelling-service endpoint |
 | `CHAT_MCP_API_KEY` | empty | Server-side service credential, if required by MCP |
@@ -74,9 +77,9 @@ These settings belong to the optional chat service, not PHP `Settings` or inboun
 | `CHAT_PORT` | `8350` | Private HTTP listener |
 | `MODELLING_CHAT_ENV_FILE` | `.env.chat` | Compose environment file path |
 
-Sessions use opaque HttpOnly, SameSite cookies, Secure on HTTPS. Mutations require a same-origin request and session-bound CSRF token. Login state is single-use. Sessions last one hour and do not survive chat-service restart. Conversations persist across restart, expire after 30 days without activity and are pruned at startup and hourly. Limits include 100 conversations per user, 80 messages per conversation, 8,000 characters per submitted message, 16 tool calls per turn, three simultaneous turns and 10 message submissions per user per minute. Long transcripts and tool outputs are bounded. The current deployment is one organisation and one shared modelling-service principal; per-project user RBAC remains separate work.
+Sessions use opaque HttpOnly, SameSite cookies, Secure on HTTPS. Mutations require a same-origin request and session-bound CSRF token. OIDC login state is single-use. Native local accounts require a one-time owner bootstrap, password plus TOTP, and store persistent revocable sessions, one-use recovery codes, role assignments and a chained identity audit. Their identity data is isolated under `CHAT_DATA_DIR/identity`; TOTP seeds use the separate encryption key. This backend supports one chat instance on one host only; do not share it between replicas. Invitations and recovery links are operator-delivered because no mail service is configured. Conversations persist across restart, expire after 30 days without activity and are pruned at startup and hourly. Limits include 100 conversations per user, 80 messages per conversation, 8,000 characters per submitted message, 16 tool calls per turn, three simultaneous turns and 10 message submissions per user per minute. Long transcripts and tool outputs are bounded. Per-project user RBAC remains separate work.
 
-Back up `chat-data` as private application data. Protect `chat-codex` as credential storage. User deletion and retention remove active conversation files; backup retention is an operator responsibility. Provider account data handling and retention follow that account's configuration. Application logs omit prompts, replies and credentials.
+Back up `chat-data` as private application data and preserve the external local-identity encryption key separately; restore both together in an isolated test. Protect `chat-codex` as credential storage. User deletion and retention remove active conversation files; backup retention is an operator responsibility. Provider account data handling and retention follow that account's configuration. Application logs omit prompts, replies and credentials.
 
 ## Repeatable verification
 

@@ -1,5 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { unlinkSync } from "node:fs";
 import * as oidc from "openid-client";
+import { IdentityStore } from "./identity-store.mjs";
 
 export function equal(a, b) {
     return (
@@ -26,6 +28,13 @@ export class Auth {
         this.sessions = new Map();
         this.transactions = new Map();
         this.discovery = null;
+        this.identityStore = config.identityEnabled
+            ? new IdentityStore(config.dataDir + "/identity", {
+                  issuer: config.localIssuer,
+                  sessionSeconds: config.sessionSeconds,
+                  encryptionKey: config.identityEncryptionKey,
+              })
+            : null;
     }
     cookie(name, value, maxAge) {
         return `${this.config.secure ? "__Host-" : ""}${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${this.config.secure ? "; Secure" : ""}`;
@@ -51,6 +60,10 @@ export class Auth {
     }
     async login(req, res) {
         this.cleanup();
+        if (!this.config.issuer || !this.config.clientId || !this.config.clientSecret)
+            throw Object.assign(new Error("Organisation sign-in is not configured. Use local account sign-in."), {
+                status: 503,
+            });
         if (this.transactions.size >= 1000) throw Object.assign(new Error("Please try again later"), { status: 429 });
         const client = await this.client(),
             id = token(),
@@ -129,6 +142,7 @@ export class Auth {
                 roles,
                 projectScopes,
                 started: Math.floor(Date.now() / 1000),
+                method: "interactive_oidc",
             };
         }
         const sessionId = token();
@@ -150,11 +164,92 @@ export class Auth {
     }
     session(req) {
         this.cleanup();
-        return this.sessions.get(this.value(req, "ModellingSession"));
+        const sessionToken = this.value(req, "ModellingSession");
+        if (this.identityStore) {
+            const local = this.identityStore.localSession(sessionToken);
+            if (local) return local;
+            const setup = this.identityStore.createSessionForSetup(sessionToken);
+            if (setup)
+                return {
+                    identity: this.config.localIssuer + "\n" + setup.user.id,
+                    name: setup.user.displayName,
+                    csrf: setup.csrf,
+                    expires: setup.expires,
+                    user: setup.user,
+                    mfaSetupRequired: true,
+                    totpSecret: setup.totpSecret,
+                    otpAuthUrl: this.otpAuthUrl(setup.totpSecret, setup.user.username),
+                };
+        }
+        return this.sessions.get(sessionToken);
     }
-    require(req, mutation = false) {
+    async localLogin(input, req, res) {
+        if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
+        const result = await this.identityStore.login(
+            input.username,
+            input.password,
+            input.otp,
+            input.recoveryCode,
+            req.socket.remoteAddress || "unknown",
+        );
+        res.setHeader("Set-Cookie", this.cookie("ModellingSession", result.sessionToken, this.config.sessionSeconds));
+        return { user: result.user, csrf: result.csrf };
+    }
+    bootstrap(input, res) {
+        if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
+        const result = this.identityStore.bootstrap(input.token, input.username, input.displayName, input.password);
+        try {
+            unlinkSync(this.config.dataDir + "/owner-bootstrap.token");
+        } catch (error) {
+            if (error.code !== "ENOENT") throw error;
+        }
+        res.setHeader("Set-Cookie", this.cookie("ModellingSession", result.sessionToken, this.config.sessionSeconds));
+        return {
+            user: result.user,
+            csrf: result.csrf,
+            totpSecret: result.totpSecret,
+            otpAuthUrl: this.otpAuthUrl(result.totpSecret, result.user.username),
+            mfaSetupRequired: true,
+        };
+    }
+    acceptInvite(input, res) {
+        if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
+        const result = this.identityStore.acceptInvite(input.token, input.username, input.displayName, input.password);
+        res.setHeader("Set-Cookie", this.cookie("ModellingSession", result.sessionToken, this.config.sessionSeconds));
+        return {
+            user: result.user,
+            csrf: result.csrf,
+            totpSecret: result.totpSecret,
+            otpAuthUrl: this.otpAuthUrl(result.totpSecret, result.user.username),
+            mfaSetupRequired: true,
+        };
+    }
+    completeAccountRecovery(input, res) {
+        if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
+        const result = this.identityStore.completeAccountRecovery(input.token, input.password);
+        res.setHeader("Set-Cookie", this.cookie("ModellingSession", result.sessionToken, this.config.sessionSeconds));
+        return {
+            user: result.user,
+            csrf: result.csrf,
+            totpSecret: result.totpSecret,
+            otpAuthUrl: this.otpAuthUrl(result.totpSecret, result.user.username),
+            mfaSetupRequired: true,
+        };
+    }
+    finishMfa(req, input) {
+        if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
+        const result = this.identityStore.verifyMfaSetup(this.value(req, "ModellingSession"), input.code);
+        return { user: result.user, csrf: result.csrf, recoveryCodes: result.recoveryCodes };
+    }
+    otpAuthUrl(secret, username) {
+        const label = encodeURIComponent("openEHR Modelling Assistant:" + username);
+        return `otpauth://totp/${label}?secret=${secret}&issuer=openEHR%20Modelling%20Assistant&algorithm=SHA1&digits=6&period=30`;
+    }
+    require(req, mutation = false, allowMfaSetup = false) {
         const session = this.session(req);
         if (!session) throw Object.assign(new Error("Please sign in to continue."), { status: 401 });
+        if (session.mfaSetupRequired && !allowMfaSetup)
+            throw Object.assign(new Error("Complete multi-factor setup before continuing."), { status: 403 });
         if (
             mutation &&
             (req.headers.origin !== this.config.origin || !equal(req.headers["x-csrf-token"], session.csrf))
@@ -164,7 +259,9 @@ export class Auth {
     }
     logout(req, res) {
         this.require(req, true);
-        this.sessions.delete(this.value(req, "ModellingSession"));
+        const sessionToken = this.value(req, "ModellingSession");
+        this.sessions.delete(sessionToken);
+        if (this.identityStore) this.identityStore.revokeSession(sessionToken);
         res.setHeader("Set-Cookie", this.cookie("ModellingSession", "", 0));
     }
 }

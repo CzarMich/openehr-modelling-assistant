@@ -81,7 +81,10 @@ export function createApplication(
                     enabled: config.enabled,
                     review_enabled: config.reviewEnabled,
                 });
-            if ((config.enabled || config.reviewEnabled) && req.headers.host !== new URL(config.origin).host)
+            if (
+                (config.enabled || config.reviewEnabled || config.identityEnabled) &&
+                req.headers.host !== new URL(config.origin).host
+            )
                 throw Object.assign(new Error("Unknown host"), { status: 421 });
             const assets = {
                 "/": ["index.html", "text/html; charset=utf-8"],
@@ -91,6 +94,7 @@ export function createApplication(
                 "/chat/app.js": ["app.js", "text/javascript"],
                 "/chat/style.css": ["style.css", "text/css"],
                 "/chat/reviews.js": ["reviews.js", "text/javascript"],
+                "/chat/identity.js": ["identity.js", "text/javascript"],
             };
             if (req.method === "GET" && path === "/chat/reviews") {
                 res.writeHead(302, { Location: "/chat/#governance" });
@@ -108,21 +112,106 @@ export function createApplication(
                 const session = auth.session(req);
                 return json(res, 200, {
                     enabled: config.enabled,
-                    authenticated: !!session,
-                    user: session ? { name: session.name } : null,
+                    authenticated: !!session && !session.mfaSetupRequired,
+                    user: session
+                        ? {
+                              name: session.name,
+                              ...(session.user ? { id: session.user.id, roles: session.user.roles } : {}),
+                          }
+                        : null,
                     csrf: session?.csrf,
                     allowWrites: config.allowWrites,
                     reviewEnabled: config.reviewEnabled,
+                    identityEnabled: config.identityEnabled,
+                    identitySetupRequired: config.identityEnabled && auth.identityStore.read().users.length === 0,
+                    oidcEnabled: !!config.issuer,
+                    mfaSetupRequired: !!session?.mfaSetupRequired,
+                    ...(session?.mfaSetupRequired
+                        ? { totpSecret: session.totpSecret, otpAuthUrl: session.otpAuthUrl }
+                        : {}),
                     retentionDays: config.retentionDays,
                 });
             }
-            if (!config.enabled && !config.reviewEnabled)
+            if (!config.enabled && !config.reviewEnabled && !config.identityEnabled)
                 throw Object.assign(
                     new Error(
                         "Browser review is disabled. Configure CHAT_REVIEW_ENABLED=true and the browser OIDC client; CHAT_ENABLED and a model-provider account are only needed for conversational chat.",
                     ),
                     { status: 503 },
                 );
+            if (req.method === "POST" && path.startsWith("/chat/auth/") && req.headers.origin !== config.origin)
+                throw Object.assign(new Error("Request could not be verified"), { status: 403 });
+            if (req.method === "POST" && path === "/chat/auth/local") {
+                const input = await body(req);
+                if (
+                    !input ||
+                    typeof input !== "object" ||
+                    Array.isArray(input) ||
+                    Object.keys(input).some((key) => !["username", "password", "otp", "recoveryCode"].includes(key))
+                )
+                    throw Object.assign(new Error("Invalid sign-in request."), { status: 400 });
+                const result = await auth.localLogin(input, req, res);
+                return json(res, 200, result);
+            }
+            if (req.method === "POST" && path === "/chat/auth/bootstrap") {
+                const input = await body(req);
+                if (
+                    !input ||
+                    typeof input !== "object" ||
+                    Array.isArray(input) ||
+                    Object.keys(input).some((key) => !["token", "username", "displayName", "password"].includes(key))
+                )
+                    throw Object.assign(new Error("Invalid bootstrap request."), { status: 400 });
+                return json(res, 201, auth.bootstrap(input, res));
+            }
+            if (req.method === "POST" && path === "/chat/auth/invitations/accept") {
+                const input = await body(req);
+                if (
+                    !input ||
+                    typeof input !== "object" ||
+                    Array.isArray(input) ||
+                    Object.keys(input).some((key) => !["token", "username", "displayName", "password"].includes(key))
+                )
+                    throw Object.assign(new Error("Invalid invitation request."), { status: 400 });
+                return json(res, 201, auth.acceptInvite(input, res));
+            }
+            if (req.method === "POST" && path === "/chat/auth/mfa") {
+                auth.require(req, true, true);
+                const input = await body(req);
+                if (
+                    !input ||
+                    typeof input !== "object" ||
+                    Array.isArray(input) ||
+                    Object.keys(input).some((key) => key !== "code")
+                )
+                    throw Object.assign(new Error("Invalid MFA request."), { status: 400 });
+                return json(res, 200, auth.finishMfa(req, input));
+            }
+            if (req.method === "POST" && path === "/chat/auth/password-reset") {
+                if (!auth.identityStore)
+                    throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
+                const input = await body(req);
+                if (
+                    !input ||
+                    typeof input !== "object" ||
+                    Array.isArray(input) ||
+                    Object.keys(input).some((key) => !["token", "password"].includes(key))
+                )
+                    throw Object.assign(new Error("Invalid password reset request."), { status: 400 });
+                auth.identityStore.resetPassword(input.token, input.password);
+                return json(res, 200, { success: true });
+            }
+            if (req.method === "POST" && path === "/chat/auth/account-recovery") {
+                const input = await body(req);
+                if (
+                    !input ||
+                    typeof input !== "object" ||
+                    Array.isArray(input) ||
+                    Object.keys(input).some((key) => !["token", "password"].includes(key))
+                )
+                    throw Object.assign(new Error("Invalid account recovery request."), { status: 400 });
+                return json(res, 200, auth.completeAccountRecovery(input, res));
+            }
             if (req.method === "GET" && path === "/chat/auth/login") return await auth.login(req, res);
             if (req.method === "GET" && path === "/chat/auth/callback") return await auth.callback(req, res);
             const mutation = req.method !== "GET";
@@ -133,6 +222,69 @@ export function createApplication(
                     if (key.startsWith(store.owner(identity) + ":")) turn.controller.abort();
                 auth.logout(req, res);
                 return json(res, 200, { success: true });
+            }
+            if (path.startsWith("/chat/api/identity/")) {
+                const store = auth.identityStore;
+                if (!store) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
+                const actor = session.user?.id;
+                if (!actor)
+                    throw Object.assign(new Error("A native administrator account is required."), { status: 403 });
+                if (req.method === "GET" && path === "/chat/api/identity/users")
+                    return json(res, 200, store.listUsers(actor));
+                if (req.method === "GET" && path === "/chat/api/identity/audit")
+                    return json(res, 200, store.listUsers(actor).audit);
+                if (req.method === "POST" && path === "/chat/api/identity/invitations") {
+                    const input = await body(req);
+                    if (
+                        !input ||
+                        typeof input !== "object" ||
+                        Array.isArray(input) ||
+                        Object.keys(input).some((key) => !["email", "roles", "expiresSeconds"].includes(key))
+                    )
+                        throw Object.assign(new Error("Invalid invitation request."), { status: 400 });
+                    return json(res, 201, store.invite(actor, input.email, input.roles, input.expiresSeconds));
+                }
+                const userRoute = path.match(
+                    /^\/chat\/api\/identity\/users\/([a-f0-9-]{36})\/(roles|disable|reset|sessions)$/,
+                );
+                if (userRoute) {
+                    const [, userId, action] = userRoute;
+                    if (action === "roles" && req.method === "PUT") {
+                        const input = await body(req);
+                        if (
+                            !input ||
+                            typeof input !== "object" ||
+                            Array.isArray(input) ||
+                            Object.keys(input).some((key) => key !== "roles")
+                        )
+                            throw Object.assign(new Error("Invalid role assignment."), { status: 400 });
+                        return json(res, 200, { user: store.setRoles(actor, userId, input.roles) });
+                    }
+                    if (action === "disable" && req.method === "POST")
+                        return json(res, 200, { user: store.disableUser(actor, userId) });
+                    if (action === "reset" && req.method === "POST")
+                        return json(res, 201, store.inviteReset(actor, userId));
+                    if (action === "sessions" && req.method === "DELETE")
+                        return json(res, 200, { success: store.revokeUserSessions(actor, userId) });
+                }
+                if (req.method === "POST" && path === "/chat/api/identity/service-accounts") {
+                    const input = await body(req);
+                    if (
+                        !input ||
+                        typeof input !== "object" ||
+                        Array.isArray(input) ||
+                        Object.keys(input).some((key) => !["name", "scopes"].includes(key))
+                    )
+                        throw Object.assign(new Error("Invalid service account request."), { status: 400 });
+                    return json(res, 201, store.issueServiceAccount(actor, input.name, input.scopes));
+                }
+                const recoveryRoute = path.match(/^\/chat\/api\/identity\/users\/([a-f0-9-]{36})\/recovery$/);
+                if (recoveryRoute && req.method === "POST")
+                    return json(res, 201, store.issueAccountRecovery(actor, recoveryRoute[1]));
+                const serviceRoute = path.match(/^\/chat\/api\/identity\/service-accounts\/([a-f0-9-]{36})$/);
+                if (serviceRoute && req.method === "DELETE")
+                    return json(res, 200, { success: store.revokeServiceAccount(actor, serviceRoute[1]) });
+                throw Object.assign(new Error("Not found."), { status: 404 });
             }
             if (path === "/chat/api/reviews" || path.startsWith("/chat/api/reviews/")) {
                 if (!config.reviewEnabled)
@@ -370,6 +522,28 @@ export function createApplication(
             if (res.headersSent) {
                 res.end();
                 return;
+            }
+            if (typeof error.message === "string" && error.message.startsWith("IDENTITY_")) {
+                error.status =
+                    error.status ||
+                    (/ADMIN_REQUIRED/.test(error.message)
+                        ? 403
+                        : /NOT_FOUND/.test(error.message)
+                          ? 404
+                          : /EXISTS|LAST_ADMIN|OWNER_ALREADY/.test(error.message)
+                            ? 409
+                            : /BUSY|CORRUPT|CHAIN_INVALID/.test(error.message)
+                              ? 503
+                              : /LOGIN_INVALID/.test(error.message)
+                                ? 401
+                                : 400);
+                error.message = /LOGIN_INVALID|BOOTSTRAP_INVALID|INVITATION_INVALID|RESET_INVALID/.test(error.message)
+                    ? "The sign-in or one-time link is invalid or expired."
+                    : /ADMIN_REQUIRED/.test(error.message)
+                      ? "Administrator permission is required."
+                      : /LAST_ADMIN/.test(error.message)
+                        ? "At least one active administrator must remain."
+                        : "The identity request could not be completed.";
             }
             const status = [400, 401, 403, 404, 409, 413, 415, 421, 429, 503].includes(error.status)
                 ? error.status

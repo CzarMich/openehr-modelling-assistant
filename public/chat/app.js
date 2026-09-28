@@ -80,12 +80,14 @@ function controls() {
 }
 async function loadSession() {
     session = await api("api/session");
-    $("login-panel").hidden = !!session.authenticated || !session.enabled;
+    $("login-panel").hidden =
+        !!session.authenticated || !(session.enabled || session.reviewEnabled || session.identityEnabled);
     $("sign-out").hidden = !session.authenticated;
     $("user-name").textContent = session.user?.name || "";
     controls();
     document.dispatchEvent(new CustomEvent("workspace:session", { detail: session }));
-    if (!session.enabled) notice("Browser chat is not configured on this deployment.");
+    if (!session.enabled && !session.reviewEnabled && !session.identityEnabled)
+        notice("Browser chat is not configured on this deployment.");
 }
 async function list() {
     const result = await api("api/conversations");

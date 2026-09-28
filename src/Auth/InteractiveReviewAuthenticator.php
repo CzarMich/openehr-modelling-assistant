@@ -52,9 +52,11 @@ final readonly class InteractiveReviewAuthenticator
             }
             $now = time();
             $maxAge = (int) $this->settings->get($request->getMethod() === 'GET' ? 'GOVERNANCE_BROWSER_SESSION_MAX_AGE' : 'GOVERNANCE_SESSION_MAX_AGE');
+            $identityMethod = $claims['identity_method'] ?? 'interactive_oidc';
             if (($claims['iss'] ?? null) !== $this->settings->get('GOVERNANCE_BROWSER_ORIGIN')
                 || ($claims['aud'] ?? null) !== 'openehr-modelling-review'
-                || ($claims['identity_issuer'] ?? null) !== $this->settings->get('GOVERNANCE_OIDC_ISSUER')
+                || !in_array($identityMethod, ['interactive_oidc', 'interactive_local'], true)
+                || !is_string($claims['identity_issuer'] ?? null) || $claims['identity_issuer'] === ''
                 || !is_string($claims['sub'] ?? null) || $claims['sub'] === '' || strlen($claims['sub']) > 300
                 || !is_int($claims['iat'] ?? null) || !is_int($claims['exp'] ?? null) || !is_int($claims['session_started'] ?? null)
                 || $claims['iat'] > $now + 5 || $claims['iat'] < $now - 60 || $claims['exp'] <= $claims['iat'] || $claims['exp'] > $claims['iat'] + 60
@@ -93,7 +95,14 @@ final readonly class InteractiveReviewAuthenticator
             if (!is_string($rawTenant) || $rawTenant === '' || strlen($rawTenant) > 300) {
                 return null;
             }
-            if ($this->settings->get('AUTH_MODE') === 'oidc') {
+            if ($identityMethod === 'interactive_local') {
+                if ($issuer !== $this->settings->get('GOVERNANCE_LOCAL_IDENTITY_ISSUER') || $rawTenant !== $issuer) {
+                    return null;
+                }
+                $tenant = $this->settings->get('AUTH_MODE') === 'oidc'
+                    ? Principal::tenantNamespace($issuer, $rawTenant)
+                    : 'shared';
+            } elseif ($this->settings->get('AUTH_MODE') === 'oidc') {
                 if ($issuer !== $this->settings->get('OIDC_ISSUER')) {
                     return null;
                 }
@@ -113,11 +122,11 @@ final readonly class InteractiveReviewAuthenticator
                 $tenant = 'shared';
             }
             $actor = new Actor(
-                'oidc:' . hash('sha256', json_encode([$issuer, $rawTenant, $claims['sub']], JSON_THROW_ON_ERROR)),
+                ($identityMethod === 'interactive_local' ? 'local:' : 'oidc:') . hash('sha256', json_encode([$issuer, $rawTenant, $claims['sub']], JSON_THROW_ON_ERROR)),
                 $tenant,
                 $roles,
                 true,
-                'interactive_oidc',
+                $identityMethod,
                 $projectScopes
             );
             $this->audit->consumeNonce($claims['jti'], $claims['exp']);

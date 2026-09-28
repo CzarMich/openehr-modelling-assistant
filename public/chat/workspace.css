@@ -250,6 +250,101 @@ body:not([data-section="chat"]) .sidebar-label {
     font-weight: 600;
     font-size: 13px;
 }
+.identity-form,
+.identity-admin-section {
+    max-width: 860px;
+    margin: 22px 0;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+}
+.identity-form h2,
+.identity-admin-section h2 {
+    margin-bottom: 12px;
+}
+.identity-form > label,
+.identity-form input:not([type="checkbox"]),
+.identity-form textarea {
+    display: block;
+    width: 100%;
+    max-width: 520px;
+    margin: 7px 0 12px;
+}
+.identity-form input:not([type="checkbox"]),
+.identity-form textarea {
+    padding: 10px 12px;
+    border: 1px solid #b8cada;
+    border-radius: 6px;
+    color: var(--ink);
+    background: white;
+}
+.identity-form fieldset,
+.identity-user fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+    margin: 14px 0;
+}
+.identity-form fieldset label,
+.identity-user fieldset label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 500;
+}
+.identity-user {
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+}
+.identity-user-heading,
+.identity-service,
+.identity-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.identity-user-heading span,
+.identity-service {
+    color: var(--muted);
+    font-size: 12px;
+}
+.identity-actions {
+    justify-content: flex-start;
+}
+.identity-link-result {
+    max-width: 860px;
+    padding: 14px 0;
+}
+.identity-link-result label {
+    display: block;
+}
+.identity-link-result textarea {
+    display: block;
+    width: 100%;
+    overflow-wrap: anywhere;
+}
+#identity-audit {
+    max-height: 420px;
+    overflow: auto;
+    padding-left: 24px;
+}
+#identity-audit li {
+    padding: 5px 0;
+    overflow-wrap: anywhere;
+}
+#mfa-enrollment code,
+#recovery-code-list {
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+.identity-admin-section > div:empty::after {
+    content: "No accounts to display.";
+    color: var(--muted);
+}
 .content-panel input,
 .content-panel select,
 .content-panel textarea {

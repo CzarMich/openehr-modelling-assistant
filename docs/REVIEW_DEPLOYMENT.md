@@ -2,7 +2,7 @@
 
 For the relationship between IdP invitations, signed claims, API scopes, project grants and browser review permissions, see [OIDC authorization and browser review roles](IDENTITY_AND_ACCESS.md).
 
-The review workspace is an optional OIDC browser adapter to the provider-neutral modelling core. It can run without conversational chat, an LLM account, a CDR or an external terminology server. Models still require qualified validation before clinical approval or publication.
+The review workspace is an optional browser adapter to the provider-neutral modelling core. It supports organisation OIDC and optional native local accounts. It can run without conversational chat, an LLM account, a CDR or an external terminology server. Models still require qualified validation before clinical approval or publication.
 
 ## Environments and storage
 
@@ -20,6 +20,7 @@ The default browser image target is `reviews`; it contains OIDC and review funct
 | `GOVERNANCE_DATABASE_PATH` | `/data/governance/audit.sqlite` | Separate persistent SQLite ledger; never place in a shared Git checkout |
 | `GOVERNANCE_BROWSER_ORIGIN` | empty | Exact public browser origin, without a path or trailing slash |
 | `GOVERNANCE_OIDC_ISSUER` | empty | Exact verified browser identity issuer |
+| `GOVERNANCE_LOCAL_IDENTITY_ISSUER` | empty | Exact local issuer accepted only for `interactive_local` assertions |
 | `GOVERNANCE_BROWSER_KEYS` | `{}` | JSON object of accepted key identifiers to dedicated random signing keys; up to three keys for rotation |
 | `GOVERNANCE_SESSION_MAX_AGE` | `900` | Maximum sign-in age for decisions in seconds, 60–3600 |
 | `GOVERNANCE_BROWSER_SESSION_MAX_AGE` | `3600` | Maximum sign-in age for reading reviews; at least the decision limit and at most the browser session lifetime |
@@ -32,11 +33,18 @@ Defaults map `modeller`, `reviewer`, `approver` and `publisher` to `modelling-mo
 
 ## Browser variables
 
-Existing `CHAT_PUBLIC_URL`, `CHAT_OIDC_ISSUER`, `CHAT_OIDC_CLIENT_ID`, `CHAT_OIDC_CLIENT_SECRET`, optional `CHAT_ALLOWED_GROUPS` and `CHAT_MCP_URL` configure the browser identity and core location. The review API uses the origin of `CHAT_MCP_URL`, and does not forward its normal MCP API key.
+Existing `CHAT_PUBLIC_URL`, `CHAT_OIDC_ISSUER`, `CHAT_OIDC_CLIENT_ID`, `CHAT_OIDC_CLIENT_SECRET`, optional `CHAT_ALLOWED_GROUPS` and `CHAT_MCP_URL` configure organisation sign-in and the core location. Native accounts are separately enabled with `CHAT_LOCAL_IDENTITY_ENABLED=true`; configure `CHAT_LOCAL_IDENTITY_ISSUER` to the same exact value as the core's `GOVERNANCE_LOCAL_IDENTITY_ISSUER`, and set `CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY` to a dedicated 32-byte random key encoded as 64 lowercase hexadecimal characters. The review API uses the origin of `CHAT_MCP_URL`, and does not forward its normal MCP API key.
+
+The first native owner is created without a shipped account or password. Enable the option and encryption key in the protected chat environment, start the browser service, then run `docker compose exec chat node src/bootstrap-identity.mjs`. The command writes a 15-minute, single-use token to `/data/chat/owner-bootstrap.token` with private permissions and logs only the file path. Retrieve it into a protected file outside the checkout (for example with `docker compose cp chat:/data/chat/owner-bootstrap.token "$HOME/.config/openehr-modelling/bootstrap-token"`) and enter it at `/chat/`; successful bootstrap deletes the token file. The owner chooses a username and password and must enroll TOTP before using the workspace. No default username or password exists.
+
+Invitations, password resets and account recovery produce one-time links for delivery through an approved operator channel; no email is sent. Account recovery replaces the password and TOTP seed and requires MFA enrollment again. TOTP recovery codes are shown once. Local account data lives under `CHAT_DATA_DIR/identity`, separate from conversations; MFA seeds are AES-GCM encrypted with the external encryption key, and the key must be backed up separately. This JSON backend is designed for one chat instance on one host with persistent local storage. Do not run multiple chat replicas against it; use OIDC or a future shared transactional identity backend for horizontally scaled deployments. Back up and restore the identity directory and encryption key together, and test recovery in isolation.
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `CHAT_REVIEW_ENABLED` | `false` | Enable `/chat/reviews` and its authenticated backend |
+| `CHAT_LOCAL_IDENTITY_ENABLED` | `false` | Enable local usernames, passwords and required TOTP MFA alongside or instead of OIDC |
+| `CHAT_LOCAL_IDENTITY_ISSUER` | `<browser-origin>/identity/local` | Stable local identity issuer; must match core governance configuration |
+| `CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY` | empty | Dedicated 32-byte hex key for encrypted local MFA seeds; required when local identity is enabled |
 | `CHAT_REVIEW_SIGNING_KEY` | empty | The dedicated active review key, kept server-side |
 | `CHAT_REVIEW_KEY_ID` | `active` | Identifier matching `GOVERNANCE_BROWSER_KEYS` |
 | `CHAT_REVIEW_ROLES_CLAIM` | `roles` | Dot-separated signed ID-token role claim, for example `realm_access.roles` |

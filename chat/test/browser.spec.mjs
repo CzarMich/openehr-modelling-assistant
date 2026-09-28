@@ -4,6 +4,33 @@ test.beforeEach(async ({ page }) => {
     browserErrors = [];
     page.on("pageerror", (error) => browserErrors.push(error.message));
 });
+
+test("administrator accounts workspace is role-gated and usable on mobile", async ({ page }) => {
+    await page.route("**/chat/api/session", async (route) =>
+        route.fulfill({
+            json: {
+                enabled: false,
+                authenticated: true,
+                user: { id: "owner-id", name: "Workspace Owner", roles: ["modelling-administrator"] },
+                csrf: "fixture-csrf",
+                reviewEnabled: true,
+                identityEnabled: true,
+                identitySetupRequired: false,
+                oidcEnabled: false,
+            },
+        }),
+    );
+    await page.route("**/chat/api/identity/users", async (route) =>
+        route.fulfill({ json: { users: [], serviceAccounts: [], audit: { events: [] } } }),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/chat/");
+    await page.getByRole("tab", { name: "Accounts" }).click();
+    await expect(page.getByRole("heading", { name: "Accounts and access" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Invite a user" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Service credential", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
 test.afterEach(async () => {
     expect(browserErrors).toEqual([]);
 });

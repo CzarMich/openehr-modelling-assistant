@@ -39,7 +39,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Codex development connection | WORKING | Installed Codex app-server initialized the HTTPS service and discovered the modelling tool catalogue with a private credential helper |
 | Browser modelling chat | WORKING | OIDC sign-in, private persistent conversations, streamed replies, actual tool activity and confirmed draft writes through an isolated Codex client; optional service |
 | Browser identity and session isolation | WORKING | Authorization code flow with PKCE, signed identity claims, secure cookies, CSRF and per-user conversation ownership; shared model repository principal |
-| Unified browser workspace | WORKING | Root URL serves Chat, Models and Governance tabs with shared identity and preserved conversation/draft state |
+| Native browser user management | PARTIAL | One-time owner bootstrap, password+TOTP login, recovery, invitations, role administration, revocable sessions, service credential lifecycle and chained audit; single-instance local storage, no email/passkeys or shared transactional identity backend |
+| Unified browser workspace | WORKING | Root URL serves Chat, Models, Governance and role-gated Accounts tabs with shared identity and preserved conversation/draft state |
 | GitHub/GitLab hosting capabilities | WORKING | Shared Git storage plus configured-repository metadata, branches/protection and draft reviews; live GitHub acceptance, GitLab contract tests |
 | GitLab live hosted acceptance | NOT TESTED | Adapter and contract tests implemented; requires a configured GitLab account/token |
 | SharePoint storage | WORKING | Graph-backed immutable snapshots, conditional index updates, revisions/history/metadata and tenant mappings; OAuth and production-container contracts verified |
@@ -60,4 +61,4 @@ Chat and model governance share the verified browser identity. Explicit platform
 
 PostgreSQL governance storage and optional Valkey/Redis model retrieval caching are implemented. SQLite migration preserves event bytes, hashes and nonce history. Cache invalidation follows authoritative revisions; cache failures fall back to model storage. See [deployment and acceptance](docs/POSTGRES_AND_CACHE.md).
 
-The [browser workspace](docs/BROWSER_WORKSPACE.md) integrates Chat, exact-revision model browsing and Governance in one responsive interface with shared identity and keyboard navigation. This is a model browser and review workspace; full visual model editing and native identity administration remain separate implementation items.
+The [browser workspace](docs/BROWSER_WORKSPACE.md) integrates Chat, exact-revision model browsing, Governance and local account administration in one responsive interface with keyboard navigation. This is a model browser and review workspace; full visual model editing remains separate implementation work.

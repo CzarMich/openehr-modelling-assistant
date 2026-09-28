@@ -194,15 +194,15 @@
     },
     {
       "id": "native-human-identity",
-      "status": "NOT IMPLEMENTED",
-      "scope": "Production local users, secure owner bootstrap, invitations, password/reset, sessions, TOTP/passkeys, RBAC, service accounts, native review identity, audit and recovery; optional OIDC",
-      "implementation": null,
-      "evidence": null
+      "status": "PARTIAL",
+      "scope": "Native local owner bootstrap, password login/reset, TOTP and recovery codes, persistent revocable sessions, role administration, invitation/recovery links, managed service credentials, local review identity and chained audit; single-instance JSON storage, no mail/passkeys, and no shared transactional identity backend",
+      "implementation": "chat/src/identity-store.mjs",
+      "evidence": "chat/test/identity-http.test.mjs"
     },
     {
       "id": "openehr-ui-theme",
       "status": "PARTIAL",
-      "scope": "Unified responsive blue/white Chat/Models/Governance workspace delivered and live-verified; native identity administration and full visual modeller remain.",
+      "scope": "Unified responsive blue/white Chat/Models/Governance/Accounts workspace; full visual modeller remains.",
       "implementation": "public/chat/workspace.css",
       "evidence": "docs/evidence/unified-workspace-live.json"
     },

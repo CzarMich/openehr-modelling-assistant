@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add native local account administration with secure bootstrap, MFA, recovery and review identity.
+
 - Document external OIDC provisioning, authorization scopes and browser review role setup.
 
 - Extend bounded OET authoring, model comparison and exact-build QA evidence.

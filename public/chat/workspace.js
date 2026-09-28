@@ -10,6 +10,7 @@ const headings = {
     chat: "Clinical modelling",
     models: "Model repository",
     governance: "Model governance",
+    accounts: "Accounts and access",
 };
 function activate(name, update = true) {
     if (!headings[name]) name = "chat";

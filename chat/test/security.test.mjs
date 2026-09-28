@@ -88,6 +88,34 @@ test("configuration refuses non-TLS public origins, embedded credentials, missin
     assert.throws(() => loadConfig({ CHAT_PUBLIC_URL: "https://user:password@example.org" }));
     assert.throws(() => loadConfig({ CHAT_ENABLED: "true" }));
     assert.throws(() => loadConfig({ CHAT_TURN_TIMEOUT_SECONDS: "invalid" }));
+    assert.equal(
+        loadConfig({
+            CHAT_ENABLED: "true",
+            CHAT_LOCAL_IDENTITY_ENABLED: "true",
+            CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY: "ab".repeat(32),
+            CHAT_PUBLIC_URL: "https://models.example",
+        }).identityEnabled,
+        true,
+    );
+    assert.throws(
+        () =>
+            loadConfig({
+                CHAT_ENABLED: "true",
+                CHAT_LOCAL_IDENTITY_ENABLED: "true",
+                CHAT_PUBLIC_URL: "https://models.example",
+            }),
+        /encryption key/,
+    );
+    assert.throws(
+        () =>
+            loadConfig({
+                CHAT_ENABLED: "true",
+                CHAT_LOCAL_IDENTITY_ENABLED: "true",
+                CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY: "ab".repeat(32),
+                CHAT_OIDC_CLIENT_ID: "partial",
+            }),
+        /OIDC/,
+    );
     assert.equal(loadConfig().enabled, false);
     assert.equal(equal("a", "é"), false);
 });

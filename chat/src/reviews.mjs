@@ -21,6 +21,7 @@ export class ReviewClient {
             iss: this.config.origin,
             aud: "openehr-modelling-review",
             identity_issuer: identity.issuer,
+            identity_method: identity.method || "interactive_oidc",
             sub: identity.subject,
             tenant: identity.tenant,
             roles: identity.roles,

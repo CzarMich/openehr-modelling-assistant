@@ -16,6 +16,9 @@ export function loadConfig(env = process.env) {
         origin: publicUrl.origin,
         secure: publicUrl.protocol === "https:",
         dataDir: resolve(env.CHAT_DATA_DIR || "/data/chat"),
+        identityEnabled: env.CHAT_LOCAL_IDENTITY_ENABLED === "true",
+        localIssuer: env.CHAT_LOCAL_IDENTITY_ISSUER || publicUrl.origin + "/identity/local",
+        identityEncryptionKey: env.CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY || "",
         issuer: env.CHAT_OIDC_ISSUER || "",
         clientId: env.CHAT_OIDC_CLIENT_ID || "",
         clientSecret: env.CHAT_OIDC_CLIENT_SECRET || "",
@@ -43,11 +46,30 @@ export function loadConfig(env = process.env) {
         retentionDays: 30,
         maxConcurrentTurns: 3,
     };
-    if (
-        (enabled || config.reviewEnabled) &&
-        (!config.issuer.startsWith("https://") || !config.clientId || !config.clientSecret)
-    )
-        throw new Error("Chat requires an OIDC client");
+    const oidcConfigured = Boolean(config.issuer || config.clientId || config.clientSecret);
+    if (oidcConfigured && (!config.issuer.startsWith("https://") || !config.clientId || !config.clientSecret))
+        throw new Error("Configure all OIDC client settings");
+    if ((enabled || config.reviewEnabled) && !config.identityEnabled && !oidcConfigured)
+        throw new Error("Chat or model review requires OIDC or explicitly enabled local identity");
+    if (config.identityEnabled) {
+        let localIssuer;
+        try {
+            localIssuer = new URL(config.localIssuer);
+        } catch {
+            throw new Error("Invalid local identity issuer");
+        }
+        if (
+            !["https:", "http:"].includes(localIssuer.protocol) ||
+            localIssuer.username ||
+            localIssuer.password ||
+            localIssuer.search ||
+            localIssuer.hash ||
+            (localIssuer.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(localIssuer.hostname))
+        )
+            throw new Error("Local identity issuer requires HTTPS");
+        if (!/^[a-f0-9]{64}$/.test(config.identityEncryptionKey))
+            throw new Error("Local identity requires a dedicated 32-byte hexadecimal encryption key");
+    }
     const mcp = new URL(config.mcpUrl);
     if (!["http:", "https:"].includes(mcp.protocol) || mcp.username || mcp.password || mcp.search || mcp.hash)
         throw new Error("Invalid CHAT_MCP_URL");

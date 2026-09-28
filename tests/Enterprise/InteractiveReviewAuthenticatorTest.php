@@ -20,6 +20,7 @@ final class InteractiveReviewAuthenticatorTest extends TestCase
     private const string KEY = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     private const string ORIGIN = 'https://models.example';
     private const string ISSUER = 'https://identity.example/realm';
+    private const string LOCAL_ISSUER = 'https://models.example/identity/local';
     private const string BODY = '{"state":"REVIEWED"}';
     private const string TARGET = '/api/v1/reviews/' . 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' . '/transitions';
 
@@ -66,6 +67,19 @@ final class InteractiveReviewAuthenticatorTest extends TestCase
         self::assertSame(Principal::tenantNamespace(self::ISSUER, 'hospital-a'), $actor->tenant);
         self::assertSame('oidc:' . hash('sha256', json_encode([self::ISSUER, 'hospital-a', 'reviewer-subject'], JSON_THROW_ON_ERROR)), $actor->id);
         self::assertNull($auth->authenticate($this->request(['tenant' => 'hospital-b'])));
+    }
+    public function test_configured_native_local_identity_is_a_distinct_human_method(): void
+    {
+        $settings = $this->settings(['GOVERNANCE_LOCAL_IDENTITY_ISSUER' => self::LOCAL_ISSUER]);
+        $auth = new InteractiveReviewAuthenticator($settings, new SqliteAuditStore(':memory:'));
+        $claims = ['identity_issuer' => self::LOCAL_ISSUER, 'identity_method' => 'interactive_local', 'tenant' => self::LOCAL_ISSUER];
+        $actor = $auth->authenticate($this->request($claims));
+        self::assertNotNull($actor);
+        self::assertTrue($actor->human);
+        self::assertSame('interactive_local', $actor->method);
+        self::assertStringStartsWith('local:', $actor->id);
+        self::assertSame('shared', $actor->tenant);
+        self::assertNull($auth->authenticate($this->request([...$claims, 'identity_issuer' => self::ISSUER])));
     }
     public static function invalidClaims(): array
     {

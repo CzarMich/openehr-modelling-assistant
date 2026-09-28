@@ -30,7 +30,7 @@ final class Settings
         'MODEL_CACHE_PASSWORD_FILE' => '', 'MODEL_CACHE_SIGNING_KEY_FILE' => '',
         'MODEL_CACHE_TTL' => '300', 'MODEL_CACHE_NAMESPACE' => 'openehr-models-v1',
         'GOVERNANCE_ENABLED' => 'false', 'GOVERNANCE_DATABASE_PATH' => '/data/governance/audit.sqlite',
-        'GOVERNANCE_BROWSER_ORIGIN' => '', 'GOVERNANCE_OIDC_ISSUER' => '', 'GOVERNANCE_BROWSER_KEYS' => '{}',
+        'GOVERNANCE_BROWSER_ORIGIN' => '', 'GOVERNANCE_OIDC_ISSUER' => '', 'GOVERNANCE_LOCAL_IDENTITY_ISSUER' => '', 'GOVERNANCE_BROWSER_KEYS' => '{}',
         'GOVERNANCE_SESSION_MAX_AGE' => '900', 'GOVERNANCE_BROWSER_SESSION_MAX_AGE' => '3600',
         'GOVERNANCE_ROLE_MAP' => '{"modeller":["modelling-modeller","modelling-administrator"],"reviewer":["modelling-reviewer","modelling-administrator"],"approver":["modelling-approver","modelling-administrator"],"publisher":["modelling-publisher","modelling-administrator"]}',
         'CKM_API_BASE_URL' => 'https://ckm.openehr.org/ckm/rest/', 'CKM_TIMEOUT' => '15',
@@ -109,7 +109,7 @@ final class Settings
             throw new InvalidArgumentException('Invalid AUTH_API_KEY_HEADER.');
         }
         foreach (['SHAREPOINT_GRAPH_URL', 'SHAREPOINT_TOKEN_URL', 'MODEL_HOSTED_API_URL', 'CKM_API_BASE_URL', 'TERMINOLOGY_FHIR_BASE_URL', 'OIDC_ISSUER', 'OIDC_JWKS_URI',
-            'GOVERNANCE_BROWSER_ORIGIN', 'GOVERNANCE_OIDC_ISSUER', 'PRODUCT_URL', 'PRODUCT_SUPPORT_URL', 'PRODUCT_DOCUMENTATION_URL', 'PRODUCT_LOGO_URL'] as $key) {
+            'GOVERNANCE_BROWSER_ORIGIN', 'GOVERNANCE_OIDC_ISSUER', 'GOVERNANCE_LOCAL_IDENTITY_ISSUER', 'PRODUCT_URL', 'PRODUCT_SUPPORT_URL', 'PRODUCT_DOCUMENTATION_URL', 'PRODUCT_LOGO_URL'] as $key) {
             if ($this->get($key) !== '') {
                 self::validateUrl($this->get($key));
             }
@@ -130,8 +130,9 @@ final class Settings
         }
         StorageConfiguration::validate($this);
         $this->governanceRoleMap();
-        if ($this->governanceBrowserKeys() !== [] && ($this->get('GOVERNANCE_BROWSER_ORIGIN') === '' || $this->get('GOVERNANCE_OIDC_ISSUER') === '')) {
-            throw new InvalidArgumentException('Governance browser keys require an explicit browser origin and OIDC issuer.');
+        if ($this->governanceBrowserKeys() !== [] && ($this->get('GOVERNANCE_BROWSER_ORIGIN') === ''
+            || ($this->get('GOVERNANCE_OIDC_ISSUER') === '' && $this->get('GOVERNANCE_LOCAL_IDENTITY_ISSUER') === ''))) {
+            throw new InvalidArgumentException('Governance browser keys require an explicit browser origin and identity issuer.');
         }
         $this->ckmSources();
         CkmAuthentication::profiles($this->get('CKM_AUTH'), $this->ckmSources());
