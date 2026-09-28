@@ -138,4 +138,22 @@ class LegacyTemplateCompilerTest {
         // An explicit slot remains restrictive. Its failed match cannot become an unconstrained placement.
         rejected("ENGINE_SLOT_NO_MATCH", oet, replace(deps, 0, "openEHR-EHR-.*", "openEHR-EHR-OBSERVATION.*"));
     }
+
+    @Test void narrowsExistingFiniteNameListAndRejectsEmptyIntersection() throws Exception {
+        String oet = NativeEngineTest.fixture("legacy/nested.oet");
+        var deps = dependencies();
+        String section = deps.get(1).content();
+        String definition = "SECTION[at0000] matches { items cardinality";
+        String constrained = section.replace(definition,
+            "SECTION[at0000] matches { name matches { DV_TEXT matches { value matches {\"Synthetic section\", \"Other section\"; \"Other section\"} } } items cardinality");
+        assertNotEquals(section, constrained);
+        var narrowedDependencies = replace(deps, 1, section, constrained);
+        var result = new LegacyTemplateCompiler().compile(oet, narrowedDependencies);
+        LegacyOptWriterTest.schema(result.content());
+        assertTrue(result.actions().stream().anyMatch(action -> "EXISTING_NAME_CONSTRAINT_NARROWED".equals(action.get("code"))));
+        assertTrue(result.content().contains("<list>Synthetic section</list>"));
+        assertFalse(result.content().contains("<list>Other section</list>"));
+
+        rejected("ENGINE_NAME_CONSTRAINT_EMPTY", oet.replace("name=\"Synthetic section\"", "name=\"Unlisted section\""), narrowedDependencies);
+    }
 }

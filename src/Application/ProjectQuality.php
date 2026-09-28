@@ -106,7 +106,20 @@ final readonly class ProjectQuality
             $checks[] = ['name' => 'explicit_terminology_inspection', 'status' => 'NOT_EXECUTED', 'reason' => 'The source is unavailable to the configured explicit terminology inspector.'];
             $findings->add('warning', 'TERMINOLOGY_INSPECTION_NOT_EXECUTED', $path, 'Terminology requirements could not be inspected.', [], 'Resolve source/profile findings and rerun the appropriate inspector.');
         }
-        foreach (['rm_type_membership', 'duplicate_native_node_identifiers', 'native_path_resolution', 'dependency_versions', 'deprecated_dependencies', 'external_dependency_resolution'] as $check) {
+        $buildEvidence = $this->nativeBuildEvidence($project, $sourceEvidence);
+        $checks[] = ['name' => 'native_build_evidence', 'status' => $buildEvidence['status'],
+            'builds' => $buildEvidence['builds'], 'reason' => $buildEvidence['reason']];
+        if ($buildEvidence['status'] === 'FAIL') {
+            $findings->add('error', 'NATIVE_BUILD_EVIDENCE_INVALID', $path, 'A saved native build for this exact source revision failed integrity or dependency verification.',
+                ['invalid_builds' => $buildEvidence['invalid_builds']], 'Repair or remove the inconsistent derived build, then rebuild from exact pinned inputs.');
+        } elseif ($buildEvidence['status'] === 'NOT_EXECUTED') {
+            $findings->add('warning', 'NATIVE_BUILD_EVIDENCE_NOT_FOUND', $path, 'No verified native build evidence exists for this exact source revision.', [],
+                'Run the appropriate native compiler with exact dependency revisions; a build is supporting evidence, not release qualification.');
+        }
+        $checks[] = ['name' => 'pinned_dependency_integrity', 'status' => $buildEvidence['status'] === 'PASS' ? 'PASS' : 'NOT_EXECUTED',
+            'scope' => 'Exact repository revisions and content hashes from a verified saved build manifest.',
+            'reason' => $buildEvidence['status'] === 'PASS' ? null : 'A matching verified build manifest is unavailable.'];
+        foreach (['dependency_versions', 'rm_type_membership', 'duplicate_native_node_identifiers', 'native_path_resolution', 'deprecated_dependencies', 'external_dependency_resolution'] as $check) {
             $checks[] = ['name' => $check, 'status' => 'NOT_EXECUTED', 'reason' => 'Requires the qualified engine and dependency resolver.'];
             $findings->add('warning', 'CHECK_NOT_EXECUTED', $path, 'This model-aware check has not run.', ['check' => $check], 'Resolve dependencies and run the qualified engine before release.');
         }
@@ -116,6 +129,132 @@ final readonly class ProjectQuality
             'traceability' => $trace, 'findings' => $findings->all(), 'model_changed' => false, 'clinical_approval' => false,
             'scope' => 'Exact source/document checks and recorded evidence; provenance and requirement links remain modeller assertions.',
             'consistency' => 'References reflect observed reads, not a distributed repository/audit transaction.', 'executed_at' => gmdate(DATE_ATOM)];
+    }
+
+    /** @param array<string, mixed> $source
+     * @return array{status: string, builds: list<array<string, mixed>>, invalid_builds: list<string>, reason: ?string} */
+    private function nativeBuildEvidence(string $project, array $source): array
+    {
+        try {
+            $artifacts = $this->repository->listArtifacts($project);
+        } catch (\RuntimeException|\InvalidArgumentException) {
+            return ['status' => 'NOT_EXECUTED', 'builds' => [], 'invalid_builds' => [], 'reason' => 'Repository build artifacts could not be listed.'];
+        }
+        $matching = [];
+        foreach ($artifacts as $artifact) {
+            $build = $artifact['metadata']['build'] ?? null;
+            if (!is_array($build) || !is_array($build['source'] ?? null) || !$this->sameSource($build['source'], $source)) {
+                continue;
+            }
+            $matching[] = $artifact;
+        }
+        if ($matching === []) {
+            return ['status' => 'NOT_EXECUTED', 'builds' => [], 'invalid_builds' => [], 'reason' => 'No saved compiler build names this exact source revision.'];
+        }
+        $verified = [];
+        $invalid = [];
+        foreach ($matching as $artifact) {
+            $build = $artifact['metadata']['build'];
+            try {
+                $this->verifyBuildArtifact($project, $artifact, $build, $source);
+                $verified[] = ['artifact' => array_intersect_key($artifact, array_flip(['path', 'revision', 'sha256'])),
+                    'kind' => $artifact['metadata']['kind'], 'format' => $build['format'], 'profile' => $build['report']['profile'],
+                    'engine' => $build['engine'], 'dependencies' => count($build['dependencies']),
+                    'checks' => $build['report']['checks'], 'limitations' => $build['report']['limitations']];
+            } catch (\RuntimeException|\InvalidArgumentException|\TypeError) {
+                $invalid[] = is_string($artifact['path'] ?? null) ? $artifact['path'] : 'unknown';
+            }
+        }
+        if ($invalid !== []) {
+            return ['status' => 'FAIL', 'builds' => $verified, 'invalid_builds' => $invalid, 'reason' => 'At least one matching build failed exact-source, output-hash or dependency verification.'];
+        }
+        return ['status' => 'PASS', 'builds' => $verified, 'invalid_builds' => [], 'reason' => null];
+    }
+
+    /** @param array<string, mixed> $artifact
+     * @param array<string, mixed> $build
+     * @param array<string, mixed> $source */
+    private function verifyBuildArtifact(string $project, array $artifact, array $build, array $source): void
+    {
+        $content = $artifact['content'] ?? null;
+        $sha = $artifact['sha256'] ?? null;
+        $report = $build['report'] ?? null;
+        $dependencies = $build['dependencies'] ?? null;
+        $validKind = in_array($artifact['metadata']['kind'] ?? null, ['compiled_opt2', 'compiled_opt14'], true);
+        $validFormat = in_array($build['format'] ?? null, ['opt2_adl', 'opt14_xml'], true);
+        $formatKindMatches = (($artifact['metadata']['kind'] ?? null) === 'compiled_opt14') === (($build['format'] ?? null) === 'opt14_xml');
+        if (!is_string($content) || !is_string($sha) || !hash_equals($sha, hash('sha256', $content))
+            || !hash_equals((string) ($build['output_sha256'] ?? ''), $sha)
+            || !$validKind || !$validFormat || !$formatKindMatches || !is_string($build['id'] ?? null) || !is_array($report)
+            || ($artifact['status'] ?? null) !== 'DRAFT' || !str_starts_with((string) ($artifact['path'] ?? ''), 'templates/compiled/')
+            || ($build['schema'] ?? null) !== 1 || ($build['project'] ?? null) !== $project
+            || ($report['operation'] ?? null) !== 'compile/template' || ($report['valid'] ?? null) !== true
+            || ($report['status'] ?? null) !== 'PASS' || ($report['content_sha256'] ?? null) !== $source['sha256']
+            || ($build['engine'] ?? null) !== ($report['engine'] ?? null)
+            || !is_array($build['engine'] ?? null) || !is_array($report['checks'] ?? null)
+            || !is_array($report['limitations'] ?? null) || !is_array($dependencies) || !array_is_list($dependencies) || count($dependencies) > 64) {
+            throw new \RuntimeException('BUILD_EVIDENCE_INVALID');
+        }
+        $expectedProfile = $build['format'] === 'opt14_xml' ? 'OET14_COMPILATION_RM_STRUCTURE' : 'ADL2_AOM2_BMM';
+        if (($report['profile'] ?? null) !== $expectedProfile) {
+            throw new \RuntimeException('BUILD_PROFILE_MISMATCH');
+        }
+        $reported = $report['dependencies'] ?? null;
+        if (!is_array($reported) || !array_is_list($reported) || count($reported) !== count($dependencies)) {
+            throw new \RuntimeException('BUILD_DEPENDENCY_MANIFEST_INVALID');
+        }
+        $manifest = [];
+        foreach ($dependencies as $dependency) {
+            if (!is_array($dependency) || !is_string($dependency['identifier'] ?? null) || !is_string($dependency['path'] ?? null)
+                || !is_string($dependency['revision'] ?? null) || !is_string($dependency['sha256'] ?? null)) {
+                throw new \RuntimeException('BUILD_DEPENDENCY_MANIFEST_INVALID');
+            }
+            if (isset($manifest[$dependency['identifier']])) {
+                throw new \RuntimeException('BUILD_DEPENDENCY_MANIFEST_INVALID');
+            }
+            $pinned = $this->repository->getArtifact($project, $dependency['path'], $dependency['revision']);
+            if (!is_string($pinned['content'] ?? null) || !hash_equals($dependency['sha256'], hash('sha256', $pinned['content']))
+                || !hash_equals($dependency['sha256'], (string) ($pinned['sha256'] ?? ''))) {
+                throw new \RuntimeException('BUILD_DEPENDENCY_HASH_MISMATCH');
+            }
+            $manifest[$dependency['identifier']] = $dependency['sha256'];
+        }
+        $reportedManifest = [];
+        foreach ($reported as $dependency) {
+            if (!is_array($dependency) || !is_string($dependency['identifier'] ?? null) || !is_string($dependency['sha256'] ?? null)) {
+                throw new \RuntimeException('BUILD_DEPENDENCY_MANIFEST_INVALID');
+            }
+            if (isset($reportedManifest[$dependency['identifier']])) {
+                throw new \RuntimeException('BUILD_DEPENDENCY_MANIFEST_INVALID');
+            }
+            $reportedManifest[$dependency['identifier']] = $dependency['sha256'];
+        }
+        ksort($manifest);
+        ksort($reportedManifest);
+        if ($manifest !== $reportedManifest) {
+            throw new \RuntimeException('BUILD_DEPENDENCY_MANIFEST_MISMATCH');
+        }
+        $identity = ['schema' => 1, 'project' => $project, 'source' => $build['source'], 'dependencies' => $dependencies,
+            'engine' => $build['engine'], 'output_sha256' => $build['output_sha256']];
+        $encoded = json_encode($this->canonicalEvidence($identity), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        if (!hash_equals($build['id'], hash('sha256', $encoded))) {
+            throw new \RuntimeException('BUILD_IDENTITY_MISMATCH');
+        }
+    }
+
+    /** @param array<mixed> $value
+     * @return array<mixed> */
+    private function canonicalEvidence(array $value): array
+    {
+        if (!array_is_list($value)) {
+            ksort($value);
+        }
+        foreach ($value as &$item) {
+            if (is_array($item)) {
+                $item = $this->canonicalEvidence($item);
+            }
+        }
+        return $value;
     }
 
     /** @param array<string, mixed> $source

@@ -177,10 +177,24 @@ final class ModelValidator
         $added = array_diff_key($b, $a);
         $removed = array_diff_key($a, $b);
         $semanticDifferences = [];
+        $moved = $this->uniqueMoves($added, $removed);
+        $movedAdded = array_fill_keys(array_column($moved, 'location'), true);
+        $movedRemoved = array_fill_keys(array_column($moved, 'before_location'), true);
+        foreach ($moved as $move) {
+            $semanticDifferences[] = ['change' => 'moved', 'location' => $move['location'], 'before_location' => $move['before_location'],
+                'dimension' => 'paths', 'identity' => $move['identity'], 'before' => $removed[$move['before_location']],
+                'after' => $added[$move['location']]];
+        }
         foreach ($added as $path => $value) {
+            if (isset($movedAdded[$path])) {
+                continue;
+            }
             $semanticDifferences[] = ['change' => 'added', 'location' => $path, 'dimension' => $this->semanticDimension($value['element'], '', $value['text']), 'before' => null, 'after' => $value];
         }
         foreach ($removed as $path => $value) {
+            if (isset($movedRemoved[$path])) {
+                continue;
+            }
             $semanticDifferences[] = ['change' => 'removed', 'location' => $path, 'dimension' => $this->semanticDimension($value['element'], '', $value['text']), 'before' => $value, 'after' => null];
         }
         foreach ($changed as $path => $delta) {
@@ -208,7 +222,38 @@ final class ModelValidator
         }
         return ['scope' => 'bounded_xml_semantic_projection', 'status' => 'PARTIAL', 'added' => $added,
             'removed' => $removed, 'changed' => $changed, 'semantic_differences' => $semanticDifferences,
-            'limitations' => ['This projection classifies explicit XML changes but does not resolve inherited constraints, dependencies, or prove full openEHR semantic equivalence.', 'Renamed placements appear as removal and addition.']];
+            'limitations' => ['This projection classifies explicit XML changes but does not resolve inherited constraints, dependencies, or prove full openEHR semantic equivalence.', 'Moves without a unique explicit archetype/node identity remain separate additions and removals.']];
+    }
+
+    /** @param array<string, array<string, mixed>> $added
+     * @param array<string, array<string, mixed>> $removed
+     * @return list<array{identity: string, location: string, before_location: string}> */
+    private function uniqueMoves(array $added, array $removed): array
+    {
+        $index = static function (array $items): array {
+            $byIdentity = [];
+            foreach ($items as $location => $value) {
+                $attributes = $value['attributes'];
+                $archetype = $attributes['archetype_id'] ?? '';
+                $node = $attributes['node_id'] ?? '';
+                if ($archetype === '' && $node === '') {
+                    continue;
+                }
+                $identity = json_encode([$value['element'], $archetype, $node], JSON_THROW_ON_ERROR);
+                $byIdentity[$identity][] = (string) $location;
+            }
+            return $byIdentity;
+        };
+        $addedByIdentity = $index($added);
+        $removedByIdentity = $index($removed);
+        $moves = [];
+        foreach ($removedByIdentity as $identity => $oldLocations) {
+            $newLocations = $addedByIdentity[$identity] ?? [];
+            if (count($oldLocations) === 1 && count($newLocations) === 1) {
+                $moves[] = ['identity' => $identity, 'location' => $newLocations[0], 'before_location' => $oldLocations[0]];
+            }
+        }
+        return $moves;
     }
 
     private function semanticDimension(string $element, string $field, string $value): string

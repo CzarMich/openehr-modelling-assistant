@@ -235,7 +235,11 @@ final class LegacyTemplateCompiler {
         if (name.isBlank() || name.length() > 1000) throw new EngineException("ENGINE_NAME_CONSTRAINT_INVALID");
         if ("attributes".equals(target.getLocalName())) throw new EngineException("ENGINE_NAME_CONSTRAINT_INVALID");
         Element attribute = attribute(target, "name");
-        if (attribute != null && !children(attribute, "children").isEmpty()) throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        if (attribute != null && !children(attribute, "children").isEmpty()) {
+            narrowExistingName(attribute, name);
+            actions.add(Map.of("code", "EXISTING_NAME_CONSTRAINT_NARROWED", "location", path(target), "value", name));
+            return;
+        }
         if (attribute == null) {
             attribute = add(target, "attributes");
             Node before = one(target, "archetype_id", false);
@@ -249,6 +253,47 @@ final class LegacyTemplateCompiler {
         value(valueAttribute, "rm_attribute_name", "value"); LegacyOptWriter.interval(add(valueAttribute, "existence"), new MultiplicityInterval(1, 1));
         Element value = add(valueAttribute, "children"); type(value, "C_PRIMITIVE_OBJECT"); common(value, "String");
         Element item = add(value, "item"); type(item, "C_STRING"); value(item, "list", name);
+    }
+
+    private static void narrowExistingName(Element attribute, String name) {
+        Element text = one(attribute, "children", true);
+        if (!"C_COMPLEX_OBJECT".equals(type(text)) || !"DV_TEXT".equals(text(text, "rm_type_name"))) {
+            throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        }
+        Element valueAttribute = attribute(text, "value");
+        if (valueAttribute == null || !"C_SINGLE_ATTRIBUTE".equals(type(valueAttribute))) {
+            throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        }
+        Element primitive = one(valueAttribute, "children", true);
+        if (!"C_PRIMITIVE_OBJECT".equals(type(primitive))) {
+            throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        }
+        if (!"string".equals(text(primitive, "rm_type_name"))) {
+            throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        }
+        Element item = one(primitive, "item", true);
+        if (!"C_STRING".equals(type(item))) {
+            throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        }
+        if (!children(item, "pattern").isEmpty() || !children(item, "range").isEmpty()) {
+            throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        }
+        if (!children(item, "list_open").isEmpty()) {
+            throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        }
+        List<Element> values = children(item, "list");
+        if (values.isEmpty()) throw new EngineException("ENGINE_NAME_REFINEMENT_UNSUPPORTED");
+        Element assumed = one(item, "assumed_value", false);
+        if (assumed != null && values.stream().noneMatch(value -> assumed.getTextContent().equals(value.getTextContent()))) {
+            throw new EngineException("ENGINE_NAME_CONSTRAINT_INVALID_" + assumed.getTextContent() + "_" + values.stream().map(Element::getTextContent).toList());
+        }
+        boolean matched = false;
+        for (Element value : values) {
+            if (name.equals(value.getTextContent())) matched = true;
+            else item.removeChild(value);
+        }
+        if (!matched) throw new EngineException("ENGINE_NAME_CONSTRAINT_EMPTY");
+        if (assumed != null) assumed.setTextContent(name);
     }
 
     private void finishSlots(Element root) {

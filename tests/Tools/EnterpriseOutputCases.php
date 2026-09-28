@@ -23,7 +23,12 @@ trait EnterpriseOutputCases
     {
         $source = $this->createStub(ArchetypeSource::class);
         $source->method('fetch')->willReturnCallback(static function (string $id): array {
-            return ['id' => $id, 'rm_class' => str_contains($id, 'COMPOSITION') ? 'COMPOSITION' : 'OBSERVATION',
+            $rmClass = match (true) {
+                str_contains($id, 'COMPOSITION') => 'COMPOSITION', str_contains($id, 'SECTION') => 'SECTION',
+                str_contains($id, 'EVALUATION') => 'EVALUATION', str_contains($id, 'CLUSTER') => 'CLUSTER',
+                default => 'OBSERVATION',
+            };
+            return ['id' => $id, 'rm_class' => $rmClass,
                 'content' => 'fixture', 'provenance' => ['kind' => 'test_fixture']];
         });
         $validator = new ModelValidator();
@@ -63,6 +68,13 @@ trait EnterpriseOutputCases
     public function test_model_diff_result_matches_output_schema(): void { $this->assertConforms($this->modelService(), 'diff', ['<a/>', '<a min="1"/>']); }
     public function test_model_qa_result_matches_output_schema(): void { $this->assertConforms($this->modelService(), 'qa', ['<a/>', 'xml']); }
     public function test_template_build_oet_result_matches_output_schema(): void { $this->assertConforms($this->modelService(), 'buildOet', ['Fixture', 'openEHR-EHR-COMPOSITION.fixture.v1', ['openEHR-EHR-OBSERVATION.fixture.v1']]); }
+    public function test_nested_template_build_oet_result_matches_output_schema(): void
+    {
+        $placements = [['id' => 'section', 'parent' => 'root', 'identifier' => 'openEHR-EHR-SECTION.fixture.v1', 'path' => '/content[at0001]'],
+            ['id' => 'evaluation', 'parent' => 'section', 'identifier' => 'openEHR-EHR-EVALUATION.fixture.v1', 'path' => '/items[at0001]'],
+            ['id' => 'cluster', 'parent' => 'evaluation', 'identifier' => 'openEHR-EHR-CLUSTER.fixture.v1', 'path' => '/data[at0001]/items[at0002]']];
+        $this->assertConforms($this->modelService(), 'buildOet', ['Nested fixture', 'openEHR-EHR-COMPOSITION.fixture.v1', [], null, $placements]);
+    }
     public function test_model_projects_result_matches_output_schema(): void { $this->assertConforms($this->projectService(), 'projects', []); }
     public function test_model_project_get_result_matches_output_schema(): void { $this->assertConforms($this->projectService(), 'get', ['test']); }
     public function test_model_project_create_result_matches_output_schema(): void { $this->assertConforms($this->projectService(), 'create', ['other', 'Other']); }

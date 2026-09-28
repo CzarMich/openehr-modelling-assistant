@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Extend bounded OET authoring, model comparison and exact-build QA evidence.
+
 - Expand project-scoped authorization, model application access and semantic comparison evidence.
 
 ## [0.21.0] - 2026-09-27

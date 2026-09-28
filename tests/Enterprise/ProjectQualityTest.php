@@ -82,6 +82,13 @@ final class ProjectQualityTest extends TestCase
         return $graph;
     }
 
+    private function canonicalEvidence(array $value): array
+    {
+        if (!array_is_list($value)) { ksort($value); }
+        foreach ($value as &$item) { if (is_array($item)) { $item = $this->canonicalEvidence($item); } }
+        return $value;
+    }
+
     #[DataProvider('providers')]
     public function test_repository_contract_inspects_exact_sources_and_evidence_without_writes(string $provider): void
     {
@@ -183,5 +190,60 @@ final class ProjectQualityTest extends TestCase
         self::assertContains('MISSING_VALIDATION_EVIDENCE', array_column($result['findings'], 'code'));
         self::assertSame([], $result['traceability']['validation_events']);
         self::assertContains('V-1', $result['traceability']['linked_nodes']);
+    }
+
+    #[DataProvider('providers')]
+    public function test_project_qa_verifies_saved_build_source_output_and_dependency_revisions(string $provider): void
+    {
+        $repository = $this->repository($provider);
+        $source = $repository->saveArtifact('project', 'templates/model.oet', ModelValidationTest::OET,
+            ['provenance' => ['origin' => 'synthetic fixture']], null);
+        $dependencyContent = 'synthetic exact ADL dependency';
+        $dependency = $repository->saveArtifact('project', 'archetypes/root.adl', $dependencyContent, [], null);
+        $output = '<template xmlns="http://schemas.openehr.org/v1"/>';
+        $engine = ['adapter' => '1.0.0', 'archie' => '3.20.0', 'aql' => '2.35.0'];
+        $report = ['operation' => 'compile/template', 'content_sha256' => $source['sha256'], 'valid' => true, 'status' => 'PASS',
+            'profile' => 'OET14_COMPILATION_RM_STRUCTURE', 'checks' => ['oet_application' => 'PASS', 'rm_structure_profile' => 'PASS', 'full_aom_semantics' => 'NOT_EXECUTED'],
+            'limitations' => ['Bounded synthetic profile only.'], 'engine' => $engine,
+            'dependencies' => [['identifier' => 'root.v1', 'sha256' => $dependency['sha256']]]];
+        $manifest = [['identifier' => 'root.v1'] + array_intersect_key($dependency, array_flip(['path', 'revision', 'sha256', 'provider']))];
+        $identity = ['schema' => 1, 'project' => 'project', 'source' => array_intersect_key($source, array_flip(['path', 'revision', 'sha256', 'provider'])),
+            'dependencies' => $manifest, 'engine' => $engine, 'output_sha256' => hash('sha256', $output)];
+        $build = $identity + ['id' => hash('sha256', json_encode($this->canonicalEvidence($identity), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
+            'format' => 'opt14_xml', 'report' => $report];
+        $artifact = $repository->saveArtifact('project', 'templates/compiled/synthetic.opt', $output,
+            ['kind' => 'compiled_opt14', 'build' => $build], null);
+
+        $result = self::service($repository)->evaluate('project', $source['path'], $source['revision']);
+        $checks = array_column($result['checks'], null, 'name');
+        self::assertSame('PASS', $checks['native_build_evidence']['status']);
+        self::assertSame('PASS', $checks['pinned_dependency_integrity']['status']);
+        self::assertSame('NOT_EXECUTED', $checks['dependency_versions']['status']);
+        self::assertSame($artifact['sha256'], $checks['native_build_evidence']['builds'][0]['artifact']['sha256']);
+        self::assertSame('NOT_EXECUTED', $report['checks']['full_aom_semantics']);
+        self::assertFalse($result['release_eligible']);
+        self::assertFalse($result['clinical_approval']);
+    }
+
+    #[DataProvider('providers')]
+    public function test_project_qa_rejects_tampered_native_build_output(string $provider): void
+    {
+        $repository = $this->repository($provider);
+        $source = $repository->saveArtifact('project', 'templates/model.oet', ModelValidationTest::OET,
+            ['provenance' => ['origin' => 'synthetic fixture']], null);
+        $engine = ['adapter' => '1.0.0', 'archie' => '3.20.0', 'aql' => '2.35.0'];
+        $output = '<template/>';
+        $identity = ['schema' => 1, 'project' => 'project', 'source' => array_intersect_key($source, array_flip(['path', 'revision', 'sha256', 'provider'])),
+            'dependencies' => [], 'engine' => $engine, 'output_sha256' => hash('sha256', $output)];
+        $build = $identity + ['id' => hash('sha256', json_encode($this->canonicalEvidence($identity), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
+            'format' => 'opt14_xml', 'report' => ['operation' => 'compile/template', 'content_sha256' => $source['sha256'], 'valid' => true, 'status' => 'PASS',
+                'profile' => 'OET14_COMPILATION_RM_STRUCTURE', 'checks' => [], 'limitations' => [], 'engine' => $engine, 'dependencies' => []]];
+        $artifact = $repository->saveArtifact('project', 'templates/compiled/tampered.opt', $output, ['kind' => 'compiled_opt14', 'build' => $build], null);
+        $repository->saveArtifact('project', $artifact['path'], 'modified derived output', $artifact['metadata'], $artifact['revision']);
+        $result = self::service($repository)->evaluate('project', $source['path'], $source['revision']);
+        $checks = array_column($result['checks'], null, 'name');
+        self::assertSame('FAIL', $checks['native_build_evidence']['status']);
+        self::assertContains('NATIVE_BUILD_EVIDENCE_INVALID', array_column($result['findings'], 'code'));
+        self::assertFalse($result['release_eligible']);
     }
 }

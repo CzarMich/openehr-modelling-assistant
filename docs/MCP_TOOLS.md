@@ -2505,7 +2505,7 @@ Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVER
 
 ## `model_diff`
 
-Compare XML placements, constraints and leaf values. Not full openEHR semantic equivalence.
+Compare a bounded XML projection and return structured changes for explicit attributes/text, identifiers, paths, cardinalities, terminology, language and other classified fields. Uniquely identifiable moves are reported as `moved`; ambiguous repeated identities remain separate additions/removals. Inherited constraints, dependency semantics and full openEHR semantic equivalence are not resolved.
 
 External dependency: none.
 
@@ -3009,7 +3009,7 @@ Interpretation and errors: [repository](MODEL_REPOSITORY.md), [governance](GOVER
 
 ## `model_project_qa`
 
-Inspect an exact repository model revision, document profile, recorded provenance, requirement trail, authentic validation/review events and explicit terminology findings. Missing engine/dependency checks remain unexecuted; no approval or model write occurs.
+Inspect an exact repository model revision, document profile, recorded provenance, requirement trail, authentic validation/review events, explicit terminology findings, and hash-verified saved native build evidence tied to that source. Missing semantic, terminology and clinical qualification checks remain unexecuted; no approval or model write occurs.
 
 External dependency: none.
 
@@ -4507,7 +4507,7 @@ Output schema:
 
 ## `template_build_oet`
 
-Generate a draft OET from a retrieved COMPOSITION and 1–30 direct ENTRY archetypes. Does not compile legacy OET or certify semantics.
+Generate a draft OET from a retrieved COMPOSITION using either 1–30 direct ENTRY identifiers (`entries`) or up to 30 explicit parent-linked nested SECTION/ENTRY/CLUSTER/ELEMENT placements (`placements`). Each nested placement supplies a unique local `id`, a `parent` (`root` or an earlier placement id), an archetype `identifier`, and the exact parent-archetype-relative `path`; optional `min`, `max` and `name` values narrow that placement. The configured native engine compile-checks drafts against the exact ADL bytes fetched for this generation. Without the engine the report says `NOT_EXECUTED`. A passing bounded compiler profile is not complete legacy semantics or clinical approval.
 
 External dependency: configured CKM REST API.
 
@@ -4530,9 +4530,26 @@ Input schema:
       "items": {
         "type": "string"
       },
-      "minItems": 1,
       "maxItems": 30,
       "uniqueItems": true
+    },
+    "placements": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "parent", "identifier", "path"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 64},
+          "parent": {"type": "string", "minLength": 1, "maxLength": 64},
+          "identifier": {"type": "string", "minLength": 1, "maxLength": 300},
+          "path": {"type": "string", "minLength": 2, "maxLength": 2048},
+          "min": {"type": "string", "pattern": "^[0-9]+$"},
+          "max": {"type": "string", "pattern": "^(?:[0-9]+|\\*)$"},
+          "name": {"type": "string", "minLength": 1, "maxLength": 1000}
+        }
+      }
     },
     "ckm": {
       "type": [
@@ -4544,12 +4561,13 @@ Input schema:
   },
   "required": [
     "name",
-    "composition",
-    "entries"
+    "composition"
   ],
   "additionalProperties": false
 }
 ```
+
+Supply exactly one of `entries` or `placements`. Placements must be ordered parent-first, use compatible RM parent/child classes, and have unique paths per parent. The generator does not invent paths, slot constraints or terminology bindings.
 
 Example `tools/call` parameters:
 
@@ -4563,6 +4581,20 @@ Example `tools/call` parameters:
       "openEHR-EHR-OBSERVATION.body_weight.v2"
     ]
   }
+}
+```
+
+Nested example:
+
+```json
+{
+  "name": "Admission draft",
+  "composition": "openEHR-EHR-COMPOSITION.encounter.v1",
+  "placements": [
+    {"id":"section","parent":"root","identifier":"openEHR-EHR-SECTION.admission.v1","path":"/content[at0001]"},
+    {"id":"assessment","parent":"section","identifier":"openEHR-EHR-EVALUATION.assessment.v1","path":"/items[at0001]"},
+    {"id":"details","parent":"assessment","identifier":"openEHR-EHR-CLUSTER.details.v1","path":"/data[at0001]/items[at0002]"}
+  ]
 }
 ```
 

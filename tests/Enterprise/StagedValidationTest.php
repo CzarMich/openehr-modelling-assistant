@@ -134,7 +134,7 @@ final class StagedValidationTest extends TestCase
 
     public function test_no_schema_location_or_raw_content_is_executed_and_findings_are_bounded(): void
     {
-        $document = str_replace('<template ', '<template xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="openEHR/v1/Template http://127.0.0.1:1/never-fetch" ', ModelValidationTest::OET);
+        $document = str_replace('<template ', '<template xsi:schemaLocation="openEHR/v1/Template http://127.0.0.1:1/never-fetch" ', ModelValidationTest::OET);
         self::assertTrue((new ModelValidator())->validate($document, 'oet')['structurally_valid']);
         $input = [];
         for ($i = 0; $i < 700; ++$i) {

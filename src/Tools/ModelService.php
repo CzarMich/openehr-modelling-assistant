@@ -27,7 +27,7 @@ final readonly class ModelService
         return ToolResult::run(fn (): array => $this->validator->validate($content, $format));
     }
 
-    /** Compare XML placements, constraints and leaf values. Not full openEHR semantic equivalence.
+    /** Compare bounded XML structure and return typed explicit-field differences, including unambiguous moves. Not full openEHR semantic equivalence.
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'model_diff', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
@@ -36,20 +36,26 @@ final readonly class ModelService
         return ToolResult::run(fn (): array => $this->validator->diff($before, $after));
     }
 
-    /** Generate a draft OET from a retrieved COMPOSITION and 1–30 direct ENTRY archetypes. Does not compile legacy OET or certify semantics.
+    /** Generate a draft OET from either 1–30 direct ENTRY identifiers or explicit parent-linked nested placements with supplied archetype paths. Drafts are compile-checked when the native engine is configured; this does not certify complete legacy semantics.
      *
      * @param list<string> $entries
+     * @param list<array<string, mixed>> $placements
      * @return array<string, mixed>
      */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'template_build_oet', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: true), outputSchema: ToolResult::SCHEMA)]
     public function buildOet(#[Schema(minLength: 1, maxLength: 200)] string $name, string $composition,
-        #[Schema(items: ['type' => 'string'], minItems: 1, maxItems: 30, uniqueItems: true)] array $entries, ?string $ckm = null): array
+        #[Schema(items: ['type' => 'string'], maxItems: 30, uniqueItems: true)] array $entries = [], ?string $ckm = null,
+        #[Schema(items: ['type' => 'object', 'additionalProperties' => false, 'required' => ['id', 'parent', 'identifier', 'path'], 'properties' => [
+            'id' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 64], 'parent' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 64],
+            'identifier' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 300], 'path' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 2048],
+            'min' => ['type' => 'string', 'pattern' => '^[0-9]+$'], 'max' => ['type' => 'string', 'pattern' => '^(?:[0-9]+|\\*)$'],
+            'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 1000]]], maxItems: 30)] array $placements = []): array
     {
-        return ToolResult::run(fn (): array => $this->authoring->generateOet($name, $composition, $entries, $ckm));
+        return ToolResult::run(fn (): array => $this->authoring->generateOet($name, $composition, $entries, $ckm, $placements));
     }
 
-    /** Run the modelling QA preflight. Missing validators and checks are NOT_EXECUTED; release eligibility stays false.
+    /** Run document/project QA and verify any saved native build tied to the exact source revision. Missing qualification remains NOT_EXECUTED; release eligibility stays false.
      *
      * @return array<string, mixed>
      */

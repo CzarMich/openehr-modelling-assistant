@@ -41,8 +41,33 @@ final class TemplateXmlProfile
                 if ($node === $definition && !$node->hasAttribute('archetype_id')) {
                     $this->error($findings, 'MISSING_ARCHETYPE_REFERENCE', $location, 'The OET definition requires an archetype reference.');
                 }
+                if ($node !== $definition && in_array($node->localName, ['Content', 'Item', 'Items'], true) && !$node->hasAttribute('archetype_id')) {
+                    $this->error($findings, 'MISSING_ARCHETYPE_REFERENCE', $location, 'An OET placement requires an archetype reference.');
+                }
                 if ($node->hasAttribute('archetype_id') && !preg_match(ModelValidator::ARCHETYPE_ID, $node->getAttribute('archetype_id'))) {
                     $this->error($findings, 'INVALID_ARCHETYPE_REFERENCE', $location, 'The archetype identifier does not match the supported identifier profile.');
+                }
+                if ($node === $definition || in_array($node->localName, ['Content', 'Item', 'Items'], true)) {
+                    $rmType = $this->oetType($node, $location, $findings);
+                    if ($node === $definition && $rmType !== 'COMPOSITION') {
+                        $this->error($findings, 'OET_ROOT_TYPE_INVALID', $location, 'The OET definition must be typed as COMPOSITION.');
+                    }
+                    if ($node->hasAttribute('archetype_id') && preg_match('/^openEHR-[A-Z_]+-([A-Z_]+)\./', $node->getAttribute('archetype_id'), $match)
+                        && $rmType !== null && $rmType !== $match[1]) {
+                        $this->error($findings, 'OET_RM_TYPE_REFERENCE_MISMATCH', $location, 'The OET xsi:type does not match the archetype identifier RM class.');
+                    }
+                    if ($node !== $definition) {
+                        $parentType = $node->parentNode instanceof DOMElement ? $this->oetType($node->parentNode, $location, $findings) : null;
+                        $expectedElement = match ($parentType) {
+                            'COMPOSITION' => 'Content',
+                            'SECTION' => 'Item',
+                            'OBSERVATION', 'EVALUATION', 'INSTRUCTION', 'ACTION', 'ADMIN_ENTRY', 'CLUSTER' => 'Items',
+                            default => null,
+                        };
+                        if ($expectedElement === null || $node->localName !== $expectedElement) {
+                            $this->error($findings, 'OET_PLACEMENT_KIND_INVALID', $location, 'The OET placement element does not match its parent RM type.');
+                        }
+                    }
                 }
                 $this->attributeBounds($node, $location, $findings);
                 if ($node->localName === 'Rule' && (!$node->hasAttribute('path') || !str_starts_with($node->getAttribute('path'), '/'))) {
@@ -133,5 +158,22 @@ final class TemplateXmlProfile
     private function error(Findings $findings, string $code, string $location, string $message): void
     {
         $findings->add('error', $code, $location, $message, [], 'Correct the source constraint and rerun validation; use the qualified engine for full model checks.');
+    }
+
+    private function oetType(DOMElement $element, string $location, Findings $findings): ?string
+    {
+        $type = $element->getAttributeNS('http://www.w3.org/2001/XMLSchema-instance', 'type');
+        if ($type === '' || !preg_match('/^(?:[A-Za-z_][A-Za-z0-9_.-]*:)?([A-Z][A-Z0-9_]*)$/D', $type, $match)) {
+            $this->error($findings, 'OET_RM_TYPE_MISSING_OR_INVALID', $location, 'The OET definition or placement requires a supported xsi:type.');
+            return null;
+        }
+        if (str_contains($type, ':')) {
+            [$prefix] = explode(':', $type, 2);
+            if ($element->lookupNamespaceURI($prefix) !== $element->namespaceURI) {
+                $this->error($findings, 'OET_RM_TYPE_NAMESPACE_INVALID', $location, 'The OET xsi:type prefix must resolve to the template namespace.');
+                return null;
+            }
+        }
+        return $match[1];
     }
 }
