@@ -92,6 +92,17 @@ test("configuration refuses non-TLS public origins, embedded credentials, missin
     assert.equal(equal("a", "é"), false);
 });
 
+test("disabled browser workspace explains review-only OIDC configuration", async (t) => {
+    const f = await fixture(t);
+    f.config.enabled = false;
+    f.config.reviewEnabled = false;
+    const response = await f.request("/chat/auth/login", { user: null });
+    assert.equal(response.status, 503);
+    const result = await response.json();
+    assert.match(result.error, /CHAT_REVIEW_ENABLED=true/);
+    assert.match(result.error, /CHAT_ENABLED and a model-provider account are only needed for conversational chat/);
+});
+
 test("authentication, same-origin CSRF and response redaction", async (t) => {
     const f = await fixture(t);
     assert.equal((await f.request("/chat/api/conversations", { user: null })).status, 401);

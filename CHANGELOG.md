@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Expand project-scoped authorization, model application access and semantic comparison evidence.
 
+- Clarify review-only browser authentication and managed VPS configuration.
+
 ## [0.21.0] - 2026-09-27
 
 - Immutable external model originals with protected import provenance and exact source downloads.

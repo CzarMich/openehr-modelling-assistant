@@ -117,9 +117,12 @@ export function createApplication(
                 });
             }
             if (!config.enabled && !config.reviewEnabled)
-                throw Object.assign(new Error("Browser workspace is not configured on this deployment."), {
-                    status: 503,
-                });
+                throw Object.assign(
+                    new Error(
+                        "Browser review is disabled. Configure CHAT_REVIEW_ENABLED=true and the browser OIDC client; CHAT_ENABLED and a model-provider account are only needed for conversational chat.",
+                    ),
+                    { status: 503 },
+                );
             if (req.method === "GET" && path === "/chat/auth/login") return await auth.login(req, res);
             if (req.method === "GET" && path === "/chat/auth/callback") return await auth.callback(req, res);
             const mutation = req.method !== "GET";

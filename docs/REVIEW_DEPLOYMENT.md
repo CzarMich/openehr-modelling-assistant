@@ -46,6 +46,40 @@ Existing `CHAT_PUBLIC_URL`, `CHAT_OIDC_ISSUER`, `CHAT_OIDC_CLIENT_ID`, `CHAT_OID
 | `CHAT_ENABLED` | `false` | Conversational chat; may remain false for human review |
 | `MODELLING_BROWSER_TARGET` | `reviews` | Compose build target; use `chat` only when its provider adapter is needed |
 
+### Managed VPS configuration
+
+The VPS uses `/opt/openehr-modelling-assistant/config/runtime.env` as Compose's project environment. Keep browser-only secrets in a separate mode-`600` file such as `/opt/openehr-modelling-assistant/config/chat.env`, then set this path in `runtime.env`:
+
+```dotenv
+MODELLING_BROWSER_TARGET=reviews
+MODELLING_CHAT_ENV_FILE=/opt/openehr-modelling-assistant/config/chat.env
+GOVERNANCE_ENABLED=true
+GOVERNANCE_BROWSER_ORIGIN=https://openehr-modelling.sandbox.hygeoniq.com
+GOVERNANCE_OIDC_ISSUER=https://identity.example.org/realms/organisation
+GOVERNANCE_BROWSER_KEYS='{"active":"<dedicated-random-key>"}'
+```
+
+The protected `chat.env` needs the browser OIDC client and review settings; it does **not** need a Codex or model-provider credential:
+
+```dotenv
+CHAT_ENABLED=false
+CHAT_REVIEW_ENABLED=true
+CHAT_PUBLIC_URL=https://openehr-modelling.sandbox.hygeoniq.com
+CHAT_OIDC_ISSUER=https://identity.example.org/realms/organisation
+CHAT_OIDC_CLIENT_ID=openehr-modelling-browser
+CHAT_OIDC_CLIENT_SECRET=<secret-manager-value>
+CHAT_REVIEW_SIGNING_KEY=<same-dedicated-random-key-as-GOVERNANCE_BROWSER_KEYS>
+CHAT_REVIEW_KEY_ID=active
+CHAT_REVIEW_ROLES_CLAIM=roles
+CHAT_REVIEW_TENANT_CLAIM=
+CHAT_REVIEW_SESSION_MAX_AGE=900
+CHAT_MCP_URL=http://ingress:8343/mcp
+```
+
+Register `https://openehr-modelling.sandbox.hygeoniq.com/chat/auth/callback` as the browser OIDC redirect URI and issue the configured governance roles in the signed ID token. If the Models tab must read MCP project data, also set the private `CHAT_MCP_API_KEY` in `chat.env`; browser login and human review use the separate request-bound review assertion, not that service key. Do not set `CHAT_ENABLED=true` unless conversational chat is intended.
+
+After provisioning the external OIDC client and secret, recreate the browser service from the active release directory with the deployment account. Verify `GET /chat/api/session` reports `reviewEnabled: true` and `enabled: false`, then visit `/chat/` and test sign-in. The response `Browser review is disabled...` means the chat env file is missing/not selected or `CHAT_REVIEW_ENABLED` is not true. An OIDC redirect/client error instead means the browser issuer, client credentials, callback URI or IdP registration needs correction. Never commit either configuration file or its secrets.
+
 Configure the identity provider's confidential browser client with redirect URI `<browser-origin>/chat/auth/callback`, authorization-code flow and PKCE. Ensure selected role and project-scope claims are included in the **signed ID token**, not only in the access token or user-info response. Project grants use `project:<id>:read` or `project:<id>:write`; wildcard grants are rejected. For Keycloak, a protocol mapper/client scope can expose assigned roles and project grants; for Entra or another OIDC provider, use its equivalent claims. Keep engineering/admin permissions separate from clinical approver assignments.
 
 In core `AUTH_MODE=oidc`, the browser issuer must match `OIDC_ISSUER`; the tenant claim and allowed tenants must match the core policy. Signed browser identity resolves to the same subject/tenant namespace as native bearer authentication. Existing per-tenant Git/SharePoint mappings continue to apply. API-key/local deployments use one shared repository namespace; browser users still have distinct authenticated actor identities.
