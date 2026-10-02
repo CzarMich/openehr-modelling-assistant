@@ -144,6 +144,7 @@ export function createApplication(
                     identityEnabled: config.identityEnabled,
                     identitySetupRequired: config.identityEnabled && auth.identityStore.read().users.length === 0,
                     oidcEnabled: !!config.issuer,
+                    mcpConnection: { url: config.origin + "/mcp", header: config.mcpKeyHeader },
                     mfaSetupRequired: !!session?.mfaSetupRequired,
                     ...(session?.mfaSetupRequired
                         ? { totpSecret: session.totpSecret, otpAuthUrl: session.otpAuthUrl }
@@ -230,6 +231,17 @@ export function createApplication(
                     return json(res, 200, store.listUsers(actor));
                 if (req.method === "GET" && path === "/chat/api/identity/audit")
                     return json(res, 200, store.listUsers(actor).audit);
+                if (req.method === "POST" && path === "/chat/api/identity/mcp-connection") {
+                    await body(req, []);
+                    store.listUsers(actor);
+                    if (!config.mcpKey)
+                        throw Object.assign(
+                            new Error("The workspace administrator must configure a modelling connection key."),
+                            { status: 503 },
+                        );
+                    store.recordMcpConnectionAccess(actor);
+                    return json(res, 200, { key: config.mcpKey });
+                }
                 if (req.method === "POST" && path === "/chat/api/identity/invitations") {
                     const input = await body(req, ["email", "roles", "expiresSeconds"], "Invalid invitation request.");
                     return json(res, 201, store.invite(actor, input.email, input.roles, input.expiresSeconds));

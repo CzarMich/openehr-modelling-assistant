@@ -24,6 +24,12 @@ Availability and tenant policies must be checked in the target organisation.
 
 ## Connect with Copilot Studio
 
+The browser's **Help → Connect Copilot Studio** page provides these steps and the
+deployment's exact server address/header. A signed-in native administrator can
+explicitly retrieve the configured MCP key there; retrieval is audited and requires
+CSRF protection. This is the existing deployment key, not a newly issued per-user key.
+No key is exposed to the assistant or to ordinary workspace users.
+
 Deploy the app according to [deployment](DEPLOYMENT.md) and expose
 `https://<enterprise-host>/mcp`. Use `AUTH_MODE=api_key` for this implementation,
 with a secret-managed key. On the agent's Tools page choose Add a tool, New tool,

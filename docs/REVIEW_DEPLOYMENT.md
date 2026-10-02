@@ -56,6 +56,31 @@ Invitations, password resets and account recovery produce one-time links for del
 
 ### Managed VPS configuration
 
+For deployments without an organisation IdP, use built-in accounts instead. Keep
+the browser variables in the protected `chat.env` selected by
+`MODELLING_CHAT_ENV_FILE`, and set `MODELLING_BROWSER_TARGET=chat` for Codex/Claude:
+
+```dotenv
+CHAT_ENABLED=true
+CHAT_LOCAL_IDENTITY_ENABLED=true
+CHAT_LOCAL_IDENTITY_ISSUER=https://<public-host>/identity/local
+CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY=<dedicated-32-byte-hex-key>
+CHAT_PROVIDER_ENCRYPTION_KEY=<different-dedicated-32-byte-hex-key>
+CHAT_PUBLIC_URL=https://<public-host>
+CHAT_OIDC_ISSUER=
+CHAT_OIDC_CLIENT_ID=
+CHAT_OIDC_CLIENT_SECRET=
+CHAT_MCP_URL=http://ingress:8343/mcp
+CHAT_MCP_API_KEY=<existing-core-api-key>
+```
+
+Use the native owner bootstrap described above, then complete account creation and
+MFA in the UI. Users connect Codex or Claude through **My AI connections**. Native
+human review additionally needs `CHAT_REVIEW_ENABLED=true`, matching review signing
+keys and `GOVERNANCE_LOCAL_IDENTITY_ISSUER` in the core. The optional Copilot Studio
+walkthrough lives in **Help**; a native administrator can copy connection details
+there. No OIDC client configuration is required for this setup.
+
 The VPS uses `/opt/openehr-modelling-assistant/config/runtime.env` as Compose's project environment. Keep browser-only secrets in a separate mode-`600` file such as `/opt/openehr-modelling-assistant/config/chat.env`, then set this path in `runtime.env`:
 
 ```dotenv

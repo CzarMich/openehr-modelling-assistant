@@ -7,6 +7,8 @@ starting a conversation; a conversation keeps that provider when reopened.
 **Sign in** stays at the top right while signed out, including in Help, Models and
 Governance. It reappears when a session expires; returning to the page and periodic
 checks refresh the session state without reloading your unsent message.
+The header is the primary sign-in control; the chat welcome area and composer do
+not repeat sign-in prompts. Built-in account forms open in the workspace.
 
 - **Codex:** select **Connect Codex**, open the displayed sign-in link and enter the
   one-time code. Complete sign-in with your ChatGPT account. Device-code access must
@@ -143,10 +145,16 @@ creating a link. The viewer cannot continue or edit the owner's chat. **Revoke l
 creating a replacement link, deleting the chat, or retention expiry invalidates access.
 Signing out does not revoke an existing link.
 
-Copilot Studio remains supported as an external MCP client through the
-[existing Microsoft integration](MICROSOFT_AGENT_INTEGRATION.md). An enterprise
-subscription alone does not configure that connection; tenant policy and acceptance
-testing still apply. The browser assistant selector remains Claude/Codex.
+**Help → Connect Copilot Studio** provides the server address, authentication header
+and setup steps without leaving the workspace for GitHub documentation. A native
+workspace administrator can explicitly retrieve and copy the configured MCP connection
+key after sign-in and MFA. Retrieval is CSRF-protected, not cached and recorded in the
+identity audit; ordinary users and model tools cannot retrieve it. The field is masked
+and can be cleared. This is the deployment's existing MCP key, not a separately scoped
+personal credential; rotating it is an administrator deployment operation.
+Copilot Studio uses the [Microsoft MCP integration](MICROSOFT_AGENT_INTEGRATION.md).
+An enterprise subscription alone does not configure the connection; tenant policy
+and acceptance testing still apply. The browser assistant selector remains Claude/Codex.
 
 ## Deployment
 

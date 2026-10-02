@@ -1,6 +1,6 @@
 # OIDC Authorization and Browser Review Roles
 
-This guide configures users in an external OpenID Connect (OIDC) identity provider (IdP) for MCP access and the browser review workspace. The IdP owns user creation, invitations, account recovery, MFA and role assignment. This application does not have a local user directory, default account, built-in invite flow or local password login. The username `admin` has no special meaning. Do not ship a reusable administrator password or treat an API key as a human identity.
+This guide configures an external OpenID Connect (OIDC) identity provider (IdP) for MCP access and browser review. For a workspace without an IdP, the application also supports [built-in accounts, owner bootstrap, invitations, passwords and MFA](REVIEW_DEPLOYMENT.md#browser-variables). In the OIDC path, the IdP owns those functions. There is no default account; the username `admin` has no special meaning. Do not ship a reusable administrator password or treat an API key as a human identity.
 
 The application consumes signed claims from the configured IdP and maps them to separate permissions. The main layers are:
 
@@ -135,4 +135,4 @@ Common outcomes:
 | `403 GOVERNANCE_INDEPENDENT_HUMAN_REQUIRED` | Required reviewer/approver/publisher role is absent, or the actor is not independent/human |
 | `403 GOVERNANCE_VALIDATION_REQUIRED` | Required qualified validation is incomplete; adding a role does not bypass this gate |
 
-Local user administration, owner bootstrap, invitation issuance/acceptance, password reset, local MFA/passkeys and local service-account lifecycle are **not implemented**. There is no default user. Until that separate capability is delivered, add/invite, disable and recover users in the configured IdP and manage its role/application assignments there. See [product scope](PRODUCT_SCOPE.md) for the built-in identity requirement.
+Native account administration, owner bootstrap, invitations, password reset, TOTP MFA and service-credential management are implemented independently of OIDC; see [native setup](REVIEW_DEPLOYMENT.md#browser-variables). There is no default user. Passkeys, mail delivery and a shared transactional identity backend are not implemented. OIDC users remain managed in their IdP.

@@ -182,7 +182,8 @@ async function initializeReview() {
     await run(async () => {
         session = await api("/chat/api/session");
         $("signed-in-user").textContent = session.authenticated ? "Signed in as " + session.user.name : "";
-        $("signin").textContent = session.authenticated ? "Refresh sign-in" : "Sign in for model review";
+        $("signin").hidden = !session.authenticated || !session.oidcEnabled;
+        $("signin").textContent = "Verify review access";
         $("signout").hidden = true; // The workspace header owns sign-out.
         if (!session.reviewEnabled) notice("Model review is not configured on this deployment.");
         else if (session.authenticated) await load();

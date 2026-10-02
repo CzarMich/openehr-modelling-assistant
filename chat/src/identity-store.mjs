@@ -505,6 +505,12 @@ export class IdentityStore {
             audit: this.auditSummary(state),
         };
     }
+    recordMcpConnectionAccess(actor) {
+        return this.mutate(actor, "MCP_CONNECTION_KEY_VIEWED", {}, (state) => {
+            if (!this.isAdmin(state, actor)) throw new Error("IDENTITY_ADMIN_REQUIRED");
+            return true;
+        });
+    }
 
     setRoles(actor, userId, rolesList) {
         this.assertRoles(rolesList);
