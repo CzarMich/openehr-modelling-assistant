@@ -41,7 +41,7 @@ test.afterEach(async () => {
 });
 async function login(page) {
     await page.goto("/chat/");
-    await page.getByRole("link", { name: "Sign in to start chatting" }).click();
+    await page.getByRole("link", { name: "Sign in", exact: true }).click();
     await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
 }
 async function send(page, message) {
@@ -268,7 +268,7 @@ test("sign in, tool-backed chat, code rendering, history and sign out", async ({
         .click();
     await expect(page.locator(".message.assistant")).toContainText("default");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
-    await expect(page.getByRole("link", { name: "Sign in to start chatting" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
     await expect(page.locator(".message")).toHaveCount(0);
 });
 
@@ -541,7 +541,7 @@ test("provider choice is retained per conversation and connection controls expla
     page,
 }) => {
     await page.goto("/chat/");
-    await page.getByRole("link", { name: /Sign in to start/ }).click();
+    await page.getByRole("link", { name: "Sign in", exact: true }).click();
     await page.locator("#chat-provider").selectOption("claude");
     await page.locator("#message").fill("List sources");
     await page.locator("#send").click();
@@ -576,7 +576,7 @@ test("disconnected users connect a personal Claude key before chatting", async (
         await route.fulfill({ json: { success: true } });
     });
     await page.goto("/chat/");
-    await page.getByRole("link", { name: /Sign in to start/ }).click();
+    await page.getByRole("link", { name: "Sign in", exact: true }).click();
     await page.locator("#chat-provider").selectOption("claude");
     await page.locator("#message").fill("List sources");
     await expect(page.locator("#send")).toBeDisabled();
@@ -775,6 +775,9 @@ test("signed-out users have a visible header sign-in on every workspace view and
     for (const name of ["Help", "Models", "Governance", "Chat"]) {
         await page.getByRole("tab", { name, exact: true }).click();
         await expect(signIn).toBeInViewport();
+        if (name !== "Help")
+            expect(await page.locator("body").innerText()).not.toMatch(/Sign in to|Sign in for|Sign in and/);
+        await expect(page.getByRole("link", { name: /sign in/i })).toHaveCount(1);
     }
     await signIn.click();
     await expect(signIn).toBeHidden();
@@ -891,4 +894,44 @@ test("chat projects are usable with keyboard navigation on phones", async ({ pag
     await expect(page.locator("#message")).toBeFocused();
     await expect(page.locator("#chat-project-context")).toContainText("Kidney care");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("Copilot setup stays in Help and only administrators can reveal the connection key", async ({ page }) => {
+    await page.goto("/chat/#help-copilot");
+    await expect(page.getByRole("heading", { name: "Connect Microsoft Copilot Studio", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Server address", { exact: true })).toHaveValue("http://127.0.0.1:8359/mcp");
+    await expect(page.getByRole("button", { name: "Get connection key" })).toBeHidden();
+    await page.route("**/chat/api/session", (route) =>
+        route.fulfill({
+            json: {
+                authenticated: true,
+                enabled: false,
+                identityEnabled: true,
+                user: { name: "Owner", roles: ["modelling-administrator"] },
+                csrf: "fixture",
+                mcpConnection: { url: "https://models.example/mcp", header: "X-Workspace-Key" },
+            },
+        }),
+    );
+    await page.route("**/chat/api/identity/users", (route) =>
+        route.fulfill({ json: { users: [], serviceAccounts: [], audit: { events: [] } } }),
+    );
+    await page.route("**/chat/api/identity/mcp-connection", (route) => {
+        expect(route.request().method()).toBe("POST");
+        expect(route.request().headers()["x-csrf-token"]).toBe("fixture");
+        return route.fulfill({ json: { key: "synthetic-workspace-key" } });
+    });
+    await page.reload();
+    await expect(page.getByLabel("API key header", { exact: true })).toHaveValue("X-Workspace-Key");
+    await page.getByRole("button", { name: "Get connection key" }).click();
+    const key = page.getByLabel("Workspace connection key", { exact: true });
+    await expect(key).toHaveValue("synthetic-workspace-key");
+    await expect(key).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Hide key", exact: true }).click();
+    await expect(key).toHaveValue("");
+    await expect(key).toBeHidden();
+    await page.getByRole("button", { name: "Get connection key" }).click();
+    await expect(key).toHaveValue("synthetic-workspace-key");
+    await page.getByRole("tab", { name: "Chat", exact: true }).click();
+    await expect(key).toHaveValue("");
 });

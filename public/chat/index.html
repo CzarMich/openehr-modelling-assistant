@@ -144,7 +144,7 @@
                 <button id="new-project" class="new-chat new-project" disabled>Create project</button>
                 <div class="sidebar-label">YOUR CHATS AND PROJECTS</div>
                 <nav id="conversations" aria-label="Your conversations">
-                    <p class="empty-list">Sign in to start a conversation.</p>
+                    <p class="empty-list">Your conversations will appear here.</p>
                 </nav>
                 <div class="sidebar-bottom">
                     <span class="status-dot"></span><span>Clinical modelling workspace</span
@@ -331,12 +331,11 @@
                         </p>
                         <p><a href="#help-start">New here? Follow the quick start guide.</a></p>
                         <div id="login-panel" class="login-panel" hidden>
-                            <a id="oidc-login" class="primary-button" href="/chat/auth/login"
-                                >Sign in to start chatting <span aria-hidden="true">→</span></a
+                            <a id="oidc-login" class="primary-button" href="/chat/auth/login" hidden
+                                >Use organisation account <span aria-hidden="true">→</span></a
                             >
                             <p id="login-description">
-                                Use your organisation account. Your conversations are private to your sign-in; model
-                                repositories may be shared.
+                                Your conversations and connections belong to your workspace account.
                             </p>
                             <form id="local-login" class="identity-form" hidden>
                                 <h2>Local account</h2>
@@ -346,7 +345,7 @@
                                 ><input id="local-password" type="password" autocomplete="current-password" required />
                                 <label for="local-code">Authenticator code or recovery code</label
                                 ><input id="local-code" autocomplete="one-time-code" />
-                                <button type="submit" class="primary-button">Sign in</button>
+                                <button type="submit" class="primary-button">Continue</button>
                             </form>
                             <form id="owner-bootstrap" class="identity-form" hidden>
                                 <h2>Create platform owner</h2>
@@ -558,7 +557,7 @@
                                     hidden
                                     disabled
                                 />
-                                <span id="composer-hint">Sign in to begin</span
+                                <span id="composer-hint">Describe what you want to model</span
                                 ><button id="stop" type="button" class="stop-button" hidden>Stop response</button
                                 ><button id="send" type="submit" class="send-button" aria-label="Send message" disabled>
                                     ↑
@@ -608,7 +607,7 @@
                             ><input id="model-filter" type="search" placeholder="Filter by name or type"
                         /></label>
                     </div>
-                    <p id="model-notice" role="status" aria-live="polite">Sign in to browse the model repository.</p>
+                    <p id="model-notice" role="status" aria-live="polite">Your model repository will appear here.</p>
                     <div class="model-layout">
                         <section class="model-list-panel" aria-label="Project artifacts">
                             <div class="list-heading">
@@ -659,7 +658,7 @@
                     </div>
                     <div class="review-session">
                         <span id="review-signed-in-user"></span
-                        ><a href="/chat/auth/login?review=1" id="review-signin">Sign in for model review</a
+                        ><a href="/chat/auth/login?review=1" id="review-signin" hidden>Verify review access</a
                         ><button id="review-signout" hidden>Sign out</button>
                     </div>
                     <p id="review-notice" role="status" aria-live="polite"></p>
@@ -676,7 +675,7 @@
                     <div class="review-layout">
                         <section aria-label="Model revisions">
                             <h2>Revisions awaiting decisions</h2>
-                            <div id="review-reviews"><p>Sign in and choose a project.</p></div>
+                            <div id="review-reviews"><p>Choose a project to see its reviews.</p></div>
                             <div class="pager">
                                 <button id="review-previous" disabled>Previous</button
                                 ><button id="review-next" disabled>Next</button>
@@ -758,6 +757,7 @@
                         <a href="#help-save">Save your work</a>
                         <a href="#help-review">Review models</a>
                         <a href="#help-sharing">Share a chat</a>
+                        <a href="#help-copilot">Connect Copilot Studio</a>
                         <a href="#help-troubleshooting">Solve a problem</a>
                     </nav>
                     <section class="help-topic" aria-labelledby="help-start">
@@ -973,6 +973,69 @@
                             appear in the shared messages. Return to <strong>Share chat</strong> and select
                             <strong>Revoke link</strong> to stop access early. Creating a new link replaces the previous
                             one.
+                        </p>
+                    </section>
+                    <section class="help-topic" aria-labelledby="help-copilot">
+                        <h2 id="help-copilot" tabindex="-1">Connect Microsoft Copilot Studio</h2>
+                        <p>
+                            Use this workspace's modelling tools from your Copilot Studio agent. Your Microsoft account
+                            and organisation must allow MCP connections.
+                        </p>
+                        <ol>
+                            <li>
+                                Open your agent in
+                                <a href="https://copilotstudio.microsoft.com/" target="_blank" rel="noopener noreferrer"
+                                    >Copilot Studio</a
+                                >. Go to <strong>Tools → Add a tool → New tool → Model Context Protocol</strong>.
+                            </li>
+                            <li>
+                                Name the connection <strong>openEHR Modelling</strong>. Describe it as tools for finding
+                                archetypes, drafting models and checking modelling artefacts.
+                            </li>
+                            <li>
+                                Paste the server address below. Choose <strong>API key</strong>, then
+                                <strong>Header</strong>, and enter the header name below.
+                            </li>
+                            <li>
+                                Create the connection, enter the workspace connection key supplied by your
+                                administrator, and add it to your agent.
+                            </li>
+                            <li>
+                                Ask your agent to list the CKM sources. Confirm it uses <strong>ckm_sources</strong> and
+                                returns a real result before using it for modelling.
+                            </li>
+                        </ol>
+                        <div class="copilot-settings">
+                            <label for="copilot-url">Server address</label><input id="copilot-url" readonly />
+                            <button id="copilot-copy-url" type="button">Copy server address</button>
+                            <label for="copilot-header">API key header</label
+                            ><input id="copilot-header" readonly value="X-API-Key" />
+                            <div id="copilot-key-controls" hidden>
+                                <p>
+                                    Administrators can access the configured workspace key here. It grants this
+                                    deployment's modelling access; keep it private.
+                                </p>
+                                <button id="copilot-show-key" type="button">Get connection key</button>
+                                <div id="copilot-key-field" hidden>
+                                    <label for="copilot-key">Workspace connection key</label
+                                    ><input id="copilot-key" type="password" readonly autocomplete="off" />
+                                    <button id="copilot-copy-key" type="button">Copy connection key</button>
+                                    <button id="copilot-hide-key" type="button">Hide key</button>
+                                </div>
+                            </div>
+                            <p id="copilot-status" role="status"></p>
+                        </div>
+                        <p>
+                            This connects tools inside Copilot Studio. Your browser chats continue to use the assistant
+                            selected in Chat. Microsoft tenant policies and connection approval still apply.
+                        </p>
+                        <p>
+                            <a
+                                href="https://learn.microsoft.com/en-us/microsoft-copilot-studio/mcp-add-existing-server-to-agent"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                >Microsoft's connection guide</a
+                            >
                         </p>
                     </section>
                     <section class="help-topic" aria-labelledby="help-troubleshooting">

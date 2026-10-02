@@ -197,6 +197,24 @@ textarea:focus-visible {
     display: grid;
     gap: 10px;
 }
+.copilot-settings {
+    display: grid;
+    gap: 8px;
+    max-width: 600px;
+}
+.copilot-settings input {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+}
+.copilot-settings button {
+    width: fit-content;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #eef5fc;
+    color: var(--ink);
+}
 .chat-project-form input,
 .chat-project-form select {
     min-width: 0;

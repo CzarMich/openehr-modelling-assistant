@@ -129,7 +129,7 @@ function controls() {
           ? connected
               ? "Enter to send · Shift + Enter for a new line"
               : "Connect your account in My AI connections"
-          : "Sign in to begin";
+          : "Describe what you want to model";
 }
 function chatSettings(expanded) {
     $("provider-bar").classList.toggle("settings-open", expanded);
@@ -139,12 +139,17 @@ $("toggle-chat-settings").onclick = () =>
     chatSettings($("toggle-chat-settings").getAttribute("aria-expanded") !== "true");
 async function loadSession() {
     session = await api("api/session");
-    $("login-panel").hidden =
-        !!session.authenticated || !(session.enabled || session.reviewEnabled || session.identityEnabled);
+    $("login-panel").hidden = !!session.authenticated || !session.identityEnabled;
     $("sign-out").hidden = !session.authenticated;
     $("sign-in").hidden = !!session.authenticated;
     $("sign-in").href = session.identityEnabled ? "#chat" : "/chat/auth/login";
     $("user-name").textContent = session.user?.name || "";
+    $("copilot-url").value = session.mcpConnection?.url || location.origin + "/mcp";
+    $("copilot-header").value = session.mcpConnection?.header || "X-API-Key";
+    $("copilot-key-controls").hidden =
+        !session.identityEnabled || !session.user?.roles?.includes("modelling-administrator");
+    $("copilot-key").value = "";
+    $("copilot-key-field").hidden = true;
     renderProviders();
     controls();
     document.dispatchEvent(new CustomEvent("workspace:session", { detail: session }));
@@ -172,7 +177,11 @@ setInterval(() => {
     if (!document.hidden && session?.authenticated) refreshSession();
 }, 60000);
 $("sign-in").onclick = (event) => {
-    if (!session?.identityEnabled) return;
+    if (!session?.identityEnabled) {
+        $("sign-in").href =
+            document.body.dataset.section === "governance" ? "/chat/auth/login?review=1" : "/chat/auth/login";
+        return;
+    }
     event.preventDefault();
     $("tab-chat").click();
     $("welcome").hidden = false;
@@ -180,6 +189,45 @@ $("sign-in").onclick = (event) => {
     $("login-panel").scrollIntoView({ block: "center" });
     $("login-panel").querySelector("form:not([hidden]) input:not([type=hidden]), a:not([hidden])")?.focus();
 };
+$("copilot-copy-url").onclick = () =>
+    navigator.clipboard
+        .writeText($("copilot-url").value)
+        .then(() => ($("copilot-status").textContent = "Server address copied."))
+        .catch(() => {
+            $("copilot-url").select();
+            $("copilot-status").textContent = "Copy the selected address.";
+        });
+$("copilot-show-key").onclick = async () => {
+    try {
+        const result = await api("api/identity/mcp-connection", { method: "POST", data: {} });
+        $("copilot-key").value = result.key;
+        $("copilot-key-field").hidden = false;
+        $("copilot-status").textContent =
+            "Use this workspace connection key only in your trusted Copilot Studio connection.";
+    } catch (error) {
+        $("copilot-status").textContent = error.message;
+    }
+};
+$("copilot-copy-key").onclick = () =>
+    navigator.clipboard
+        .writeText($("copilot-key").value)
+        .then(() => ($("copilot-status").textContent = "Connection key copied. Paste it into Copilot Studio."))
+        .catch(() => {
+            $("copilot-key").select();
+            $("copilot-status").textContent = "Copy the selected key.";
+        });
+$("copilot-hide-key").onclick = () => {
+    $("copilot-key").value = "";
+    $("copilot-key-field").hidden = true;
+    $("copilot-status").textContent = "Connection key hidden.";
+};
+for (const section of ["chat", "models", "governance", "accounts"]) {
+    document.addEventListener("workspace:" + section, () => {
+        $("copilot-key").value = "";
+        $("copilot-key-field").hidden = true;
+        $("copilot-status").textContent = "";
+    });
+}
 function renderProjectContext() {
     const project = chatProjects.find((item) => item.id === projectDraft);
     $("chat-project-context").textContent = project ? "Chat project: " + project.name : "";

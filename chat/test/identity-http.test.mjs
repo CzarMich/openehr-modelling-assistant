@@ -42,6 +42,7 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
         localIssuer: "http://localhost/identity/local",
         dataDir: directory,
         maxConcurrentTurns: 1,
+        mcpKey: "synthetic-workspace-mcp-key",
     };
     const auth = new Auth(config);
     const server = createApplication(config, { auth, store: new Store(join(directory, "conversations")) });
@@ -76,6 +77,8 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
 
     const initial = await (await request("/chat/api/session")).json();
     assert.equal(initial.identitySetupRequired, true);
+    assert.doesNotMatch(JSON.stringify(initial), /synthetic-workspace-mcp-key/);
+    assert.equal((await request("/chat/api/identity/mcp-connection", "POST", {})).status, 401);
     const crossSite = await fetch(origin + "/chat/auth/local", {
         method: "POST",
         headers: { "Content-Type": "application/json", Origin: "https://attacker.example" },
@@ -101,6 +104,18 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
     const ownerSession = auth.session({ headers: { cookie }, socket: {} });
     csrf = ownerSession.csrf;
     assert.equal((await request("/chat/api/identity/users")).status, 200);
+    const keyResponse = await request("/chat/api/identity/mcp-connection", "POST", {});
+    assert.equal(keyResponse.status, 200);
+    assert.equal((await keyResponse.json()).key, config.mcpKey);
+    assert.equal(keyResponse.headers.get("cache-control"), "no-store");
+    const keyAudit = auth.identityStore.read().audit;
+    assert.ok(keyAudit.some((event) => event.action === "MCP_CONNECTION_KEY_VIEWED"));
+    assert.doesNotMatch(JSON.stringify(keyAudit), /synthetic-workspace-mcp-key/);
+    const savedCsrf = csrf;
+    csrf = "incorrect";
+    assert.equal((await request("/chat/api/identity/mcp-connection", "POST", {})).status, 403);
+    csrf = savedCsrf;
+
     const invitationResponse = await request("/chat/api/identity/invitations", "POST", {
         email: "modeller@example.test",
         roles: ["modelling-modeller"],
@@ -121,6 +136,7 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
     const memberSession = auth.session({ headers: { cookie }, socket: {} });
     csrf = memberSession.csrf;
     assert.equal((await request("/chat/api/identity/users")).status, 403);
+    assert.equal((await request("/chat/api/identity/mcp-connection", "POST", {})).status, 403);
     assert.equal((await request("/chat/auth/logout", "POST")).status, 200);
     assert.equal(auth.identityStore.localSession(cookie.split("=")[1]), null);
 

@@ -234,7 +234,7 @@ function update(value) {
     const identityEnabled = value.identityEnabled;
     const admin = value.authenticated && identityEnabled && value.user?.roles?.includes("modelling-administrator");
     $("tab-accounts").hidden = !admin;
-    $("oidc-login").hidden = identityEnabled && !value.oidcEnabled;
+    $("oidc-login").hidden = !identityEnabled || !value.oidcEnabled;
     $("local-login").hidden = true;
     $("owner-bootstrap").hidden = true;
     $("invite-accept").hidden = true;
