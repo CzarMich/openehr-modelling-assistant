@@ -58,7 +58,7 @@ Native ADL 2/OPT 2 compilation and AQL syntax parsing are available through the 
 | **REQ-F12** | Provider-neutral persistent projects, artifacts and revisions. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-F13** | Draft OET generation, bounded validation and structural diff. | partial; exact boundaries in CAPABILITIES.md |
 | **REQ-F14** | Optional local/FHIR terminology, canonical discovery, review-only translation, independent versions, explicit bindings and provenance. | partial; exact boundaries in CAPABILITIES.md |
-| **REQ-F15** | Authenticated browser chat with personal Claude/Codex connections, grounded tool calls, private conversation history, streaming and activity indicators, clickable single/multiple decision options, explicit confirmation of model writes and a built-in user guide available before sign-in. | landed; exact boundaries in CAPABILITIES.md |
+| **REQ-F15** | Authenticated browser chat with personal Claude/Codex connections, grounded tool calls, private conversation history grouped into user-managed chat projects, streaming and activity indicators, clickable single/multiple decision options, explicit confirmation of model writes and a built-in user guide available before sign-in. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N11** | Authenticated bounded transport and redacted failures. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N12** | Client-neutral deployment and truthful capability documentation. | landed; exact boundaries in CAPABILITIES.md |
 

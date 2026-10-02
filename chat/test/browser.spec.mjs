@@ -825,3 +825,70 @@ test("header sign-in reveals native sign-in from another workspace tab", async (
     await expect(page.locator("#local-login")).toBeVisible();
     await expect(page.locator("#local-username")).toBeFocused();
 });
+
+test("chat projects group new and existing conversations and removal preserves their messages", async ({ page }) => {
+    await login(page);
+    await send(page, "Existing renal conversation");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await page.getByRole("button", { name: "Create project", exact: true }).click();
+    let dialog = page.getByRole("dialog", { name: "Create chat project" });
+    await dialog.getByLabel("Project name").fill("Kidney care");
+    await dialog.getByRole("button", { name: "Create project", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator("#chat-project-context")).toContainText("Kidney care");
+    await send(page, "Plan a kidney template");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    let group = page.locator(".chat-project").filter({ has: page.locator("summary", { hasText: "Kidney care" }) });
+    await expect(group.getByRole("button", { name: "Plan a kidney template", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Move Existing renal conversation to a project", exact: true }).click();
+    dialog = page.getByRole("dialog", { name: "Move conversation" });
+    await dialog.getByLabel("Chat project").selectOption({ label: "Kidney care" });
+    await dialog.getByRole("button", { name: "Move chat", exact: true }).click();
+    await expect(group.locator(".conversation-row")).toHaveCount(2);
+    await group.getByRole("button", { name: "Rename Kidney care", exact: true }).click();
+    dialog = page.getByRole("dialog", { name: "Rename chat project" });
+    await dialog.getByLabel("Project name").fill("Renal care");
+    await dialog.getByRole("button", { name: "Save name", exact: true }).click();
+    await expect(page.locator("#chat-project-context")).toContainText("Renal care");
+    await page.reload();
+    group = page.locator(".chat-project");
+    await expect(group.locator("summary")).toHaveText("Renal care (2)");
+    await expect(group.getByRole("button", { name: "Existing renal conversation", exact: true })).toBeHidden();
+    await group.locator("summary").click();
+    await group.getByRole("button", { name: "Existing renal conversation", exact: true }).click();
+    await expect(page.locator(".message.user")).toContainText("Existing renal conversation");
+    const deleteChat = group.getByRole("button", { name: "Delete Plan a kidney template", exact: true });
+    await expect(deleteChat).toHaveCSS("opacity", "1");
+    page.once("dialog", (dialog) => dialog.dismiss());
+    await deleteChat.click();
+    await expect(group.locator(".conversation-row")).toHaveCount(2);
+    page.once("dialog", (dialog) => dialog.accept());
+    await deleteChat.click();
+    await expect(group.locator(".conversation-row")).toHaveCount(1);
+    page.once("dialog", (dialog) => dialog.accept());
+    await group.getByRole("button", { name: "Delete project Renal care", exact: true }).click();
+    await expect(page.locator(".chat-project")).toHaveCount(0);
+    await expect(page.locator(".conversation-row")).toHaveCount(1);
+    await expect(page.locator(".message.user")).toContainText("Existing renal conversation");
+});
+
+test("chat projects are usable with keyboard navigation on phones", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await page.getByRole("button", { name: "Toggle conversations", exact: true }).click();
+    await page.getByRole("button", { name: "Create project", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Create chat project" });
+    await expect(dialog.getByLabel("Project name")).toBeFocused();
+    await dialog.getByLabel("Project name").fill("Kidney care");
+    const { default: AxeBuilder } = await import("@axe-core/playwright");
+    expect(
+        (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze()).violations,
+    ).toEqual([]);
+    await dialog.getByLabel("Project name").press("Enter");
+    await expect(dialog).toBeHidden();
+    await page.getByRole("button", { name: "Toggle conversations", exact: true }).click();
+    await page.getByRole("button", { name: "New chat in Kidney care", exact: true }).click();
+    await expect(page.locator("#message")).toBeFocused();
+    await expect(page.locator("#chat-project-context")).toContainText("Kidney care");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

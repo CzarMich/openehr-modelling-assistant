@@ -141,7 +141,8 @@
                 <button id="new-chat" class="new-chat" disabled>
                     <span aria-hidden="true">+</span> New conversation
                 </button>
-                <div class="sidebar-label">YOUR CONVERSATIONS</div>
+                <button id="new-project" class="new-chat new-project" disabled>Create project</button>
+                <div class="sidebar-label">YOUR CHATS AND PROJECTS</div>
                 <nav id="conversations" aria-label="Your conversations">
                     <p class="empty-list">Sign in to start a conversation.</p>
                 </nav>
@@ -169,6 +170,31 @@
                         <button id="sign-out" class="text-button" hidden>Sign out</button>
                     </div>
                 </header>
+                <dialog id="chat-project-dialog" aria-labelledby="chat-project-dialog-title">
+                    <form id="chat-project-form" class="chat-project-form">
+                        <h2 id="chat-project-dialog-title">Create chat project</h2>
+                        <p>Group your conversations in a private folder.</p>
+                        <label for="chat-project-input">Project name</label>
+                        <input id="chat-project-input" maxlength="80" required autocomplete="off" />
+                        <p id="chat-project-error" role="alert"></p>
+                        <div>
+                            <button id="save-chat-project" type="submit">Create project</button>
+                            <button id="cancel-chat-project" type="button">Cancel</button>
+                        </div>
+                    </form>
+                </dialog>
+                <dialog id="move-chat-dialog" aria-labelledby="move-chat-title">
+                    <form id="move-chat-form" class="chat-project-form">
+                        <h2 id="move-chat-title">Move conversation</h2>
+                        <label for="move-chat-project">Chat project</label>
+                        <select id="move-chat-project"></select>
+                        <p id="move-chat-error" role="alert"></p>
+                        <div>
+                            <button id="confirm-move-chat" type="submit">Move chat</button>
+                            <button id="cancel-move-chat" type="button">Cancel</button>
+                        </div>
+                    </form>
+                </dialog>
                 <section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
                     <div id="notice" role="alert" class="notice" hidden></div>
                     <div id="provider-bar" class="provider-bar" hidden>
@@ -475,6 +501,7 @@
                         </div>
                     </section>
                     <section id="thread" class="thread" aria-label="Chat messages" hidden></section>
+                    <p id="chat-project-context" class="chat-project-context" hidden></p>
                     <div id="activity" class="activity" role="status" aria-live="polite"></div>
                     <div class="composer-wrap">
                         <details id="conversation-files" class="conversation-files" hidden>
@@ -771,6 +798,19 @@
                         <p>
                             Connections and conversations belong to your profile. Repository files follow the access
                             rules of the repository where you save them.
+                        </p>
+                        <h3>Organise your chats</h3>
+                        <p>
+                            Select <strong>Create project</strong> in the sidebar to group chats in a private folder.
+                            Open a project's heading to see its conversations, or select <strong>+ Chat</strong> to
+                            start one inside it. Use the arrow beside a chat to move it to a project. You can rename a
+                            project; deleting it keeps its conversations in <strong>Unfiled chats</strong>. On phones,
+                            select <strong>Toggle conversations</strong> to see these controls. Each chat keeps its own
+                            files and chosen repository.
+                        </p>
+                        <p>
+                            Select <strong>× (Delete conversation)</strong> beside a chat to delete its messages and
+                            uploaded files. You will be asked to confirm. Other chats and the project are kept.
                         </p>
                     </section>
                     <section class="help-topic" aria-labelledby="help-files">
