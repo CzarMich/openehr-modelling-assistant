@@ -4,7 +4,17 @@ let session = null,
     current = null,
     running = false,
     controller = null;
+let uploading = false,
+    sharedView = false,
+    personalConnections = [];
 const toolLabels = {
+    attachment_read: "Read source file",
+    personal_connections: "Personal connections",
+    personal_ckm_search: "Search personal CKM",
+    personal_ckm_get: "Retrieve personal CKM model",
+    personal_repository_get: "Read personal repository",
+    personal_repository_list: "Browse personal repository",
+    personal_repository_save: "Save to personal repository",
     model_traceability_save: "Save requirements traceability",
     model_traceability_get: "Requirements and evidence graph",
     model_traceability_explain: "Explain model element",
@@ -66,12 +76,19 @@ async function api(path, { method = "GET", data } = {}) {
     return result;
 }
 function controls() {
-    const ready = !!session?.authenticated && session.enabled;
+    const ready = !!session?.authenticated && session.enabled && !uploading && !sharedView;
     const connected = session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected);
-    $("chat-provider").disabled = running || !!current?.messages?.length;
+    $("chat-provider").disabled =
+        running || uploading || sharedView || !!current?.messages?.length || !!current?.attachments?.length;
+    $("sign-out").disabled = uploading;
+    document.querySelectorAll(".conversation-row button").forEach((button) => (button.disabled = running || uploading));
     $("message").disabled = !ready || running;
     $("send").disabled = !ready || !connected || running || !$("message").value.trim();
     $("new-chat").disabled = !ready || running;
+    if (sharedView) $("new-chat").disabled = false;
+    $("upload-files").disabled = !ready || running;
+    $("save-destination").disabled = !ready || running;
+    $("share-chat").disabled = !ready || running || !current?.messages?.length;
     $("stop").hidden = !running;
     document.querySelectorAll(".suggestion").forEach((button) => (button.disabled = !ready || !connected || running));
     $("composer-hint").textContent = running
@@ -109,13 +126,13 @@ async function list() {
         const button = document.createElement("button");
         button.textContent = c.title;
         button.title = c.title;
-        button.disabled = running;
+        button.disabled = running || uploading;
         button.onclick = () => open(c.id).catch((e) => notice(e.message));
         const remove = document.createElement("button");
         remove.className = "delete-chat";
         remove.textContent = "×";
         remove.setAttribute("aria-label", "Delete " + c.title);
-        remove.disabled = running;
+        remove.disabled = running || uploading;
         remove.onclick = async () => {
             if (!confirm("Delete this conversation and its messages?")) return;
             try {
@@ -132,6 +149,8 @@ async function list() {
 }
 function reset() {
     current = null;
+    sharedView = false;
+    $("attachment-list").replaceChildren();
     $("thread").replaceChildren();
     $("thread").hidden = true;
     $("welcome").hidden = false;
@@ -184,7 +203,7 @@ function bubble(message) {
     article.className = "message " + message.role;
     const title = document.createElement("div");
     title.className = "message-header";
-    title.textContent = message.role === "user" ? "You" : "Modelling Assistant";
+    title.textContent = message.role === "user" ? (sharedView ? "Participant" : "You") : "Modelling Assistant";
     const content = document.createElement("div");
     content.className = "message-content";
     format(content, message.content || "");
@@ -222,8 +241,11 @@ function toolChip(container, tool) {
         (toolLabels[tool.name] || tool.name.replaceAll("_", " "));
 }
 async function open(id) {
-    if (running) return;
+    if (running || uploading) return;
     current = await api("api/conversations/" + id);
+    sharedView = false;
+    renderAttachments();
+    renderDestinations();
     $("chat-provider").value = current.provider || "codex";
     controls();
     $("welcome").hidden = true;
@@ -279,15 +301,14 @@ function approval(event, target) {
     card.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 async function send(text) {
-    if (running || !text.trim()) return;
+    if (running || uploading || sharedView || !text.trim()) return;
     notice("");
     if (!session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected)) {
         $("provider-settings").open = true;
         notice("Connect your provider account before sending a message.");
         return;
     }
-    if (!current)
-        current = await api("api/conversations", { method: "POST", data: { provider: $("chat-provider").value } });
+    await ensureConversation();
     $("welcome").hidden = true;
     $("thread").hidden = false;
     $("message").value = "";
@@ -459,8 +480,17 @@ for (const name of ["codex", "claude"])
         }
     };
 loadSession()
-    .then(() => {
-        if (session.authenticated && session.enabled) return list();
+    .then(async () => {
+        if (session.authenticated && session.enabled) {
+            await loadConnections();
+            await list();
+            if (!location.hash.startsWith("#share=") && sessionStorage.getItem("pending-share"))
+                location.hash = sessionStorage.getItem("pending-share");
+            sessionStorage.removeItem("pending-share");
+            if (location.hash.startsWith("#share=")) await showShared();
+        } else if (location.hash.startsWith("#share=")) {
+            sessionStorage.setItem("pending-share", location.hash);
+        }
     })
     .catch(() => notice("The chat service is currently unavailable. Please try again shortly."));
 
@@ -469,3 +499,222 @@ document.addEventListener("workspace:discuss", (event) => {
     controls();
     $("message").focus();
 });
+
+async function ensureConversation() {
+    if (!current) {
+        const repository = $("save-destination").value;
+        current = await api("api/conversations", { method: "POST", data: { provider: $("chat-provider").value } });
+        if (repository)
+            current = await api("api/conversations/" + current.id + "/settings", {
+                method: "PUT",
+                data: { repository },
+            });
+    }
+    return current;
+}
+function renderDestinations() {
+    const selected = current ? current.repository || "" : $("save-destination").value;
+    $("save-destination").replaceChildren(new Option("Enterprise repository", ""));
+    for (const connection of personalConnections.filter((c) => c.kind !== "ckm"))
+        $("save-destination").add(new Option(connection.label + " · " + connection.branch, connection.id));
+    if (selected && !personalConnections.some((c) => c.id === selected))
+        $("save-destination").add(new Option("Saved personal repository (load My sources to view)", selected));
+    $("save-destination").value = selected || "";
+}
+async function loadConnections() {
+    const data = await api("api/connections");
+    if (data.enterpriseUnavailable)
+        notice(
+            "Enterprise CKMs could not be listed. Personal repositories remain available; retry before adding a CKM.",
+        );
+    personalConnections = data.personal;
+    $("connection-list").replaceChildren();
+    for (const item of [...data.enterprise, ...data.personal]) {
+        const row = document.createElement("div"),
+            text = document.createElement("span");
+        row.setAttribute("role", "listitem");
+        text.textContent =
+            item.label +
+            " · " +
+            (item.scope === "enterprise" ? "Enterprise" : "Personal") +
+            " · " +
+            item.url +
+            (item.branch ? " · " + item.branch : "");
+        row.append(text);
+        if (item.scope !== "enterprise") {
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.textContent = "Remove " + item.label;
+            remove.onclick = async () => {
+                try {
+                    await api("api/connections/" + item.id, { method: "DELETE" });
+                    await loadConnections();
+                } catch (e) {
+                    notice(e.message);
+                }
+            };
+            row.append(remove);
+        }
+        $("connection-list").append(row);
+    }
+    renderDestinations();
+}
+$("personal-settings").ontoggle = () => {
+    if ($("personal-settings").open) loadConnections().catch((e) => notice(e.message));
+};
+$("connection-kind").onchange = () => {
+    const isCkm = $("connection-kind").value === "ckm";
+    $("repository-fields").hidden = isCkm;
+    $("connection-url").placeholder = isCkm
+        ? "https://models.example.org/ckm/rest/"
+        : "https://github.com/owner/models";
+};
+$("personal-connection").onsubmit = async (event) => {
+    event.preventDefault();
+    const data = {
+        kind: $("connection-kind").value,
+        label: $("connection-label").value,
+        url: $("connection-url").value,
+        ...($("connection-token").value ? { token: $("connection-token").value } : {}),
+    };
+    if (data.kind !== "ckm") data.branch = $("connection-branch").value;
+    $("connection-token").value = "";
+    try {
+        const result = await api("api/connections", { method: "POST", data });
+        await loadConnections();
+        notice(
+            result.duplicate
+                ? "This connection is already available. No duplicate was added."
+                : "Personal connection added.",
+        );
+    } catch (e) {
+        notice(e.message);
+    }
+};
+$("save-destination").onchange = async () => {
+    if (!current) return;
+    try {
+        current = await api("api/conversations/" + current.id + "/settings", {
+            method: "PUT",
+            data: { repository: $("save-destination").value || null },
+        });
+    } catch (e) {
+        $("save-destination").value = current.repository || "";
+        notice(e.message);
+    }
+};
+function renderAttachments() {
+    $("attachment-list").replaceChildren();
+    for (const item of current?.attachments || []) {
+        const row = document.createElement("div"),
+            link = document.createElement("a"),
+            info = document.createElement("span"),
+            remove = document.createElement("button");
+        link.textContent = item.name;
+        link.href = "/chat/api/conversations/" + current.id + "/attachments/" + item.id;
+        link.download = item.name;
+        info.textContent = " · " + item.status + " · " + item.note;
+        remove.type = "button";
+        remove.textContent = "Remove " + item.name;
+        remove.disabled = running || uploading;
+        remove.onclick = async () => {
+            try {
+                const result = await api("api/conversations/" + current.id + "/attachments/" + item.id, {
+                    method: "DELETE",
+                });
+                current.attachments = result.attachments;
+                renderAttachments();
+            } catch (e) {
+                notice(e.message);
+            }
+        };
+        row.append(link, info, remove);
+        $("attachment-list").append(row);
+    }
+}
+$("upload-files").onchange = async () => {
+    const files = Array.from($("upload-files").files);
+    $("upload-files").value = "";
+    if (!files.length || running || uploading) return;
+    uploading = true;
+    controls();
+    try {
+        await ensureConversation();
+        for (const file of files) {
+            if (file.size > 10 * 1024 * 1024) throw new Error(file.name + " exceeds the 10 MiB file limit.");
+            notice("Reading " + file.name + "…");
+            const response = await fetch("/chat/api/conversations/" + current.id + "/attachments", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-Token": session.csrf,
+                    "X-File-Name": encodeURIComponent(file.name),
+                    "Content-Type": "application/octet-stream",
+                },
+                body: file,
+            });
+            const item = await response.json();
+            if (!response.ok) throw new Error(item.error || "File upload failed.");
+            current.attachments = [...(current.attachments || []), item];
+            renderAttachments();
+        }
+        notice("Files added. Describe what you want to model; the assistant can read their extracted content.");
+        await list();
+    } catch (e) {
+        notice(e.message);
+    } finally {
+        uploading = false;
+        controls();
+        renderAttachments();
+    }
+};
+$("share-chat").onclick = () => {
+    $("share-url").value = "";
+    $("share-status").textContent = current.share
+        ? "An existing link expires on " +
+          new Date(current.share.expiresAt).toLocaleString() +
+          ". Creating another link revokes it."
+        : "No active link.";
+    $("revoke-share").disabled = !current.share;
+    $("share-dialog").showModal();
+};
+$("close-share").onclick = () => $("share-dialog").close();
+$("create-share").onclick = async () => {
+    try {
+        const result = await api("api/conversations/" + current.id + "/share", { method: "POST", data: {} });
+        $("share-url").value = location.origin + "/chat/#share=" + result.token;
+        $("share-status").textContent =
+            "Snapshot created. Copy the link above. It expires on " + new Date(result.expiresAt).toLocaleString() + ".";
+        current.share = result;
+        $("revoke-share").disabled = false;
+        $("share-url").select();
+    } catch (e) {
+        $("share-status").textContent = e.message;
+    }
+};
+$("revoke-share").onclick = async () => {
+    try {
+        await api("api/conversations/" + current.id + "/share", { method: "DELETE" });
+        delete current.share;
+        $("share-url").value = "";
+        $("share-status").textContent = "Link revoked.";
+        $("revoke-share").disabled = true;
+    } catch (e) {
+        $("share-status").textContent = e.message;
+    }
+};
+async function showShared() {
+    if (running || uploading || !session?.authenticated || !location.hash.startsWith("#share=")) return;
+    try {
+        const snapshot = await api("api/shares/" + encodeURIComponent(location.hash.slice(7)));
+        reset();
+        sharedView = true;
+        $("welcome").hidden = true;
+        $("thread").hidden = false;
+        for (const message of snapshot.messages) bubble(message);
+        notice("Shared snapshot: " + snapshot.title + ". Read-only; later messages and original files are not shared.");
+        controls();
+    } catch (e) {
+        notice(e.message);
+    }
+}
+window.addEventListener("hashchange", () => showShared());

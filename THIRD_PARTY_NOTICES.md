@@ -19,3 +19,5 @@ External terminology responses must be used under the source's applicable terms.
 ## Optional browser chat
 
 The chat runtime uses Node.js (MIT and bundled notices), openid-client and oauth4webapi (MIT), and the pinned OpenAI Codex distribution (Apache-2.0 and its bundled third-party notices). Playwright (Apache-2.0) and Prettier (MIT) are development dependencies. Package lockfiles and the chat Dockerfile record versions. No provider trademark implies endorsement.
+
+Source extraction uses Mozilla PDF.js and SheetJS Community Edition (Apache-2.0), and Mammoth (BSD-2-Clause). Personal network address checks use ipaddr.js (MIT). Their licenses and dependency notices remain in the installed `node_modules` tree; SheetJS is pinned to its official distribution archive in the lockfile.

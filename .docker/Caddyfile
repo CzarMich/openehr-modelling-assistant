@@ -4,8 +4,13 @@
     persist_config off
 }
 :8343 {
-    request_body {
+    @ordinary not path /chat/api/conversations/*/attachments
+    request_body @ordinary {
         max_size {$MAX_REQUEST_BYTES:2097152}
+    }
+    @uploads path /chat/api/conversations/*/attachments
+    request_body @uploads {
+        max_size 10485760
     }
     @chat path /chat /chat/*
     handle @chat {

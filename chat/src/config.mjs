@@ -30,6 +30,10 @@ export function loadConfig(env = process.env) {
         mcpKey: env.CHAT_MCP_API_KEY || "",
         mcpKeyHeader: env.CHAT_MCP_API_KEY_HEADER || "X-API-Key",
         allowWrites: env.CHAT_ALLOW_WRITES === "true",
+        personalAllowedHosts: (env.CHAT_PERSONAL_ALLOWED_HOSTS || "")
+            .split(",")
+            .map((host) => host.trim().toLowerCase())
+            .filter(Boolean),
         reviewEnabled: env.CHAT_REVIEW_ENABLED === "true",
         reviewSigningKey: env.CHAT_REVIEW_SIGNING_KEY || "",
         reviewKeyId: env.CHAT_REVIEW_KEY_ID || "active",

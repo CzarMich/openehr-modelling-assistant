@@ -194,7 +194,63 @@
                                 <button id="disconnect-claude" type="button" hidden>Disconnect Claude</button>
                             </form>
                         </details>
+                        <details id="personal-settings">
+                            <summary>My sources and repositories</summary>
+                            <p>
+                                Personal connections are available only to your profile. Enterprise CKMs stay available
+                                to everyone.
+                            </p>
+                            <div id="connection-list" role="list" aria-label="Available connections"></div>
+                            <form id="personal-connection" class="personal-form">
+                                <label for="connection-kind">Connection type</label>
+                                <select id="connection-kind">
+                                    <option value="ckm">CKM</option>
+                                    <option value="github">GitHub repository</option>
+                                    <option value="gitlab">GitLab repository</option>
+                                </select>
+                                <label for="connection-label">Connection name</label
+                                ><input id="connection-label" maxlength="80" required />
+                                <label for="connection-url">HTTPS URL</label
+                                ><input
+                                    id="connection-url"
+                                    type="url"
+                                    placeholder="https://models.example.org/ckm/rest/"
+                                    required
+                                />
+                                <div id="repository-fields" hidden>
+                                    <label for="connection-branch">Target branch</label
+                                    ><input id="connection-branch" value="main" maxlength="200" />
+                                </div>
+                                <label for="connection-token">Personal access token (optional for public reads)</label
+                                ><input id="connection-token" type="password" autocomplete="off" maxlength="2000" />
+                                <p>
+                                    CKMs use an optional bearer token. Repository saves need a token with access to the
+                                    chosen repository and branch.
+                                </p>
+                                <button type="submit">Add personal connection</button>
+                            </form>
+                        </details>
+                        <div class="destination-control">
+                            <label for="save-destination">Save artifacts to</label
+                            ><select id="save-destination">
+                                <option value="">Enterprise repository</option>
+                            </select>
+                        </div>
+                        <button id="share-chat" type="button" disabled>Share chat</button>
                     </div>
+                    <dialog id="share-dialog" aria-labelledby="share-title">
+                        <h2 id="share-title">Share a conversation snapshot</h2>
+                        <p>
+                            Anyone signed in to this workspace with the link can read the current messages for 7 days.
+                            Later messages and uploaded originals are excluded. Review messages for sensitive
+                            information before sharing.
+                        </p>
+                        <button id="create-share" type="button">Create link</button>
+                        <button id="revoke-share" type="button">Revoke link</button>
+                        <label for="share-url">Share link</label><input id="share-url" readonly />
+                        <p id="share-status" role="status"></p>
+                        <button id="close-share" type="button">Close</button>
+                    </dialog>
                     <section id="welcome" class="welcome">
                         <div class="eyebrow"><span class="status-dot"></span> OPENEHR MODELLING ASSISTANT</div>
                         <h1>Your clinical modelling workspace</h1>
@@ -375,6 +431,12 @@
                     <section id="thread" class="thread" aria-label="Chat messages" hidden></section>
                     <div id="activity" class="activity" role="status" aria-live="polite"></div>
                     <div class="composer-wrap">
+                        <div
+                            id="attachment-list"
+                            class="attachment-list"
+                            role="group"
+                            aria-label="Conversation files"
+                        ></div>
                         <form id="chat-form" class="composer">
                             <label class="sr-only" for="message">Message the modelling assistant</label
                             ><textarea
@@ -385,6 +447,8 @@
                                 disabled
                             ></textarea>
                             <div class="composer-actions">
+                                <label class="upload-label" for="upload-files">Attach files</label
+                                ><input id="upload-files" type="file" multiple aria-label="Attach files" disabled />
                                 <span id="composer-hint">Sign in to begin</span
                                 ><button id="stop" type="button" class="stop-button" hidden>Stop response</button
                                 ><button id="send" type="submit" class="send-button" aria-label="Send message" disabled>
@@ -393,6 +457,7 @@
                             </div>
                         </form>
                         <p class="disclaimer">
+                            Upload PDF, spreadsheets, DOCX, XML, JSON, CSV or other source files (10 MiB each).
                             Generated models remain drafts. Check sources and obtain qualified review before use.
                         </p>
                     </div>

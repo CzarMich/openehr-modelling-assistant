@@ -13,6 +13,7 @@ const config = {
     allowWrites: true,
     reviewEnabled: true,
     dataDir: mkdtempSync(join(tmpdir(), "chat-browser-test-")),
+    providerEncryptionKey: "ab".repeat(32),
 };
 const auth = new Auth(config);
 const reviewId = "a".repeat(64);
@@ -75,7 +76,7 @@ auth.login = async (req, res) => {
 };
 const provider = {
     run: async ({ messages, callTool, onEvent, signal }) => {
-        const text = messages.at(-1).content;
+        const text = messages.at(-1).content.split("\n\nWorkspace context")[0];
         if (text === "wait")
             return new Promise((resolve, reject) =>
                 signal.addEventListener("abort", () => reject(new Error("Stopped")), { once: true }),
@@ -191,7 +192,9 @@ const mcpFactory = () => ({
                   ? { project: { id: "default" }, artifacts: [artifact] }
                   : name === "model_artifact_get"
                     ? artifact
-                    : {};
+                    : name === "ckm_sources"
+                      ? { sources: { default: "https://ckm.example.org/ckm/rest/" } }
+                      : {};
         return {
             structuredContent: { success: true, result, error: null },
             content: [{ type: "text", text: "Fixture data" }],

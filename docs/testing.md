@@ -2,6 +2,8 @@
 
 Run offline unit, schema and regression checks with `make ci`. Run `npm --prefix chat test`, `npm --prefix chat run check:format` and `npm --prefix chat run test:browser` for the browser service, including personal provider isolation. Tests mock external HTTP. Coverage spans preserved upstream tools/prompts/resources, configuration, auth rejection, named CKMs, secure XML, draft provenance, storage traversal/concurrency/history, governance refusal, traceability and local/FHIR terminology. `make conformance` runs isolated production HTTP/stdio product probes and pinned applicable official MCP scenarios, with no expected failures in the gate. The historical whole demonstration-suite result remains diagnostic evidence; see [the protocol profile](MCP_PROTOCOL.md).
 
+Personal workspace tests exercise real PDF/spreadsheet/text extraction, exact original downloads, cross-user denial, source deduplication, encrypted tokens, network-address refusal, revision-conditional Git writes and snapshot revocation. Browser scenarios add private connections, select a destination, upload evidence and view/revoke sharing links. Git/CKM contracts use mocked responses; live account acceptance requires separately provisioned personal credentials.
+
 Run the independent protocol client against a running container:
 
 ```bash

@@ -48,6 +48,57 @@ async function send(page, message) {
     expect((await response).status()).toBe(200);
 }
 
+test("personal CKMs and repository destinations persist, while enterprise duplicates are ignored", async ({ page }) => {
+    await login(page);
+    await page.getByText("My sources and repositories", { exact: true }).click();
+    await page.getByLabel("Connection name", { exact: true }).fill("Already provided");
+    await page.getByLabel("HTTPS URL", { exact: true }).fill("https://ckm.example.org/ckm/rest/");
+    await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("No duplicate was added");
+    await expect(page.getByRole("button", { name: "Remove Already provided" })).toHaveCount(0);
+    await page.getByLabel("Connection type").selectOption("github");
+    await page.getByLabel("Connection name", { exact: true }).fill("Personal models");
+    await page.getByLabel("HTTPS URL", { exact: true }).fill("https://github.com/example/personal-models");
+    await page.getByLabel("Target branch", { exact: true }).fill("drafts");
+    await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Remove Personal models" })).toBeVisible();
+    await page.getByText("My sources and repositories", { exact: true }).click();
+    await page.getByLabel("Save artifacts to").selectOption({ label: "Personal models · drafts" });
+    await send(page, "Use my personal repository");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await page.reload();
+    await page.getByRole("button", { name: "Use my personal repository", exact: true }).click();
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(/^[a-f0-9-]{36}$/);
+});
+
+test("upload source files, create a read-only snapshot and revoke its link", async ({ page, context }) => {
+    await login(page);
+    await page.getByLabel("Attach files", { exact: true }).setInputFiles({
+        name: "renal.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("requirement,unit\nurine volume,mL\n"),
+    });
+    await expect(page.locator("#attachment-list")).toContainText("ready");
+    await expect(page.getByRole("link", { name: "renal.csv", exact: true })).toBeVisible();
+    await send(page, "Model the source requirements");
+    await expect(page.getByRole("button", { name: "Share chat", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: "Share chat", exact: true }).click();
+    await page.getByRole("button", { name: "Create link", exact: true }).click();
+    await expect(page.getByLabel("Share link", { exact: true })).toHaveValue(/#share=/);
+    const link = await page.getByLabel("Share link", { exact: true }).inputValue();
+    const viewer = await context.newPage();
+    await viewer.goto(link);
+    await expect(viewer.getByRole("alert")).toContainText("Shared snapshot");
+    await expect(viewer.getByRole("textbox", { name: "Message the modelling assistant" })).toBeDisabled();
+    await expect(viewer.locator("#attachment-list")).toBeEmpty();
+    await expect(viewer.locator(".message.user")).toContainText("Participant");
+    await page.getByRole("button", { name: "Revoke link", exact: true }).click();
+    await expect(page.locator("#share-status")).toHaveText("Link revoked.");
+    await viewer.reload();
+    await expect(viewer.getByRole("alert")).toContainText("not found or expired");
+    await viewer.close();
+});
+
 test("sign in, tool-backed chat, code rendering, history and sign out", async ({ page }) => {
     await login(page);
     await send(page, "Which CKMs are configured?");
