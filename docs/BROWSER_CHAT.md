@@ -1,6 +1,6 @@
 # Browser chat
 
-Open `/chat/`, sign in to the modelling workspace, and open **My AI connections**.
+Open `/chat/`, sign in to the modelling workspace, and open the **Chat settings** gear, then **My AI connections**.
 Each user connects their own provider account. Choose **Codex** or **Claude** before
 starting a conversation; a conversation keeps that provider when reopened.
 
@@ -68,18 +68,30 @@ the sidebar controls. Empty folders stay available for later work.
 Use **× (Delete conversation)** beside a chat to delete its messages and uploaded
 files after confirmation. Other chats and the containing project are kept.
 
-Chat projects organise history within your profile. Each conversation keeps its
-own provider, attachments and repository destination; moving it preserves those
-settings. The **Models** tab continues to show repository modelling projects.
+Chat projects organise history within your profile. Moving a chat into a project adopts
+that project's repository and folder. Review the file moves, then press **Move chat and
+artefacts** to commit them. Messages, provider connections and uploaded originals remain
+in the workspace. Existing saved artefacts move together in one commit within the same
+personal repository and branch; a different repository, an existing destination file or
+changed source revision blocks the move. Future saves use the project's folder.
+**Unfiled chats** keeps the current repository location. For older chats whose save paths
+were not recorded, use **Include older saved artefacts** and enter each repository path.
+The preview never infers paths from the assistant's prose. Up to 50 artefacts can move at once. The **Models** tab continues to show repository modelling projects.
 Limits are 40 chat projects and the existing 100 conversations per profile. Chat
 retention still applies inside projects; project names persist until removed.
 
+
+Move previews expire after ten minutes and require a separate, owner-authenticated confirmation.
+GitHub uses a [tree/commit](https://docs.github.com/en/rest/git/trees) followed by a
+[non-forced branch update](https://docs.github.com/en/rest/git/refs); GitLab uses a
+[batch commit](https://docs.gitlab.com/api/commits/) with exact file revisions. The chat destination updates only after the repository commit succeeds.
+A persisted GitHub commit receipt lets a retry recover a lost response without committing again.
 
 ## Personal workspace
 
 ### Personal sources and repositories
 
-Open **My sources and repositories** to add a CKM REST base URL or a GitHub/GitLab
+Open the **Chat settings** gear in the top bar, then **My sources and repositories**, to add a CKM REST base URL or a GitHub/GitLab
 repository URL. Connections and optional personal tokens belong only to your signed-in
 profile; tokens are encrypted and never exposed to the assistant. An enterprise CKM
 with the same normalized URL is reused without storing another connection. If the
@@ -109,10 +121,15 @@ Enter **Repository folder**, such as `AKI` or `Clinical/AKI`, or choose **Use pr
 then save the selection. The profile remembers the last saved destination for new unfiled chats.
 Projects have a default repository and folder; creation derives the folder from the project name
 unless a path is supplied. **Settings** changes defaults for future chats. Saving a destination
-inside a project updates its defaults too; existing chats retain their own destinations. Renaming,
-moving or deleting chat projects does not move or delete repository files. Destination metadata
+inside a project updates its defaults too; existing chats retain their own destinations until explicitly moved.
+Renaming or deleting a project does not move or delete repository files. Destination metadata
 is private to the owner and persists across restarts. Legacy projects gain a suggested folder;
 existing conversations continue to use their original repository-root paths.
+
+Within the selected folder, model types have separate locations: `archetypes/` for ADL
+archetypes, `templates/oet/` for OETs, `templates/opt/` for OPTs, and `templates/adl/`
+for `.adlt` templates. Moving a chat applies this structure to its saved artefacts.
+Other file types retain their relative subfolders.
 
 Personal saves require a full repository-relative path inside the selected folder, checked
 before confirmation and again before writing. Traversal, hidden directories and writes to a

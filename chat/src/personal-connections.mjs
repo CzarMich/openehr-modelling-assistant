@@ -194,7 +194,7 @@ export class PersonalConnections {
             path.split("/").some((p) => !p || p === "." || p === ".." || p.startsWith("."))
         )
             throw problem("Use a relative artifact path without hidden directories or traversal.");
-        if (!/\.(adl|adls|adlf|oet|opt|xml|json|aql|csv|md|txt|yaml|yml)$/i.test(path))
+        if (!/\.(adl|adls|adlf|adlt|oet|opt|xml|json|aql|csv|md|txt|yaml|yml)$/i.test(path))
             throw problem("Choose a modelling artifact file extension.");
         return path;
     }
@@ -224,7 +224,7 @@ export class PersonalConnections {
             limit: 100,
         };
     }
-    async readRepository(identity, args, signal) {
+    async readRepository(identity, args, signal, ref) {
         const repo = this.get(identity, args.repository);
         if (repo.kind === "ckm") throw problem("Choose a repository.");
         const path = this.validatePath(args.path);
@@ -233,8 +233,8 @@ export class PersonalConnections {
                 ? "/contents/" +
                   path.split("/").map(encodeURIComponent).join("/") +
                   "?ref=" +
-                  encodeURIComponent(repo.branch)
-                : "/repository/files/" + encodeURIComponent(path) + "?ref=" + encodeURIComponent(repo.branch);
+                  encodeURIComponent(ref || repo.branch)
+                : "/repository/files/" + encodeURIComponent(path) + "?ref=" + encodeURIComponent(ref || repo.branch);
         const response = await this.remote(this.repoApi(repo), suffix, { signal });
         if (response.status === 404) return { exists: false, revision: null, path, repository: visible(repo) };
         let data;

@@ -12,6 +12,7 @@ import { PersonalConnections } from "./personal-connections.mjs";
 import { Attachments, UPLOAD_LIMIT } from "./attachments.mjs";
 import { Shares } from "./shares.mjs";
 import { repositoryFolder } from "./repository-paths.mjs";
+import { ProjectMoves, recordArtifact } from "./project-moves.mjs";
 import { WorkspaceTools, PERSONAL_WRITE } from "./workspace-tools.mjs";
 import { CHOICE_TOOL, choiceQuestion, choiceAnswer, choiceMessage } from "./choices.mjs";
 
@@ -73,6 +74,8 @@ export function createApplication(
         rate = new Map(),
         modelReads = new Map();
     const uploading = new Set();
+    const moving = new Set();
+    const projectMoves = new ProjectMoves(store, connections, config.allowWrites);
     store.prune();
     shares.prune();
     const cleanup = setInterval(() => {
@@ -215,6 +218,11 @@ export function createApplication(
             const mutation = req.method !== "GET";
             const session = auth.require(req, mutation);
             const identity = session.identity;
+            const checkMoving = () => {
+                if (moving.has(identity))
+                    throw Object.assign(new Error("Wait for the project move to finish."), { status: 409 });
+            };
+            if (mutation) checkMoving();
             if (req.method === "POST" && path === "/chat/auth/logout") {
                 for (const [key, turn] of active)
                     if (key.startsWith(store.owner(identity) + ":")) turn.controller.abort();
@@ -364,7 +372,10 @@ export function createApplication(
                         if (input?.kind === "ckm") throw error;
                         enterpriseUnavailable = true;
                     }
-                    if (input) return json(res, 200, connections.add(identity, input, enterprise));
+                    if (input) {
+                        checkMoving();
+                        return json(res, 200, connections.add(identity, input, enterprise));
+                    }
                     return json(res, 200, { enterprise, personal: connections.list(identity), enterpriseUnavailable });
                 } finally {
                     await mcp.close?.();
@@ -404,6 +415,7 @@ export function createApplication(
                 if (req.method === "GET") return json(res, 200, { projects: store.projects(identity) });
                 if (req.method === "POST") {
                     const input = await body(req, ["name", "repository", "folder"]);
+                    checkMoving();
                     if (
                         input.repository !== undefined &&
                         input.repository !== null &&
@@ -417,8 +429,22 @@ export function createApplication(
             if (projectRoute) {
                 const id = projectRoute[1];
                 store.project(identity, id);
+                const checkPendingMoves = () => {
+                    if (
+                        store.list(identity).some((item) => {
+                            const chat = store.get(identity, item.id);
+                            return chat.movePlan?.commit && (chat.movePlan.project === id || chat.project === id);
+                        })
+                    )
+                        throw Object.assign(
+                            new Error("Finish the pending artefact move before changing this project."),
+                            { status: 409 },
+                        );
+                };
                 if (req.method === "PUT") {
                     const input = await body(req, ["name", "repository", "folder"]);
+                    checkMoving();
+                    checkPendingMoves();
                     if (
                         input.repository !== undefined &&
                         input.repository !== null &&
@@ -428,6 +454,7 @@ export function createApplication(
                     return json(res, 200, store.saveProject(identity, input.name, id, input));
                 }
                 if (req.method === "DELETE") {
+                    checkPendingMoves();
                     const owner = store.owner(identity) + ":";
                     if ([...active.keys(), ...uploading].some((key) => key.startsWith(owner)))
                         throw Object.assign(
@@ -455,6 +482,7 @@ export function createApplication(
                     if (!["codex", "claude"].includes(selected))
                         throw Object.assign(new Error("Choose a provider."), { status: 400 });
                     const defaults = store.destination(identity, input.project ?? null);
+                    checkMoving();
                     const repository = input.repository !== undefined ? input.repository : defaults.repository;
                     if (repository !== null && connections.get(identity, repository).kind === "ckm")
                         throw Object.assign(new Error("Choose a repository."), { status: 400 });
@@ -465,13 +493,18 @@ export function createApplication(
                 }
             }
             const route = path.match(
-                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|choice|settings|share|attachments)(?:\/([a-f0-9-]{36}))?(?:\/(preview))?)?$/,
+                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|choice|settings|share|attachments|move-preview|move)(?:\/([a-f0-9-]{36}))?(?:\/(preview))?)?$/,
             );
             if (!route) throw Object.assign(new Error("Not found"), { status: 404 });
             const [, id, action, attachmentId, preview] = route,
                 key = store.owner(identity) + ":" + id;
             let conversation = store.get(identity, id);
+            if (mutation && conversation.movePlan?.commit && !["move", "move-preview"].includes(action))
+                throw Object.assign(new Error("Finish the pending project move before changing this conversation."), {
+                    status: 409,
+                });
             const freshConversation = () => {
+                checkMoving();
                 if (uploading.has(key) || active.has(key))
                     throw Object.assign(new Error("Wait for the current upload or response to finish."), {
                         status: 409,
@@ -483,8 +516,35 @@ export function createApplication(
                 throw Object.assign(new Error("Not found"), { status: 404 });
             if (mutation && uploading.has(key))
                 throw Object.assign(new Error("Wait for the file upload to finish."), { status: 409 });
-            if (["settings", "share", "attachments"].includes(action) && mutation && active.has(key))
+            if (
+                ["settings", "share", "attachments", "move-preview", "move"].includes(action) &&
+                mutation &&
+                active.has(key)
+            )
                 throw Object.assign(new Error("Stop the response before changing this conversation."), { status: 409 });
+            if (["move-preview", "move"].includes(action) && req.method === "POST") {
+                const input = await body(req, action === "move-preview" ? ["project", "paths"] : ["id"]);
+                conversation = freshConversation();
+                const owner = store.owner(identity) + ":";
+                if ([...active.keys(), ...uploading].some((item) => item.startsWith(owner)))
+                    throw Object.assign(new Error("Finish active responses and uploads before moving artefacts."), {
+                        status: 409,
+                    });
+                moving.add(identity);
+                try {
+                    if (action === "move" && conversation.lastMove?.id === input.id)
+                        return json(res, 200, conversation);
+                    return json(
+                        res,
+                        200,
+                        action === "move-preview"
+                            ? await projectMoves.preview(identity, conversation, input.project, input.paths)
+                            : await projectMoves.apply(identity, conversation, input.id),
+                    );
+                } finally {
+                    moving.delete(identity);
+                }
+            }
             if (action === "settings" && req.method === "PUT") {
                 const input = await body(req, ["repository", "project", "folder"]);
                 if (!Object.keys(input).length)
@@ -495,7 +555,24 @@ export function createApplication(
                     if (selected.kind === "ckm")
                         throw Object.assign(new Error("Choose a repository."), { status: 400 });
                 }
-                if (Object.hasOwn(input, "project") && input.project !== null) store.project(identity, input.project);
+                if (Object.hasOwn(input, "project") && input.project !== null) {
+                    const project = store.project(identity, input.project);
+                    if (
+                        conversation.artifacts?.length ||
+                        conversation.messages.some((message) =>
+                            (message.tools || []).some(
+                                (tool) => tool.name === PERSONAL_WRITE && tool.status === "completed",
+                            ),
+                        )
+                    )
+                        throw Object.assign(new Error("Preview the chat move to include its saved artefacts."), {
+                            status: 409,
+                        });
+                    if (project.repository && connections.get(identity, project.repository).kind === "ckm")
+                        throw Object.assign(new Error("Choose a repository in project settings."), { status: 400 });
+                    input.repository = project.repository;
+                    input.folder = project.folder;
+                }
                 if (Object.hasOwn(input, "folder")) input.folder = repositoryFolder(input.folder);
                 if (Object.hasOwn(input, "repository")) conversation.repository = input.repository;
                 if (Object.hasOwn(input, "folder")) conversation.folder = input.folder;
@@ -780,6 +857,14 @@ export function createApplication(
                                 result?.isError || result?.structuredContent?.success === false
                                     ? "failed"
                                     : "completed";
+                            if (
+                                name === PERSONAL_WRITE &&
+                                trace.status === "completed" &&
+                                result.structuredContent?.saved
+                            ) {
+                                trace.artifact = recordArtifact(conversation, args);
+                                store.save(identity, conversation);
+                            }
                             emit({ type: "tool", ...trace });
                             return result;
                         } catch (error) {

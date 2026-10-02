@@ -33,3 +33,21 @@ export function requireFolderPath(path, folder) {
         );
     return path;
 }
+
+// Keep generated model classes separate while retaining any user subfolders.
+export function artifactPath(path, folder = "") {
+    folder = repositoryFolder(folder);
+    const relative = folder && path.startsWith(folder + "/") ? path.slice(folder.length + 1) : path;
+    const category = /\.oet(?:\.xml)?$/i.test(path)
+        ? "templates/oet"
+        : /\.opt(?:\.xml)?$/i.test(path)
+          ? "templates/opt"
+          : /\.adlt$/i.test(path)
+            ? "templates/adl"
+            : /\.(adl|adls|adlf)$/i.test(path)
+              ? "archetypes"
+              : null;
+    if (!category) return (folder ? folder + "/" : "") + relative;
+    const name = relative.replace(/^(?:archetypes|templates\/(?:oet|opt|adl)|templates|oets?|opts?)\//i, "");
+    return (folder ? folder + "/" : "") + category + "/" + name;
+}

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Chat moves saved artefacts into project folders and places connection settings behind a gear.
+
 - Chat projects retain repository destinations and organise saved artefacts in selected folders.
 
 - Workspace simplifies sign-in and adds guided Copilot Studio connection setup.

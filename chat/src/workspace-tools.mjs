@@ -1,6 +1,6 @@
 import { WRITE_TOOLS } from "./mcp.mjs";
 import { problem } from "./personal-http.mjs";
-import { requireFolderPath } from "./repository-paths.mjs";
+import { requireFolderPath, artifactPath } from "./repository-paths.mjs";
 import { CHOICE_TOOL } from "./choices.mjs";
 
 const string = { type: "string" };
@@ -55,7 +55,7 @@ export class WorkspaceTools {
             personal.push(
                 tool(
                     PERSONAL_WRITE,
-                    "Commit a draft artifact to this conversation's selected personal repository and branch after exact-change browser confirmation. Check personal_connections for the active destination and readiness. The repository must be selected in the UI. Use its full repository-relative path within the selected folder; missing directories are created with the file. A separate folder-creation tool is unnecessary. Use personal_repository_get first; supply its revision, or null for a new file. Include source provenance in artifacts. Use model validation tools before proposing the save. This does not record enterprise governance or clinical approval.",
+                    "Commit a draft artifact to this conversation's selected personal repository and branch after exact-change browser confirmation. Check personal_connections for the active destination and readiness. The repository must be selected in the UI. Use its full repository-relative path within the selected folder; missing directories are created with the file. Separate archetypes into archetypes/, OETs into templates/oet/, and OPTs into templates/opt/ under the selected folder. A separate folder-creation tool is unnecessary. Use personal_repository_get first; supply its revision, or null for a new file. Include source provenance in artifacts. Use model validation tools before proposing the save. This does not record enterprise governance or clinical approval.",
                     {
                         repository: string,
                         path: string,
@@ -104,10 +104,24 @@ export class WorkspaceTools {
             throw problem("Use this conversation's selected repository.", 403);
         this.connections.validatePath(args.path);
         requireFolderPath(args.path, this.conversation.folder || "");
+        const organised = artifactPath(args.path, this.conversation.folder || "");
+        if (organised !== args.path)
+            throw problem(
+                "Keep model types in separate folders. Use " +
+                    organised +
+                    ". Read that path before proposing the save.",
+            );
     }
     context(messages) {
         const context = {
             attachments: this.conversation.attachments || [],
+            savedArtifacts: this.conversation.artifacts || [],
+            artifactFolders: {
+                archetypes: "archetypes/",
+                oet: "templates/oet/",
+                opt: "templates/opt/",
+                adlTemplates: "templates/adl/",
+            },
             personalRepositorySave: this.saveStatus(),
             saveDestination: this.conversation.repository
                 ? this.destination() || "Selected repository was removed; ask the user to choose another."

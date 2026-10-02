@@ -165,6 +165,55 @@
                         ><span class="workspace-name" id="section-title">Modelling workspace</span>
                     </div>
                     <div class="account">
+                        <button
+                            id="share-chat"
+                            class="text-button"
+                            type="button"
+                            aria-label="Share chat"
+                            title="Share chat"
+                            disabled
+                            hidden
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                width="20"
+                                height="20"
+                                aria-hidden="true"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.7"
+                            >
+                                <circle cx="6" cy="12" r="3" />
+                                <circle cx="18" cy="5" r="3" />
+                                <circle cx="18" cy="19" r="3" />
+                                <path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4" /></svg
+                            ><span>Share chat</span>
+                        </button>
+                        <button
+                            id="toggle-chat-settings"
+                            class="icon-button"
+                            type="button"
+                            aria-label="Chat settings"
+                            title="Chat settings"
+                            aria-haspopup="dialog"
+                            aria-controls="chat-settings-dialog"
+                            hidden
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                width="22"
+                                height="22"
+                                aria-hidden="true"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.7"
+                            >
+                                <path
+                                    d="m9.5 3-.6 2.4-2 .9-2.3-.7-2.5 4.3 1.8 1.7v2.3L2.1 15l2.5 4.3 2.3-.7 2 .9.6 2.4h5l.6-2.4 2-.9 2.3.7 2.5-4.3-1.8-1.1v-2.3l1.8-1.7-2.5-4.3-2.3.7-2-.9-.6-2.4z"
+                                />
+                                <circle cx="12" cy="12.5" r="3.2" />
+                            </svg>
+                        </button>
                         <span id="user-name"></span>
                         <a id="sign-in" class="sign-in" href="/chat/auth/login">Sign in</a>
                         <button id="sign-out" class="text-button" hidden>Sign out</button>
@@ -203,30 +252,38 @@
                         <h2 id="move-chat-title">Move conversation</h2>
                         <label for="move-chat-project">Chat project</label>
                         <select id="move-chat-project"></select>
+                        <p>
+                            Conversations and uploads stay in your workspace. Saved artefacts move into the project's
+                            repository folder.
+                        </p>
+                        <details id="move-older-files">
+                            <summary>Include older saved artefacts</summary>
+                            <label for="move-chat-paths">Existing repository paths (one per line)</label>
+                            <textarea id="move-chat-paths" rows="3" placeholder="templates/example.oet"></textarea>
+                            <p>Use this for files saved before the workspace started tracking artefact paths.</p>
+                        </details>
+                        <div id="move-chat-preview" hidden role="status" aria-live="polite"></div>
                         <p id="move-chat-error" role="alert"></p>
+                        <p id="move-chat-progress" role="status" hidden>Checking and organising your artefacts…</p>
                         <div>
                             <button id="confirm-move-chat" type="submit">Move chat</button>
+                            <button id="refresh-move-preview" type="button" hidden>Review again</button>
                             <button id="cancel-move-chat" type="button">Cancel</button>
                         </div>
                     </form>
                 </dialog>
-                <section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
-                    <div id="notice" role="alert" class="notice" hidden></div>
+                <dialog id="chat-settings-dialog" aria-labelledby="chat-settings-title">
+                    <div class="settings-heading">
+                        <h2 id="chat-settings-title">Chat settings</h2>
+                        <button id="close-chat-settings" type="button" aria-label="Close settings">✕</button>
+                    </div>
+                    <p id="settings-notice" role="alert" hidden></p>
                     <div id="provider-bar" class="provider-bar" hidden>
                         <label for="chat-provider">Assistant</label>
                         <select id="chat-provider">
                             <option value="codex">Codex</option>
                             <option value="claude">Claude</option>
                         </select>
-                        <button
-                            id="toggle-chat-settings"
-                            class="mobile-only text-button"
-                            type="button"
-                            aria-expanded="false"
-                            aria-controls="provider-settings personal-settings save-destination-settings share-chat"
-                        >
-                            Chat settings
-                        </button>
                         <details id="provider-settings">
                             <summary>My AI connections</summary>
                             <p>
@@ -335,22 +392,24 @@
                             <p id="save-destination-status" role="status" aria-live="polite"></p>
                             <p id="repository-token-status" hidden></p>
                         </div>
-                        <button id="share-chat" type="button" disabled>Share chat</button>
                     </div>
-                    <dialog id="share-dialog" aria-labelledby="share-title">
-                        <h2 id="share-title">Share a conversation snapshot</h2>
-                        <p>
-                            Anyone signed in to this workspace with the link can read the current messages for 7 days.
-                            Later messages and uploaded originals are excluded. Review messages for sensitive
-                            information before sharing.
-                        </p>
-                        <p><a href="#help-sharing" id="share-help">Help with sharing</a></p>
-                        <button id="create-share" type="button">Create link</button>
-                        <button id="revoke-share" type="button">Revoke link</button>
-                        <label for="share-url">Share link</label><input id="share-url" readonly />
-                        <p id="share-status" role="status"></p>
-                        <button id="close-share" type="button">Close</button>
-                    </dialog>
+                </dialog>
+                <dialog id="share-dialog" aria-labelledby="share-title">
+                    <h2 id="share-title">Share a conversation snapshot</h2>
+                    <p>
+                        Anyone signed in to this workspace with the link can read the current messages for 7 days. Later
+                        messages and uploaded originals are excluded. Review messages for sensitive information before
+                        sharing.
+                    </p>
+                    <p><a href="#help-sharing" id="share-help">Help with sharing</a></p>
+                    <button id="create-share" type="button">Create link</button>
+                    <button id="revoke-share" type="button">Revoke link</button>
+                    <label for="share-url">Share link</label><input id="share-url" readonly />
+                    <p id="share-status" role="status"></p>
+                    <button id="close-share" type="button">Close</button>
+                </dialog>
+                <section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
+                    <div id="notice" role="alert" class="notice" hidden></div>
                     <section id="welcome" class="welcome">
                         <div class="eyebrow"><span class="status-dot"></span> OPENEHR MODELLING ASSISTANT</div>
                         <h1>Your clinical modelling workspace</h1>
@@ -800,9 +859,9 @@
                                 out.
                             </li>
                             <li>
-                                Open <strong>My AI connections</strong>. Choose <strong>Connect Codex</strong> and
-                                follow the sign-in instructions, or enter your Anthropic API key for Claude. Your
-                                workspace login and AI connection are separate.
+                                Open the <strong>Chat settings</strong> gear, then <strong>My AI connections</strong>.
+                                Choose <strong>Connect Codex</strong> and follow the sign-in instructions, or enter your
+                                Anthropic API key for Claude. Your workspace login and AI connection are separate.
                             </li>
                             <li>
                                 Choose your <strong>Assistant</strong>, describe what you want to model, and select
@@ -823,7 +882,9 @@
                             <strong>Use selected options</strong>. Choose <strong>Write another answer</strong> for your
                             own wording, or <strong>Skip question</strong> to continue without choosing. A moving
                             progress ring shows when work is in progress; it pauses when your answer is needed. On
-                            phones, use <strong>Chat settings</strong> to open connections, repositories and sharing.
+                            desktop and phones, use the <strong>Chat settings</strong> gear in the top bar to open
+                            connections, sources and repository settings. Use <strong>Share chat</strong> in the top bar
+                            to share a snapshot.
                         </p>
                         <p>
                             Connections and conversations belong to your profile. Repository files follow the access
@@ -835,8 +896,9 @@
                             Open a project's heading to see its conversations, or select <strong>+ Chat</strong> to
                             start one inside it. Use the arrow beside a chat to move it to a project. You can rename a
                             project; deleting it keeps its conversations in <strong>Unfiled chats</strong>. On phones,
-                            select <strong>Toggle conversations</strong> to see these controls. Each chat keeps its own
-                            files and chosen repository. Project <strong>Settings</strong> lets you choose a default
+                            select <strong>Toggle conversations</strong> to see these controls. Moving a chat adopts the
+                            project repository and folder, with a preview for existing artefacts. Messages and uploads
+                            stay in the workspace. Project <strong>Settings</strong> lets you choose a default
                             repository and folder for new chats. The project name suggests a folder such as
                             <code>Renal-care</code>; you can choose a different path. Renaming or deleting a chat
                             project does not move or delete repository files.
@@ -901,8 +963,9 @@
                     <section class="help-topic" aria-labelledby="help-connections">
                         <h2 id="help-connections" tabindex="-1">3. Add sources and repositories</h2>
                         <p>
-                            Open <strong>My sources and repositories</strong> in Chat. Give each connection a name you
-                            recognise. Your personal connections are available only to your profile.
+                            Open the <strong>Chat settings</strong> gear, then
+                            <strong>My sources and repositories</strong>. Give each connection a name you recognise.
+                            Your personal connections are available only to your profile.
                         </p>
                         <h3>Add a CKM</h3>
                         <p>
@@ -946,7 +1009,10 @@
                     <section class="help-topic" aria-labelledby="help-folders">
                         <h2 id="help-folders" tabindex="-1">Choose where artefacts are saved</h2>
                         <ol>
-                            <li>Choose your repository under <strong>Save artifacts to</strong>.</li>
+                            <li>
+                                Open the <strong>Chat settings</strong> gear, then choose your repository under
+                                <strong>Save artifacts to</strong>.
+                            </li>
                             <li>
                                 Enter a <strong>Repository folder</strong>, such as <code>AKI</code> or
                                 <code>Clinical/AKI</code>, or choose <strong>Use project folder</strong>. Leave it empty
@@ -963,13 +1029,29 @@
                         </ol>
                         <p>
                             For example, the assistant can save a draft at
-                            <code>AKI/templates/AKI_clinical_documentation.oet</code>. The folders appear in GitHub or
-                            GitLab when the first file is committed. Empty folders do not need a separate creation step.
+                            <code>AKI/templates/oet/AKI_clinical_documentation.oet</code>. The folders appear in GitHub
+                            or GitLab when the first file is committed. Empty folders do not need a separate creation
+                            step.
                         </p>
                         <p>
                             Saving a destination in a project also updates its defaults for future chats. To change only
                             the defaults, use the project's <strong>Settings</strong>. Moving a chat between projects
-                            keeps its existing save destination.
+                            adopts the new project's repository and folder. Review the proposed paths, then press
+                            <strong>Move chat and artefacts</strong>. Existing artefacts move in one commit within the
+                            same repository and branch. A conflicting filename or changed revision stops the move.
+                            Conversations and uploads remain in your workspace; only artefacts go to Git.
+                        </p>
+                        <p>
+                            Keep model types in their own subfolders: <code>archetypes/</code>,
+                            <code>templates/oet/</code> and <code>templates/opt/</code>. For example, an AKI project can
+                            contain <code>AKI/archetypes/</code> alongside <code>AKI/templates/oet/</code>. Moving a
+                            chat organises its saved models into these folders.
+                        </p>
+                        <p>
+                            For older saved files, open <strong>Include older saved artefacts</strong> in the move
+                            dialog and enter their repository paths, one per line. Files are never guessed from chat
+                            messages. Choose <strong>Unfiled chats</strong> to remove the grouping while keeping the
+                            current repository location.
                         </p>
                         <p>
                             If saving is unavailable, check that the intended repository is <strong>Active</strong> and
@@ -988,7 +1070,7 @@
                             </li>
                             <li>
                                 Ask the assistant to prepare and save the draft. For a personal repository, include a
-                                relative file path, such as <code>templates/assessment.oet</code>.
+                                relative file path, such as <code>templates/oet/assessment.oet</code>.
                             </li>
                             <li>
                                 Read the proposed destination, file and changes in the confirmation. Select

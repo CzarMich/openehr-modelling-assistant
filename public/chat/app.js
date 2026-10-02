@@ -18,7 +18,8 @@ let workspaceLoaded = false,
     projectDraft = "",
     projectSaving = false,
     editingProject = null,
-    movingConversation = null;
+    movingConversation = null,
+    movePreview = null;
 const expandedProjects = new Set();
 const toolLabels = {
     request_user_choice: "Your modelling choice",
@@ -74,7 +75,9 @@ const toolLabels = {
 };
 function notice(message) {
     $("notice").textContent = message || "";
-    $("notice").hidden = !message;
+    $("notice").hidden = !message || $("chat-settings-dialog").open;
+    $("settings-notice").textContent = message || "";
+    $("settings-notice").hidden = !message;
 }
 async function api(path, { method = "GET", data } = {}) {
     const response = await fetch("/chat/" + path, {
@@ -109,6 +112,11 @@ function controls() {
     $("new-project").disabled = !ready || busy;
     $("save-chat-project").disabled = !ready || busy;
     $("confirm-move-chat").disabled = !ready || busy;
+    $("move-chat-project").disabled = busy;
+    $("move-chat-paths").disabled = busy;
+    $("refresh-move-preview").disabled = busy;
+    $("move-chat-form").setAttribute("aria-busy", String(projectSaving));
+    $("move-chat-progress").hidden = !projectSaving;
     renderProjectContext();
     if (sharedView) $("new-chat").disabled = false;
     $("upload-files").disabled = !ready || busy || unsavedRepository;
@@ -118,6 +126,7 @@ function controls() {
     $("use-project-folder").disabled = !ready || busy;
     $("save-repository-selection").disabled = !ready || busy || !unsavedRepository;
     $("share-chat").disabled = !ready || busy || !current?.messages?.length;
+    $("share-chat").hidden = !ready || !current?.messages?.length;
     document.querySelectorAll(".attachment-remove").forEach((button) => (button.disabled = busy));
     $("stop").hidden = !running;
     document
@@ -138,15 +147,32 @@ function controls() {
         : ready
           ? connected
               ? "Enter to send · Shift + Enter for a new line"
-              : "Connect your account in My AI connections"
+              : "Open the settings gear to connect your assistant"
           : "Describe what you want to model";
 }
 function chatSettings(expanded) {
-    $("provider-bar").classList.toggle("settings-open", expanded);
-    $("toggle-chat-settings").setAttribute("aria-expanded", String(expanded));
+    if (expanded) $("chat-settings-dialog").showModal();
+    else $("chat-settings-dialog").close();
+    $("notice").hidden = expanded || !$("notice").textContent;
 }
-$("toggle-chat-settings").onclick = () =>
-    chatSettings($("toggle-chat-settings").getAttribute("aria-expanded") !== "true");
+$("chat-settings-dialog").addEventListener("close", () => {
+    $("notice").hidden = !$("notice").textContent;
+});
+$("toggle-chat-settings").onclick = () => chatSettings(true);
+$("close-chat-settings").onclick = () => chatSettings(false);
+$("chat-settings-dialog").addEventListener("click", (event) => {
+    if (event.target.closest('a[href^="#help"]')) chatSettings(false);
+    if (event.target === $("chat-settings-dialog")) {
+        const bounds = event.target.getBoundingClientRect();
+        if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+        )
+            chatSettings(false);
+    }
+});
 async function loadSession() {
     session = await api("api/session");
     $("login-panel").hidden = !!session.authenticated || !session.identityEnabled;
@@ -302,16 +328,66 @@ $("chat-project-form").onsubmit = (event) => {
     }, $("chat-project-error"));
 };
 $("cancel-move-chat").onclick = () => $("move-chat-dialog").close();
+function clearMovePreview() {
+    movePreview = null;
+    $("move-chat-preview").replaceChildren();
+    $("move-chat-preview").hidden = true;
+    $("move-chat-error").textContent = "";
+    $("confirm-move-chat").textContent = "Move chat";
+    $("refresh-move-preview").hidden = true;
+}
+$("refresh-move-preview").onclick = clearMovePreview;
+$("move-chat-project").onchange = clearMovePreview;
+$("move-chat-paths").oninput = clearMovePreview;
 $("move-chat-form").onsubmit = (event) => {
     event.preventDefault();
     projectAction(async () => {
-        const updated = await api("api/conversations/" + movingConversation.id + "/settings", {
-            method: "PUT",
-            data: { project: $("move-chat-project").value || null },
+        const base = "api/conversations/" + movingConversation.id;
+        if (!movePreview) {
+            movePreview = await api(base + "/move-preview", {
+                method: "POST",
+                data: {
+                    project: $("move-chat-project").value || null,
+                    paths: $("move-chat-paths")
+                        .value.split("\n")
+                        .map((path) => path.trim())
+                        .filter(Boolean),
+                },
+            });
+            if (movePreview.moves.length) {
+                const preview = $("move-chat-preview"),
+                    intro = document.createElement("p"),
+                    list = document.createElement("ul");
+                intro.textContent =
+                    "Move " +
+                    movePreview.moves.length +
+                    " artefact(s) in " +
+                    movePreview.destination.url +
+                    " · " +
+                    movePreview.destination.branch +
+                    ":";
+                for (const move of movePreview.moves) {
+                    const item = document.createElement("li");
+                    item.textContent = move.from + " → " + move.to;
+                    list.append(item);
+                }
+                preview.replaceChildren(intro, list);
+                preview.hidden = false;
+                $("confirm-move-chat").textContent = "Move chat and artefacts";
+                $("refresh-move-preview").hidden = false;
+                return;
+            }
+        }
+        const updated = await api(base + "/move", {
+            method: "POST",
+            data: { id: movePreview.id },
         });
         if (current?.id === updated.id) {
             current = updated;
             projectDraft = updated.project || "";
+            repositoryDraft = updated.repository || "";
+            folderDraft = updated.folder || "";
+            renderDestinations();
         }
         if (updated.project) expandedProjects.add(updated.project);
         $("move-chat-dialog").close();
@@ -331,6 +407,9 @@ function conversationRow(c) {
     move.setAttribute("aria-label", "Move " + c.title + " to a project");
     move.onclick = () => {
         movingConversation = c;
+        clearMovePreview();
+        $("move-chat-paths").value = "";
+        $("move-older-files").open = false;
         $("move-chat-project").replaceChildren(new Option("Unfiled chats", ""));
         for (const project of chatProjects) $("move-chat-project").add(new Option(project.name, project.id));
         $("move-chat-project").value = c.project || "";
@@ -832,6 +911,9 @@ document
 let providerPoll;
 function renderProviders() {
     $("provider-bar").hidden = !session?.authenticated || !session.enabled;
+    $("toggle-chat-settings").hidden = $("provider-bar").hidden;
+    $("share-chat").hidden = $("provider-bar").hidden;
+    if ($("provider-bar").hidden) chatSettings(false);
     for (const provider of session?.providers || []) {
         $(provider.id + "-status").textContent = provider.connected
             ? "Connected"
