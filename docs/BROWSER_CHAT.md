@@ -39,6 +39,8 @@ without a selection. Submitted answers are saved in your conversation. Choosing 
 option does not approve a repository write or a model for clinical use.
 Questions expire after two minutes or when the response is stopped/disconnected;
 the assistant receives a skipped answer, never an assumed selection.
+On phones, **Chat settings** opens AI connections, sources, the repository destination
+and sharing controls. These fold away while the assistant replies.
 
 Enter sends a message; Shift+Enter adds a line. **New conversation** starts another
 topic or lets you select a different provider. Conversations are private to the

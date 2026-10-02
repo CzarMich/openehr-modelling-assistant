@@ -691,6 +691,11 @@ test("single-click decisions pause the assistant and persist the selected answer
     await send(page, "choose intended use");
     const card = page.getByRole("group", { name: "What is the intended use?" });
     await expect(card).toBeVisible();
+    expect(await page.locator("#thread").evaluate((node) => node.clientHeight)).toBeGreaterThan(180);
+    await page.getByRole("button", { name: "Chat settings", exact: true }).click();
+    await expect(page.getByLabel("Save artifacts to")).toBeVisible();
+    await page.getByRole("button", { name: "Chat settings", exact: true }).click();
+    await expect(page.getByLabel("Save artifacts to")).toBeHidden();
     await expect(page.locator("#activity")).toHaveAttribute("data-waiting", "true");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const { default: AxeBuilder } = await import("@axe-core/playwright");

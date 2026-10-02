@@ -828,6 +828,17 @@ textarea::placeholder {
     cursor: pointer;
     padding: 0.4rem;
 }
+@media (max-width: 720px) {
+    .provider-bar:not(.settings-open) > details,
+    .provider-bar:not(.settings-open) > .destination-control,
+    .provider-bar:not(.settings-open) > #share-chat {
+        display: none;
+    }
+    #toggle-chat-settings {
+        min-height: 34px;
+        margin-left: auto;
+    }
+}
 .provider-connection {
     padding: 0.75rem 0;
     border-top: 1px solid #dbe3ed;

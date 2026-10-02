@@ -118,6 +118,12 @@ function controls() {
               : "Connect your account in My AI connections"
           : "Sign in to begin";
 }
+function chatSettings(expanded) {
+    $("provider-bar").classList.toggle("settings-open", expanded);
+    $("toggle-chat-settings").setAttribute("aria-expanded", String(expanded));
+}
+$("toggle-chat-settings").onclick = () =>
+    chatSettings($("toggle-chat-settings").getAttribute("aria-expanded") !== "true");
 async function loadSession() {
     session = await api("api/session");
     $("login-panel").hidden =
@@ -450,6 +456,7 @@ async function send(text) {
     }
     notice("");
     if (!session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected)) {
+        chatSettings(true);
         $("provider-settings").open = true;
         notice("Connect your provider account before sending a message.");
         return;
@@ -465,6 +472,7 @@ async function send(text) {
     const target = bubble({ role: "assistant", content: "" });
     $("thread").scrollTop = $("thread").scrollHeight;
     running = true;
+    chatSettings(false);
     controls();
     await list();
     controller = new AbortController();

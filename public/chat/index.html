@@ -177,6 +177,15 @@
                             <option value="codex">Codex</option>
                             <option value="claude">Claude</option>
                         </select>
+                        <button
+                            id="toggle-chat-settings"
+                            class="mobile-only text-button"
+                            type="button"
+                            aria-expanded="false"
+                            aria-controls="provider-settings personal-settings save-destination-settings share-chat"
+                        >
+                            Chat settings
+                        </button>
                         <details id="provider-settings">
                             <summary>My AI connections</summary>
                             <p>
@@ -260,7 +269,7 @@
                                 <button type="submit">Save connection</button>
                             </form>
                         </details>
-                        <div class="destination-control">
+                        <div id="save-destination-settings" class="destination-control">
                             <label for="save-destination">Save artifacts to</label
                             ><select id="save-destination">
                                 <option value="">Enterprise repository</option>
@@ -756,7 +765,8 @@
                             When the assistant offers choices, click one answer, or tick several boxes and press
                             <strong>Use selected options</strong>. Choose <strong>Write another answer</strong> for your
                             own wording, or <strong>Skip question</strong> to continue without choosing. A moving
-                            progress ring shows when work is in progress; it pauses when your answer is needed.
+                            progress ring shows when work is in progress; it pauses when your answer is needed. On
+                            phones, use <strong>Chat settings</strong> to open connections, repositories and sharing.
                         </p>
                         <p>
                             Connections and conversations belong to your profile. Repository files follow the access
