@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
+import { request as httpRequest } from "node:http";
 import { fileURLToPath } from "node:url";
 import * as XLSX from "xlsx";
 import sharp from "sharp";
@@ -317,6 +318,7 @@ async function httpFixture(t, run, requestRemote) {
             call: async () => ({ structuredContent: { sources: { default: "https://ckm.example/rest/" } } }),
         }),
     });
+    server.connectionsCheckingInterval = 100;
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
     f.config.origin = "http://127.0.0.1:" + server.address().port;
@@ -338,6 +340,53 @@ async function httpFixture(t, run, requestRemote) {
         });
     return { ...f, request };
 }
+
+test(
+    "a 5.8 MiB PDF upload can finish after thirty seconds without an empty HTTP timeout",
+    { timeout: 45000 },
+    async (t) => {
+        const f = await httpFixture(t, async () => "Draft");
+        const chat = await (await f.request("conversations", { method: "POST", data: { provider: "codex" } })).json();
+        const bytes = sourcePdf(Math.floor(5.8 * 1024 * 1024));
+        const result = await new Promise((resolve, reject) => {
+            const req = httpRequest(
+                f.config.origin + "/chat/api/conversations/" + chat.id + "/attachments",
+                {
+                    method: "POST",
+                    headers: {
+                        Cookie: "ModellingSession=alice",
+                        Origin: f.config.origin,
+                        "X-CSRF-Token": "alice",
+                        "Content-Type": "application/octet-stream",
+                        "Content-Length": bytes.length,
+                        "X-File-Name": "large-publication.pdf",
+                    },
+                },
+                (response) => {
+                    const chunks = [];
+                    response.on("data", (chunk) => chunks.push(chunk));
+                    response.on("end", () =>
+                        resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString() }),
+                    );
+                },
+            );
+            req.on("error", reject);
+            req.write(bytes.subarray(0, bytes.length / 2));
+            const timer = setTimeout(() => req.end(bytes.subarray(Math.floor(bytes.length / 2))), 31000);
+            t.after(() => {
+                clearTimeout(timer);
+                req.destroy();
+            });
+        });
+        assert.equal(result.status, 201, result.body);
+        const item = JSON.parse(result.body);
+        assert.equal(item.status, "ready", item.note);
+        assert.equal(item.size, bytes.length);
+        const saved = f.store.get("alice", chat.id);
+        assert.deepEqual(f.attachments.bytes("alice", saved, item.id), bytes);
+        assert.match(f.attachments.read("alice", saved, { attachment: item.id }).text, /Renal publication evidence/);
+    },
+);
 
 test("repository creation is owner-scoped and stale message destinations never reach the provider", async (t) => {
     let calls = 0;

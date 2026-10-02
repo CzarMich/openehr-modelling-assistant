@@ -85,10 +85,37 @@ async function api(path, { method = "GET", data } = {}) {
         headers: method === "GET" ? {} : { "Content-Type": "application/json", "X-CSRF-Token": session?.csrf || "" },
         body: data === undefined ? undefined : JSON.stringify(data),
     });
-    const result = await response.json();
-    if (!response.ok) {
-        if (response.status === 401) await loadSession();
-        throw new Error(result.error || "Request failed");
+    if (response.status === 401) await loadSession();
+    return responseJson(response);
+}
+async function responseJson(response, upload = false) {
+    let result;
+    try {
+        result = await response.json();
+    } catch {
+        // Proxies and HTTP request timeouts can return an empty or HTML response.
+    }
+    if (!response.ok || !result || typeof result !== "object" || Array.isArray(result)) {
+        const messages = {
+            401: "Your session expired. Sign in again, then retry.",
+            408: upload
+                ? "The upload timed out. Please try adding the file again."
+                : "The request timed out. Please try again.",
+            413: upload
+                ? "The server rejected the file size. Files can be up to 10 MiB; a smaller file may help."
+                : "The request is too large. Please send less content at once.",
+            429: "The server is busy. Please try again shortly.",
+            502: "The server connection was interrupted. Please try again shortly.",
+            503: "The server is temporarily unavailable. Please try again shortly.",
+            504: "The server took too long to respond. Please try again shortly.",
+        };
+        throw new Error(
+            (typeof result?.error === "string" && result.error) ||
+                messages[response.status] ||
+                (upload
+                    ? "The upload response was incomplete. Reopen this chat to check whether the file was added before trying again."
+                    : "The server returned an incomplete response. Please try again."),
+        );
     }
     return result;
 }
@@ -804,9 +831,8 @@ async function send(text) {
         });
         if (!response.ok) {
             if (response.status === 401) await refreshSession();
-            const data = await response.json();
             $("message").value = text;
-            throw new Error(data.error || "The message could not be sent.");
+            await responseJson(response);
         }
         const reader = response.body.getReader(),
             decoder = new TextDecoder();
@@ -1421,9 +1447,8 @@ async function uploadFiles(files) {
                     },
                     body: entry.file,
                 });
-                const item = await response.json();
                 if (response.status === 401) await refreshSession();
-                if (!response.ok) throw new Error(item.error || "File upload failed.");
+                const item = await responseJson(response, true);
                 current.attachments = [...existing, item];
                 uploadQueue = uploadQueue.filter((item) => item !== entry);
                 added++;
