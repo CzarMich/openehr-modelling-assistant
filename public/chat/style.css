@@ -723,6 +723,9 @@ textarea::placeholder {
     align-items: start;
     flex-wrap: wrap;
     gap: 0.75rem;
+    flex-shrink: 0;
+    max-height: 55dvh;
+    overflow-y: auto;
 }
 .provider-bar select,
 .provider-bar input {
@@ -731,6 +734,8 @@ textarea::placeholder {
     border: 1px solid #64748b;
     border-radius: 0.3rem;
     max-width: 100%;
+    background: #fff;
+    color: inherit;
 }
 .provider-bar details {
     flex: 1;
@@ -749,5 +754,12 @@ textarea::placeholder {
     line-height: 1.5;
 }
 .provider-connection button {
-    margin: 0.3rem;
+    margin: 0.3rem 0.3rem 0.3rem 0;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #b6cfe8;
+    border-radius: 6px;
+    background: #fff;
+    color: var(--green);
+    font-weight: 600;
+    font-size: 0.85rem;
 }
