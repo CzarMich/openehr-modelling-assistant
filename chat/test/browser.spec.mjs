@@ -263,6 +263,7 @@ test("upload source files, create a read-only snapshot and revoke its link", asy
     await expect(page.getByRole("link", { name: "renal.csv", exact: true })).toBeVisible();
     await send(page, "Model the source requirements");
     await expect(page.getByRole("button", { name: "Share chat", exact: true })).toBeEnabled();
+    await page.getByRole("tab", { name: "Models", exact: true }).click();
     await page.getByRole("button", { name: "Share chat", exact: true }).click();
     await page.getByRole("button", { name: "Create link", exact: true }).click();
     await expect(page.getByLabel("Share link", { exact: true })).toHaveValue(/#share=/);

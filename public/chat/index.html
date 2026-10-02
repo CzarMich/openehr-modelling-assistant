@@ -394,22 +394,22 @@
                         </div>
                     </div>
                 </dialog>
+                <dialog id="share-dialog" aria-labelledby="share-title">
+                    <h2 id="share-title">Share a conversation snapshot</h2>
+                    <p>
+                        Anyone signed in to this workspace with the link can read the current messages for 7 days. Later
+                        messages and uploaded originals are excluded. Review messages for sensitive information before
+                        sharing.
+                    </p>
+                    <p><a href="#help-sharing" id="share-help">Help with sharing</a></p>
+                    <button id="create-share" type="button">Create link</button>
+                    <button id="revoke-share" type="button">Revoke link</button>
+                    <label for="share-url">Share link</label><input id="share-url" readonly />
+                    <p id="share-status" role="status"></p>
+                    <button id="close-share" type="button">Close</button>
+                </dialog>
                 <section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
                     <div id="notice" role="alert" class="notice" hidden></div>
-                    <dialog id="share-dialog" aria-labelledby="share-title">
-                        <h2 id="share-title">Share a conversation snapshot</h2>
-                        <p>
-                            Anyone signed in to this workspace with the link can read the current messages for 7 days.
-                            Later messages and uploaded originals are excluded. Review messages for sensitive
-                            information before sharing.
-                        </p>
-                        <p><a href="#help-sharing" id="share-help">Help with sharing</a></p>
-                        <button id="create-share" type="button">Create link</button>
-                        <button id="revoke-share" type="button">Revoke link</button>
-                        <label for="share-url">Share link</label><input id="share-url" readonly />
-                        <p id="share-status" role="status"></p>
-                        <button id="close-share" type="button">Close</button>
-                    </dialog>
                     <section id="welcome" class="welcome">
                         <div class="eyebrow"><span class="status-dot"></span> OPENEHR MODELLING ASSISTANT</div>
                         <h1>Your clinical modelling workspace</h1>

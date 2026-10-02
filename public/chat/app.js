@@ -126,6 +126,7 @@ function controls() {
     $("use-project-folder").disabled = !ready || busy;
     $("save-repository-selection").disabled = !ready || busy || !unsavedRepository;
     $("share-chat").disabled = !ready || busy || !current?.messages?.length;
+    $("share-chat").hidden = !ready || !current?.messages?.length;
     document.querySelectorAll(".attachment-remove").forEach((button) => (button.disabled = busy));
     $("stop").hidden = !running;
     document
