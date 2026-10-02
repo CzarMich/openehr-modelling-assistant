@@ -13,6 +13,8 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 
+import { repositoryFolder, projectFolder } from "./repository-paths.mjs";
+
 export class Store {
     constructor(directory, retentionDays = 30) {
         this.directory = directory;
@@ -49,7 +51,13 @@ export class Store {
     }
     projects(identity) {
         try {
-            return JSON.parse(readFileSync(join(this.directoryFor(identity), "projects.json"), "utf8"));
+            return JSON.parse(readFileSync(join(this.directoryFor(identity), "projects.json"), "utf8")).map(
+                (project) => ({
+                    ...project,
+                    repository: project.repository ?? null,
+                    folder: project.folder ?? projectFolder(project.name),
+                }),
+            );
         } catch (error) {
             if (error.code === "ENOENT") return [];
             throw error;
@@ -66,7 +74,30 @@ export class Store {
         writeFileSync(temp, JSON.stringify(projects), { mode: 0o600 });
         renameSync(temp, path);
     }
-    saveProject(identity, name, id = null) {
+    destination(identity, project = null) {
+        if (project) {
+            const value = this.project(identity, project);
+            return { repository: value.repository, folder: value.folder };
+        }
+        try {
+            return JSON.parse(readFileSync(join(this.directoryFor(identity), "destination.json"), "utf8"));
+        } catch (error) {
+            if (error.code === "ENOENT") return { repository: null, folder: "" };
+            throw error;
+        }
+    }
+    saveDestination(identity, repository, folder, project = null) {
+        folder = repositoryFolder(folder);
+        if (project) {
+            const value = this.project(identity, project);
+            this.saveProject(identity, value.name, project, { repository, folder });
+        }
+        const path = join(this.directoryFor(identity), "destination.json"),
+            temp = path + "." + randomUUID() + ".tmp";
+        writeFileSync(temp, JSON.stringify({ repository, folder }), { mode: 0o600 });
+        renameSync(temp, path);
+    }
+    saveProject(identity, name, id = null, destination = {}) {
         if (typeof name !== "string" || !name.trim() || name.trim().length > 80 || /[\x00-\x1f\x7f]/.test(name))
             throw Object.assign(new Error("Enter a project name of 1 to 80 characters."), { status: 400 });
         const projects = this.projects(identity);
@@ -79,6 +110,15 @@ export class Store {
             });
         const project = id ? projects.find((item) => item.id === id) : { id: randomUUID() };
         project.name = name.trim();
+        project.repository =
+            destination.repository !== undefined
+                ? destination.repository
+                : id
+                  ? project.repository
+                  : this.destination(identity).repository;
+        project.folder = repositoryFolder(
+            destination.folder !== undefined ? destination.folder : (project.folder ?? projectFolder(project.name)),
+        );
         if (!id) projects.push(project);
         this.saveProjects(identity, projects);
         return project;
@@ -116,8 +156,10 @@ export class Store {
         }
         return items.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     }
-    create(identity, provider = "codex", repository = null, project = null) {
-        if (project !== null) this.project(identity, project);
+    create(identity, provider = "codex", repository = undefined, project = null, folder = undefined) {
+        const defaults = this.destination(identity, project);
+        repository = repository === undefined ? defaults.repository : repository;
+        folder = repositoryFolder(folder === undefined ? defaults.folder : folder);
         if (this.list(identity).length >= 100)
             throw Object.assign(new Error("Conversation limit reached. Delete an older chat."), { status: 429 });
         const conversation = {
@@ -125,6 +167,7 @@ export class Store {
             title: "New conversation",
             provider,
             ...(repository ? { repository } : {}),
+            folder,
             ...(project ? { project } : {}),
             messages: [],
             updatedAt: new Date().toISOString(),

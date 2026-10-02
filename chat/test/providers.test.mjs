@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { ProviderStore } from "../src/provider-store.mjs";
 import { Providers } from "../src/providers.mjs";
 import { ClaudeProvider } from "../src/claude.mjs";
+import { problem } from "../src/personal-http.mjs";
 
 function fixture(t) {
     const directory = mkdtempSync(join(tmpdir(), "provider-test-"));
@@ -217,4 +218,37 @@ test("Claude cannot treat incomplete responses as successful or continue after c
     const controller = new AbortController();
     controller.abort();
     await assert.rejects(provider.run({ ...args, signal: controller.signal }), { name: "AbortError" });
+});
+
+test("Claude receives actionable local save errors but never raw exception details", async () => {
+    for (const error of [problem("Choose the selected repository folder."), new Error("secret-token-from-remote")]) {
+        const requests = [];
+        const client = {
+            messages: {
+                stream(input) {
+                    requests.push(structuredClone(input));
+                    return requests.length === 1
+                        ? streamFixture({
+                              stop_reason: "tool_use",
+                              content: [{ type: "tool_use", id: "save", name: "personal_repository_save", input: {} }],
+                          })
+                        : streamFixture({ stop_reason: "end_turn", content: [] });
+                },
+            },
+        };
+        await new ClaudeProvider({}, "fixture", client).run({
+            messages: [{ role: "user", content: "Save draft" }],
+            tools: [{ name: "personal_repository_save", inputSchema: { type: "object" } }],
+            signal: AbortSignal.timeout(2000),
+            onEvent() {},
+            callTool() {
+                throw error;
+            },
+        });
+        const result = requests[1].messages.at(-1).content[0];
+        assert.equal(result.is_error, true);
+        assert.doesNotMatch(result.content, /secret-token-from-remote/);
+        if (error.userSafe) assert.equal(result.content, error.message);
+        else assert.match(result.content, /not executed/);
+    }
 });

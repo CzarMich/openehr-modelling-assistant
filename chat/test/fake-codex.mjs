@@ -18,6 +18,7 @@ assert.equal(process.env.CHAT_MCP_API_KEY, undefined);
 assert.equal(process.env.CHAT_REVIEW_SIGNING_KEY, undefined);
 assert.equal(process.env.TOKIO_WORKER_THREADS, "2");
 assert.equal(process.env.RAYON_NUM_THREADS, "2");
+let toolErrorCheck = false;
 const send = (data) => process.stdout.write(JSON.stringify(data) + "\n");
 createInterface({ input: process.stdin }).on("line", (line) => {
     const m = JSON.parse(line);
@@ -46,6 +47,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
         send({ id: m.id, result: { thread: { id: "fixture-thread" } } });
     }
     if (m.method === "turn/start") {
+        toolErrorCheck = m.params.input[0].text.includes("VERIFY_TOOL_ERROR");
         if (m.params.input[0].text.includes("VERIFY_IMAGES")) {
             const images = m.params.input.filter((item) => item.type === "localImage");
             assert.equal(images.length, 1);
@@ -78,8 +80,17 @@ createInterface({ input: process.stdin }).on("line", (line) => {
         });
     }
     if (m.id === 101) {
-        assert.equal(m.result.success, true);
-        assert.ok(m.result.contentItems[0].text.includes("fixture-result"));
+        if (toolErrorCheck) {
+            assert.equal(m.result.success, false);
+            assert.match(
+                m.result.contentItems[0].text,
+                /Choose the selected repository folder|The tool was not executed/,
+            );
+            assert.doesNotMatch(m.result.contentItems[0].text, /secret-token-from-remote/);
+        } else {
+            assert.equal(m.result.success, true);
+            assert.ok(m.result.contentItems[0].text.includes("fixture-result"));
+        }
         send({ method: "item/agentMessage/delta", params: { itemId: "reply", delta: "Verified " } });
         send({ method: "item/agentMessage/delta", params: { itemId: "reply", delta: "response" } });
         send({ method: "turn/completed", params: { turn: { id: "fixture-turn", status: "completed" } } });

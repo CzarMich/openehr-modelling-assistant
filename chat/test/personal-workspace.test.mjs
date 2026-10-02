@@ -403,7 +403,7 @@ test("personal commits wait for owner confirmation of the destination and cannot
         async ({ callTool }) => {
             await callTool("personal_repository_save", {
                 repository,
-                path: "templates/renal.oet",
+                path: "AKI/templates/renal.oet",
                 content: "<draft/>",
                 message: "Draft renal model",
                 expectedRevision: null,
@@ -422,6 +422,7 @@ test("personal commits wait for owner confirmation of the destination and cannot
     for (const approved of [false, true]) {
         const conversation = f.store.create("alice");
         conversation.repository = repository;
+        conversation.folder = "AKI";
         f.store.save("alice", conversation);
         const base = "conversations/" + conversation.id;
         const response = await f.request(base + "/messages", { method: "POST", data: { content: "Save this draft" } });
@@ -709,4 +710,134 @@ test("chat project moves and removal cannot race an active response", async (t) 
     await f.request(base + "/stop", { method: "POST" });
     await turn.text();
     assert.equal(f.store.get("alice", conversation.id).project, project.id);
+});
+
+test("project and profile destinations persist privately and existing chats keep their folder", async (t) => {
+    const f = await httpFixture(t, async () => "Ready");
+    const repository = f.connections.add("alice", github).connection.id;
+    const otherRepository = f.connections.add("bob", github).connection.id;
+    const projectResponse = await f.request("projects", { method: "POST", data: { name: "AKI", repository } });
+    assert.equal(projectResponse.status, 201);
+    const project = await projectResponse.json();
+    assert.equal(project.folder, "AKI");
+    const enterprise = f.store.saveProject("alice", "Enterprise", null, { repository: null });
+    f.store.saveDestination("alice", repository, "Temporary");
+    f.store.saveProject("alice", "Enterprise renamed", enterprise.id);
+    assert.equal(f.store.project("alice", enterprise.id).repository, null);
+    f.store.deleteProject("alice", enterprise.id);
+
+    for (const data of [
+        { name: "Forbidden", repository: otherRepository },
+        { name: "Escape", folder: "../AKI" },
+    ]) {
+        const response = await f.request("projects", { method: "POST", data });
+        assert.ok([400, 404].includes(response.status));
+    }
+    assert.equal(f.store.projects("alice").length, 1);
+    assert.deepEqual(f.store.destination("bob"), { repository: null, folder: "" });
+    const created = await (await f.request("conversations", { method: "POST", data: { project: project.id } })).json();
+    assert.equal(created.repository, repository);
+    assert.equal(created.folder, "AKI");
+    const base = "conversations/" + created.id;
+    assert.equal(
+        (await f.request(base + "/settings", { method: "PUT", csrf: false, data: { folder: "Other" } })).status,
+        403,
+    );
+    assert.equal(
+        (await f.request(base + "/settings", { method: "PUT", user: "bob", data: { folder: "Other" } })).status,
+        404,
+    );
+    for (const folder of [
+        "../AKI",
+        "/AKI",
+        ".github",
+        "AKI/../other",
+        "AKI//other",
+        "AKI/.hidden",
+        "AKI\\other",
+        "x".repeat(201),
+    ])
+        assert.equal((await f.request(base + "/settings", { method: "PUT", data: { folder } })).status, 400, folder);
+    const saved = await f.request(base + "/settings", { method: "PUT", data: { repository, folder: "Renal/AKI" } });
+    assert.equal(saved.status, 200);
+    const reloaded = new Store(f.store.directory);
+    assert.deepEqual(reloaded.destination("alice"), { repository, folder: "Renal/AKI" });
+    assert.deepEqual(reloaded.destination("alice", project.id), { repository, folder: "Renal/AKI" });
+    const next = await (await f.request("conversations", { method: "POST", data: {} })).json();
+    assert.equal(next.repository, repository);
+    assert.equal(next.folder, "Renal/AKI");
+    await f.request("projects/" + project.id, { method: "PUT", data: { name: "Renal care", folder: "New/AKI" } });
+    assert.equal(f.store.get("alice", created.id).folder, "Renal/AKI");
+    const projectChat = await (
+        await f.request("conversations", { method: "POST", data: { project: project.id } })
+    ).json();
+    assert.equal(projectChat.folder, "New/AKI");
+    assert.equal(
+        (await f.request(base + "/messages", { method: "POST", data: { content: "Save", repository, folder: "AKI" } }))
+            .status,
+        409,
+    );
+    assert.equal(f.store.get("alice", created.id).messages.length, 0);
+    await f.request("projects/" + project.id, { method: "DELETE" });
+    assert.equal(f.store.get("alice", created.id).project, null);
+    assert.equal(f.store.get("alice", created.id).folder, "Renal/AKI");
+});
+
+test("personal save discovery explains readiness and enforces the folder before any write", async (t) => {
+    const remote = [];
+    const f = setup(t, async (url, options) => {
+        remote.push({ url, ...options });
+        return { status: options.method ? 201 : 404, text: "{}" };
+    });
+    const repository = f.connections.add("alice", github).connection.id;
+    const conversation = f.store.create("alice");
+    const workspace = new WorkspaceTools(
+        { tools: async () => [] },
+        f.connections,
+        f.attachments,
+        "alice",
+        conversation,
+        AbortSignal.timeout(5000),
+        true,
+    );
+    assert.ok((await workspace.tools()).some((tool) => tool.name === "personal_repository_save"));
+    assert.match(
+        (await workspace.call("personal_connections", {})).structuredContent.saveStatus.reason,
+        /No personal repository selected/,
+    );
+    const args = {
+        repository,
+        path: "AKI/templates/AKI_clinical_documentation.oet",
+        content: "<template/>",
+        expectedRevision: null,
+        message: "Synthetic draft",
+    };
+    await assert.rejects(workspace.call("personal_repository_save", args), /No personal repository selected/);
+    conversation.repository = repository;
+    conversation.folder = "AKI";
+    const status = (await workspace.call("personal_connections", {})).structuredContent.saveStatus;
+    assert.equal(status.ready, true);
+    assert.equal(status.folder, "AKI");
+    for (const path of ["Other/template.oet", "AKI-other/template.oet", "AKI/../template.oet", ".github/draft.xml"])
+        await assert.rejects(workspace.call("personal_repository_save", { ...args, path }));
+    await assert.rejects(workspace.call("model_artifact_save", args), /Enterprise writes are unavailable/);
+    assert.equal(remote.length, 0);
+    const saved = (await workspace.call("personal_repository_save", args)).structuredContent;
+    assert.equal(saved.saved, true);
+    assert.equal(saved.path, args.path);
+    assert.equal(remote.filter((call) => call.method).length, 1);
+    assert.match(remote.at(-1).url, /\/contents\/AKI\/templates\/AKI_clinical_documentation.oet$/);
+    conversation.repository = f.connections.add("alice", {
+        ...github,
+        url: "https://github.com/alice/public",
+        token: undefined,
+    }).connection.id;
+    assert.match(workspace.saveStatus().reason, /Add a token/);
+    workspace.allowWrites = false;
+    assert.equal(
+        (await workspace.tools()).some((tool) => tool.name === "personal_repository_save"),
+        false,
+    );
+    assert.match(workspace.saveStatus().reason, /disabled/);
+    assert.doesNotMatch(JSON.stringify(workspace.saveStatus()), /private-test-token/);
 });

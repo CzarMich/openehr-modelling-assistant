@@ -955,8 +955,45 @@ textarea::placeholder {
 .destination-control {
     display: grid;
     gap: 0.2rem;
-    width: min(20rem, 100%);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    flex: 1 1 30rem;
+    max-width: 36rem;
     min-width: 0;
+    column-gap: 12px;
+}
+.destination-repository {
+    display: grid;
+    gap: 6px;
+    align-content: start;
+}
+.destination-control > button,
+.destination-control > p {
+    grid-column: 1 / -1;
+}
+.destination-control:has(#repository-folder-control[hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 20rem;
+}
+.folder-label {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px;
+}
+#use-project-folder {
+    border: 0;
+    background: transparent;
+    color: var(--blue);
+    padding: 0;
+    font-size: 12px;
+    text-decoration: underline;
+}
+@media (max-width: 720px) {
+    .destination-control {
+        grid-template-columns: minmax(0, 1fr);
+        flex-basis: 100%;
+    }
 }
 #save-destination-status {
     margin: 0.2rem 0 0;
@@ -1150,4 +1187,23 @@ textarea::placeholder {
     display: block;
     width: 100%;
     padding: 0.5rem;
+}
+
+#repository-folder-control {
+    display: grid;
+    gap: 6px;
+}
+#repository-folder-control[hidden] {
+    display: none;
+}
+#repository-folder {
+    min-width: 0;
+    width: 100%;
+    padding: 0.4rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+}
+#repository-folder-control p {
+    margin: 0;
+    font-size: 12px;
 }

@@ -306,6 +306,24 @@ export class PersonalConnections {
         }
         const response = await this.remote(this.repoApi(repo), suffix, { method, body, signal });
         if (response.status === 404) throw problem("Repository or branch not found.", 404);
-        return { saved: true, repository: visible(repo), path, status: "DRAFT", clinicalApproval: false };
+        let receipt = {};
+        try {
+            receipt = JSON.parse(response.text);
+        } catch {}
+        const commit = repo.kind === "github" ? receipt?.commit?.sha : receipt?.commit_id;
+        return {
+            saved: true,
+            repository: visible(repo),
+            path,
+            status: "DRAFT",
+            clinicalApproval: false,
+            ...(typeof commit === "string" && /^[a-f0-9]{40,64}$/.test(commit) ? { commit } : {}),
+            url:
+                repo.url +
+                (repo.kind === "github" ? "/blob/" : "/-/blob/") +
+                encodeURIComponent(repo.branch) +
+                "/" +
+                path.split("/").map(encodeURIComponent).join("/"),
+        };
     }
 }

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { INSTRUCTIONS, toolOutput, toolSucceeded } from "./provider-tools.mjs";
+import { INSTRUCTIONS, toolOutput, toolSucceeded, toolError } from "./provider-tools.mjs";
 
 export class ClaudeProvider {
     constructor(
@@ -81,12 +81,12 @@ export class ClaudeProvider {
                             content: toolOutput(result),
                             is_error: !toolSucceeded(result),
                         });
-                    } catch {
+                    } catch (error) {
                         signal.throwIfAborted();
                         results.push({
                             type: "tool_result",
                             tool_use_id: call.id,
-                            content: "The tool was declined, unavailable, or exceeded a limit.",
+                            content: toolError(error),
                             is_error: true,
                         });
                     }
