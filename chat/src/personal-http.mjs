@@ -2,7 +2,7 @@ import https from "node:https";
 import { lookup } from "node:dns";
 import ipaddr from "ipaddr.js";
 
-export const problem = (message, status = 400) => Object.assign(new Error(message), { status });
+export const problem = (message, status = 400) => Object.assign(new Error(message), { status, userSafe: true });
 
 export function httpsUrl(value) {
     let url;

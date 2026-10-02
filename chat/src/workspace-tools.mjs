@@ -1,5 +1,6 @@
 import { WRITE_TOOLS } from "./mcp.mjs";
 import { problem } from "./personal-http.mjs";
+import { requireFolderPath } from "./repository-paths.mjs";
 import { CHOICE_TOOL } from "./choices.mjs";
 
 const string = { type: "string" };
@@ -20,7 +21,7 @@ export class WorkspaceTools {
             CHOICE_TOOL,
             tool(
                 "personal_connections",
-                "List your private CKM connections and repositories. Enterprise CKMs are listed by ckm_sources. Credentials are never returned.",
+                "List your private CKM connections, repositories and the current save destination, folder and write readiness. Check this before claiming that a save tool or repository write access is missing. Enterprise CKMs are listed by ckm_sources. Credentials are never returned.",
                 {},
             ),
             tool(
@@ -50,11 +51,11 @@ export class WorkspaceTools {
                 { repository: string, path: string },
             ),
         ];
-        if (this.allowWrites && this.conversation.repository)
+        if (this.allowWrites)
             personal.push(
                 tool(
                     PERSONAL_WRITE,
-                    "Commit a draft artifact to this conversation's selected personal repository and branch after exact-change browser confirmation. Use personal_repository_get first; supply its revision, or null for a new file. Include source provenance in artifacts. Use model validation tools before proposing the save. This does not record enterprise governance or clinical approval.",
+                    "Commit a draft artifact to this conversation's selected personal repository and branch after exact-change browser confirmation. Check personal_connections for the active destination and readiness. The repository must be selected in the UI. Use its full repository-relative path within the selected folder; missing directories are created with the file. A separate folder-creation tool is unnecessary. Use personal_repository_get first; supply its revision, or null for a new file. Include source provenance in artifacts. Use model validation tools before proposing the save. This does not record enterprise governance or clinical approval.",
                     {
                         repository: string,
                         path: string,
@@ -70,10 +71,44 @@ export class WorkspaceTools {
     destination() {
         return this.connections.list(this.identity).find((item) => item.id === this.conversation.repository) || null;
     }
+    saveStatus() {
+        const destination = this.destination();
+        const reason = !this.allowWrites
+            ? "Repository writes are disabled by this installation."
+            : !this.conversation.repository
+              ? "No personal repository selected. Choose Save artifacts to and press Save repository selection; connecting a repository alone does not select it."
+              : !destination
+                ? "The selected connection is unavailable. Choose another repository."
+                : !destination.authenticated
+                  ? "Add a token through Update access in My sources and repositories; repository saves require write access."
+                  : null;
+        return {
+            selectedRepository: this.conversation.repository || null,
+            destination,
+            folder: this.conversation.folder || "",
+            writeTool: this.allowWrites ? PERSONAL_WRITE : null,
+            ready: !reason,
+            reason,
+            remotePermissionsVerified: false,
+        };
+    }
+    checkWrite(name, args) {
+        if (name !== PERSONAL_WRITE) {
+            if (this.conversation.repository && WRITE_TOOLS.has(name))
+                throw problem("Enterprise writes are unavailable while a personal repository is selected.", 403);
+            return;
+        }
+        const status = this.saveStatus();
+        if (!status.ready) throw problem(status.reason, 403);
+        if (args?.repository !== this.conversation.repository)
+            throw problem("Use this conversation's selected repository.", 403);
+        this.connections.validatePath(args.path);
+        requireFolderPath(args.path, this.conversation.folder || "");
+    }
     context(messages) {
-        if (!this.conversation.attachments?.length && !this.conversation.repository) return messages;
         const context = {
             attachments: this.conversation.attachments || [],
+            personalRepositorySave: this.saveStatus(),
             saveDestination: this.conversation.repository
                 ? this.destination() || "Selected repository was removed; ask the user to choose another."
                 : "Enterprise repository",
@@ -87,7 +122,10 @@ export class WorkspaceTools {
     async call(name, args) {
         if (name === CHOICE_TOOL.name) throw problem("This question requires an active browser conversation.");
         const personal = this.personal.find((t) => t.name === name);
-        if (!personal) return this.mcp.call(name, args);
+        if (!personal) {
+            this.checkWrite(name, args);
+            return this.mcp.call(name, args);
+        }
         if (
             !args ||
             typeof args !== "object" ||
@@ -101,6 +139,7 @@ export class WorkspaceTools {
             result = {
                 connections: this.connections.list(this.identity),
                 selectedRepository: this.conversation.repository || null,
+                saveStatus: this.saveStatus(),
             };
         else if (name === "attachment_read") result = this.attachments.read(this.identity, this.conversation, args);
         else if (name.startsWith("personal_ckm_"))
@@ -110,8 +149,7 @@ export class WorkspaceTools {
         else if (name === "personal_repository_get")
             result = await this.connections.readRepository(this.identity, args, this.signal);
         else if (name === PERSONAL_WRITE) {
-            if (!this.conversation.repository || args.repository !== this.conversation.repository)
-                throw problem("Use this conversation's selected repository.", 403);
+            this.checkWrite(name, args);
             result = await this.connections.publish(this.identity, args, this.signal);
         }
         return { structuredContent: result, content: [{ type: "text", text: JSON.stringify(result) }] };

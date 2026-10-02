@@ -173,9 +173,24 @@
                 <dialog id="chat-project-dialog" aria-labelledby="chat-project-dialog-title">
                     <form id="chat-project-form" class="chat-project-form">
                         <h2 id="chat-project-dialog-title">Create chat project</h2>
-                        <p>Group your conversations in a private folder.</p>
+                        <p>
+                            Group your conversations and choose where new chats save their artefacts. Existing chats
+                            keep their saved destinations.
+                        </p>
                         <label for="chat-project-input">Project name</label>
                         <input id="chat-project-input" maxlength="80" required autocomplete="off" />
+                        <label for="chat-project-repository">Default repository</label>
+                        <select id="chat-project-repository"></select>
+                        <label for="chat-project-folder">Default repository folder</label>
+                        <input
+                            id="chat-project-folder"
+                            maxlength="200"
+                            placeholder="Use project name"
+                            autocomplete="off"
+                        />
+                        <p id="chat-project-folder-hint">
+                            For personal repositories. Leave empty when creating a project to use its name.
+                        </p>
                         <p id="chat-project-error" role="alert"></p>
                         <div>
                             <button id="save-chat-project" type="submit">Create project</button>
@@ -296,10 +311,24 @@
                             </form>
                         </details>
                         <div id="save-destination-settings" class="destination-control">
-                            <label for="save-destination">Save artifacts to</label
-                            ><select id="save-destination">
-                                <option value="">Enterprise repository</option>
-                            </select>
+                            <div class="destination-repository">
+                                <label for="save-destination">Save artifacts to</label>
+                                <select id="save-destination">
+                                    <option value="">Enterprise repository</option>
+                                </select>
+                            </div>
+                            <div id="repository-folder-control" hidden>
+                                <div class="folder-label">
+                                    <label for="repository-folder">Repository folder</label>
+                                    <button id="use-project-folder" type="button" hidden>Use project folder</button>
+                                </div>
+                                <input
+                                    id="repository-folder"
+                                    maxlength="200"
+                                    placeholder="Repository root"
+                                    autocomplete="off"
+                                />
+                            </div>
                             <button id="save-repository-selection" type="button" disabled>
                                 Save repository selection
                             </button>
@@ -754,6 +783,7 @@
                         <a href="#help-start">Get started</a>
                         <a href="#help-files">Upload documents</a>
                         <a href="#help-connections">Add sources and repositories</a>
+                        <a href="#help-folders">Choose a repository folder</a>
                         <a href="#help-save">Save your work</a>
                         <a href="#help-review">Review models</a>
                         <a href="#help-sharing">Share a chat</a>
@@ -806,7 +836,10 @@
                             start one inside it. Use the arrow beside a chat to move it to a project. You can rename a
                             project; deleting it keeps its conversations in <strong>Unfiled chats</strong>. On phones,
                             select <strong>Toggle conversations</strong> to see these controls. Each chat keeps its own
-                            files and chosen repository.
+                            files and chosen repository. Project <strong>Settings</strong> lets you choose a default
+                            repository and folder for new chats. The project name suggests a folder such as
+                            <code>Renal-care</code>; you can choose a different path. Renaming or deleting a chat
+                            project does not move or delete repository files.
                         </p>
                         <p>
                             Select <strong>× (Delete conversation)</strong> beside a chat to delete its messages and
@@ -895,7 +928,7 @@
                                 Select <strong>Save connection</strong>, then choose it under
                                 <strong>Save artifacts to</strong> and press
                                 <strong>Save repository selection</strong> for this conversation. Wait for
-                                <strong>Active</strong> and check its URL and branch.
+                                <strong>Active</strong> and check its URL, branch and folder.
                             </li>
                         </ol>
                         <p>
@@ -908,6 +941,40 @@
                             with <strong>Contents: Read and write</strong>. Paste it only in the connection form. To add
                             or replace a token later, select <strong>Update access</strong> beside the connection, enter
                             the token and select <strong>Save connection</strong>. Your active selection is kept.
+                        </p>
+                    </section>
+                    <section class="help-topic" aria-labelledby="help-folders">
+                        <h2 id="help-folders" tabindex="-1">Choose where artefacts are saved</h2>
+                        <ol>
+                            <li>Choose your repository under <strong>Save artifacts to</strong>.</li>
+                            <li>
+                                Enter a <strong>Repository folder</strong>, such as <code>AKI</code> or
+                                <code>Clinical/AKI</code>, or choose <strong>Use project folder</strong>. Leave it empty
+                                to use the repository root.
+                            </li>
+                            <li>
+                                Press <strong>Save repository selection</strong>. New chats remember this choice; chats
+                                in a project use that project's defaults. Existing chats keep their own destination.
+                            </li>
+                            <li>
+                                Ask the assistant to save the draft. Check the repository, branch, complete file path
+                                and content in the confirmation before approving.
+                            </li>
+                        </ol>
+                        <p>
+                            For example, the assistant can save a draft at
+                            <code>AKI/templates/AKI_clinical_documentation.oet</code>. The folders appear in GitHub or
+                            GitLab when the first file is committed. Empty folders do not need a separate creation step.
+                        </p>
+                        <p>
+                            Saving a destination in a project also updates its defaults for future chats. To change only
+                            the defaults, use the project's <strong>Settings</strong>. Moving a chat between projects
+                            keeps its existing save destination.
+                        </p>
+                        <p>
+                            If saving is unavailable, check that the intended repository is <strong>Active</strong> and
+                            that its connection has a token with write access. An earlier message saying a tool was
+                            unavailable does not describe the current connection.
                         </p>
                     </section>
                     <section class="help-topic" aria-labelledby="help-save">

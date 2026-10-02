@@ -4,9 +4,13 @@ let session = null,
     current = null,
     running = false,
     controller = null;
-let uploading = false,
+let workspaceLoaded = false,
+    uploading = false,
     repositorySaving = false,
     repositoryDraft = "",
+    folderDraft = "",
+    destinationDefaults = { repository: null, folder: "" },
+    newChatDestination = { repository: null, folder: "" },
     uploadQueue = [],
     sharedView = false,
     personalConnections = [],
@@ -85,10 +89,14 @@ async function api(path, { method = "GET", data } = {}) {
     }
     return result;
 }
+function destinationChanged() {
+    const saved = current || newChatDestination;
+    return repositoryDraft !== (saved.repository || "") || folderDraft !== (saved.folder || "");
+}
 function controls() {
-    const ready = !!session?.authenticated && session.enabled && !sharedView;
+    const ready = workspaceLoaded && !!session?.authenticated && session.enabled && !sharedView;
     const busy = running || uploading || repositorySaving || projectSaving;
-    const unsavedRepository = repositoryDraft !== (current?.repository || "");
+    const unsavedRepository = destinationChanged();
     const connected = session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected);
     $("chat-provider").disabled = busy || sharedView || !!current?.messages?.length || !!current?.attachments?.length;
     $("sign-out").disabled = uploading || repositorySaving || projectSaving;
@@ -106,6 +114,8 @@ function controls() {
     $("upload-files").disabled = !ready || busy || unsavedRepository;
     $("attach-files").disabled = !ready || busy || unsavedRepository;
     $("save-destination").disabled = !ready || busy;
+    $("repository-folder").disabled = !ready || busy;
+    $("use-project-folder").disabled = !ready || busy;
     $("save-repository-selection").disabled = !ready || busy || !unsavedRepository;
     $("share-chat").disabled = !ready || busy || !current?.messages?.length;
     document.querySelectorAll(".attachment-remove").forEach((button) => (button.disabled = busy));
@@ -250,9 +260,21 @@ async function projectAction(action, errorTarget) {
 }
 function editProject(project = null) {
     editingProject = project;
-    $("chat-project-dialog-title").textContent = project ? "Rename chat project" : "Create chat project";
+    $("chat-project-dialog-title").textContent = project ? "Project settings" : "Create chat project";
     $("chat-project-input").value = project?.name || "";
-    $("save-chat-project").textContent = project ? "Save name" : "Create project";
+    $("save-chat-project").textContent = project ? "Save project" : "Create project";
+    $("chat-project-repository").replaceChildren(new Option("Enterprise repository", ""));
+    for (const connection of personalConnections.filter((item) => item.kind !== "ckm"))
+        $("chat-project-repository").add(new Option(connection.label + " · " + connection.branch, connection.id));
+    const repository = project ? project.repository : destinationDefaults.repository;
+    if (repository && !personalConnections.some((item) => item.id === repository))
+        $("chat-project-repository").add(new Option("Unavailable saved connection", repository));
+    $("chat-project-repository").value = repository || "";
+    $("chat-project-folder").value = project?.folder || "";
+    $("chat-project-folder").placeholder = project ? "Repository root" : "Use project name";
+    $("chat-project-folder-hint").textContent = project
+        ? "For personal repositories. An empty folder saves at the repository root."
+        : "For personal repositories. Leave empty to use the project name.";
     $("chat-project-error").textContent = "";
     $("chat-project-dialog").showModal();
     $("chat-project-input").focus();
@@ -264,8 +286,13 @@ $("chat-project-form").onsubmit = (event) => {
     projectAction(async () => {
         const project = await api("api/projects" + (editingProject ? "/" + editingProject.id : ""), {
             method: editingProject ? "PUT" : "POST",
-            data: { name: $("chat-project-input").value },
+            data: {
+                name: $("chat-project-input").value,
+                repository: $("chat-project-repository").value || null,
+                ...(editingProject || $("chat-project-folder").value ? { folder: $("chat-project-folder").value } : {}),
+            },
         });
+        chatProjects = [...chatProjects.filter((item) => item.id !== project.id), project];
         expandedProjects.add(project.id);
         if (!editingProject) {
             reset(project.id);
@@ -331,6 +358,7 @@ function conversationRow(c) {
 async function list() {
     const result = await api("api/conversations");
     chatProjects = result.projects || [];
+    destinationDefaults = result.destination || { repository: null, folder: "" };
     $("conversations").replaceChildren();
     for (const project of chatProjects) {
         const group = document.createElement("details"),
@@ -357,7 +385,7 @@ async function list() {
                     $("message").focus();
                 },
             ],
-            ["Rename " + project.name, "Rename", () => editProject(project)],
+            ["Settings for " + project.name, "Settings", () => editProject(project)],
             [
                 "Delete project " + project.name,
                 "Delete",
@@ -407,7 +435,9 @@ async function list() {
 function reset(project = "") {
     current = null;
     projectDraft = project;
-    repositoryDraft = "";
+    newChatDestination = chatProjects.find((item) => item.id === project) || destinationDefaults;
+    repositoryDraft = newChatDestination.repository || "";
+    folderDraft = newChatDestination.folder || "";
     renderDestinations();
     sharedView = false;
     uploadQueue = [];
@@ -515,6 +545,7 @@ async function open(id) {
     if (running || uploading || repositorySaving || projectSaving) return;
     current = await api("api/conversations/" + id);
     repositoryDraft = current.repository || "";
+    folderDraft = current.folder || "";
     projectDraft = current.project || "";
     if (projectDraft) expandedProjects.add(projectDraft);
     sharedView = false;
@@ -654,7 +685,7 @@ function completeChoice(event) {
 }
 async function send(text) {
     if (running || uploading || repositorySaving || projectSaving || sharedView || !text.trim()) return;
-    if (repositoryDraft !== (current?.repository || "")) {
+    if (destinationChanged()) {
         notice("Press Save repository selection before sending your message.");
         return;
     }
@@ -685,7 +716,11 @@ async function send(text) {
         const response = await fetch("/chat/api/conversations/" + current.id + "/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrf },
-            body: JSON.stringify({ content: text, repository: current.repository || null }),
+            body: JSON.stringify({
+                content: text,
+                repository: current.repository || null,
+                folder: current.folder || "",
+            }),
             signal: controller.signal,
         });
         if (!response.ok) {
@@ -862,6 +897,9 @@ loadSession()
         if (session.authenticated && session.enabled) {
             await loadConnections();
             await list();
+            workspaceLoaded = true;
+            if (!current) reset();
+            controls();
             if (!location.hash.startsWith("#share=") && sessionStorage.getItem("pending-share"))
                 location.hash = sessionStorage.getItem("pending-share");
             sessionStorage.removeItem("pending-share");
@@ -886,6 +924,7 @@ async function ensureConversation() {
                 provider: $("chat-provider").value,
                 repository: repositoryDraft || null,
                 project: projectDraft || null,
+                folder: folderDraft,
             },
         });
         renderDestinations();
@@ -900,25 +939,35 @@ function renderDestinations() {
     if (selected && !personalConnections.some((c) => c.id === selected))
         $("save-destination").add(new Option("Saved personal repository (load My sources to view)", selected));
     $("save-destination").value = selected || "";
+    $("repository-folder").value = folderDraft;
     renderDestinationStatus();
 }
 function renderDestinationStatus() {
     const selected = repositoryDraft;
     const repository = personalConnections.find((item) => item.id === selected);
+    $("repository-folder-control").hidden = !selected;
+    $("use-project-folder").hidden = !chatProjects.some((item) => item.id === projectDraft);
     $("save-destination-status").textContent = repositorySaving
         ? "Saving repository choice…"
-        : selected !== (current?.repository || "")
+        : destinationChanged()
           ? "Not active yet. Press Save repository selection."
           : repository
-            ? "Active: " + repository.url + " · " + repository.branch
+            ? "Active: " +
+              repository.url +
+              " · " +
+              repository.branch +
+              " · " +
+              (folderDraft ? folderDraft + "/" : "Repository root")
             : selected
               ? "Repository unavailable. Choose another destination."
               : "Your organisation's configured repository";
-    $("repository-token-status").hidden = !repository || repository.authenticated;
+    $("repository-token-status").hidden = !repository || (repository.authenticated && session?.allowWrites !== false);
     $("repository-token-status").textContent =
-        repository && !repository.authenticated
-            ? "Read-only connection. Use Update access in My sources and repositories to add a token for saving files."
-            : "";
+        repository && session?.allowWrites === false
+            ? "Repository writes are disabled on this installation. Contact your workspace administrator."
+            : repository && !repository.authenticated
+              ? "Read-only connection. Use Update access in My sources and repositories to add a token for saving files."
+              : "";
 }
 async function loadConnections() {
     const data = await api("api/connections");
@@ -1020,6 +1069,15 @@ $("save-destination").onchange = async () => {
     repositoryDraft = $("save-destination").value;
     controls();
 };
+$("repository-folder").oninput = () => {
+    folderDraft = $("repository-folder").value;
+    controls();
+};
+$("use-project-folder").onclick = () => {
+    folderDraft = chatProjects.find((item) => item.id === projectDraft)?.folder || "";
+    $("repository-folder").value = folderDraft;
+    controls();
+};
 $("save-repository-selection").onclick = async () => {
     repositorySaving = true;
     controls();
@@ -1028,7 +1086,7 @@ $("save-repository-selection").onclick = async () => {
         else
             current = await api("api/conversations/" + current.id + "/settings", {
                 method: "PUT",
-                data: { repository: repositoryDraft || null },
+                data: { repository: repositoryDraft || null, folder: folderDraft },
             });
         await list();
     } catch (e) {
@@ -1036,6 +1094,7 @@ $("save-repository-selection").onclick = async () => {
     } finally {
         repositorySaving = false;
         repositoryDraft = current?.repository || "";
+        folderDraft = current?.folder || "";
         renderDestinations();
         controls();
     }
@@ -1166,7 +1225,7 @@ async function uploadFiles(files) {
         uploading ||
         repositorySaving ||
         projectSaving ||
-        repositoryDraft !== (current?.repository || "") ||
+        destinationChanged() ||
         sharedView ||
         !session?.authenticated ||
         !session.enabled

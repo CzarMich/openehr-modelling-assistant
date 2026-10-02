@@ -93,12 +93,34 @@ Searches return a bounded candidate window and preserve the source URL and CID.
 
 Choose **Save artifacts to**, then press **Save repository selection** before requesting a save.
 The choice remains inactive until confirmed by that button. The selected repository and
-branch are saved with the conversation, including when it is first created. The URL
-and branch appear below the selector. Sending waits while a changed choice is saved;
+branch are saved with the conversation, including when it is first created. The URL,
+branch and folder appear below the selector. Sending waits while a changed choice is saved;
 if another tab changes the destination, the next message is rejected with its draft
 text preserved and the current selection refreshed. **Enterprise repository** retains the existing
 modelling workflow. A personal destination offers confirmed commits through
 `personal_repository_save`, while enterprise write tools are omitted for that turn.
+The personal save tool remains discoverable when writes are enabled; `personal_connections`
+reports the exact selected destination, folder and any local setup blocker. Selecting a
+repository and supplying a token are required before its write can proceed; hosted token
+permissions are enforced by the Git provider. Safe, actionable tool errors reach both assistants
+without forwarding raw provider failures. Old chat claims do not override current readiness.
+
+Enter **Repository folder**, such as `AKI` or `Clinical/AKI`, or choose **Use project folder**,
+then save the selection. The profile remembers the last saved destination for new unfiled chats.
+Projects have a default repository and folder; creation derives the folder from the project name
+unless a path is supplied. **Settings** changes defaults for future chats. Saving a destination
+inside a project updates its defaults too; existing chats retain their own destinations. Renaming,
+moving or deleting chat projects does not move or delete repository files. Destination metadata
+is private to the owner and persists across restarts. Legacy projects gain a suggested folder;
+existing conversations continue to use their original repository-root paths.
+
+Personal saves require a full repository-relative path inside the selected folder, checked
+before confirmation and again before writing. Traversal, hidden directories and writes to a
+different destination are rejected. Sending also checks the saved folder so another tab cannot
+silently retarget a request. The first successful file commit creates parent folders; no empty
+folder or placeholder commit is needed. Successful saves return a file link and the GitHub commit
+reference when the provider supplies it. In-app Help includes these steps and an AKI path example.
+
 Confirmations display the destination, branch, path, full content and prior revision.
 Existing files require their current revision; concurrent modifications fail without
 overwriting them. Personal commits remain drafts and do not enter the enterprise

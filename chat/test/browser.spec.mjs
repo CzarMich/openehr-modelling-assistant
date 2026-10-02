@@ -852,10 +852,10 @@ test("chat projects group new and existing conversations and removal preserves t
     await dialog.getByLabel("Chat project").selectOption({ label: "Kidney care" });
     await dialog.getByRole("button", { name: "Move chat", exact: true }).click();
     await expect(group.locator(".conversation-row")).toHaveCount(2);
-    await group.getByRole("button", { name: "Rename Kidney care", exact: true }).click();
-    dialog = page.getByRole("dialog", { name: "Rename chat project" });
+    await group.getByRole("button", { name: "Settings for Kidney care", exact: true }).click();
+    dialog = page.getByRole("dialog", { name: "Project settings" });
     await dialog.getByLabel("Project name").fill("Renal care");
-    await dialog.getByRole("button", { name: "Save name", exact: true }).click();
+    await dialog.getByRole("button", { name: "Save project", exact: true }).click();
     await expect(page.locator("#chat-project-context")).toContainText("Renal care");
     await page.reload();
     group = page.locator(".chat-project");
@@ -938,4 +938,54 @@ test("Copilot setup stays in Help and only administrators can reveal the connect
     await expect(key).toHaveValue("synthetic-workspace-key");
     await page.getByRole("tab", { name: "Chat", exact: true }).click();
     await expect(key).toHaveValue("");
+});
+
+test("project repository folders and saved destinations survive new chats and reloads", async ({ page }) => {
+    await login(page);
+    await addRepository(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await page.getByLabel("Repository folder", { exact: true }).fill("AKI");
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    await expect(page.locator("#save-destination-status")).toContainText("AKI/");
+    const repository = await page.getByLabel("Save artifacts to").inputValue();
+    await page.locator("#new-chat").click();
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(repository);
+    await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("AKI");
+    await send(page, "inspect repository");
+    await expect(page.locator(".message.assistant")).toContainText("Personal save available");
+    await page.reload();
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(repository);
+    await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("AKI");
+    await page.getByRole("button", { name: "Create project", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Create chat project" });
+    await dialog.getByLabel("Project name", { exact: true }).fill("Renal care");
+    await expect(dialog.getByLabel("Default repository", { exact: true })).toHaveValue(repository);
+    await dialog.getByRole("button", { name: "Create project", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("Renal-care");
+    await page.getByLabel("Repository folder", { exact: true }).fill("Renal/Reviewed");
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    await page.locator("#new-chat").click();
+    await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("Renal/Reviewed");
+    await page.getByLabel("Repository folder", { exact: true }).fill("Temporary");
+    await page.getByRole("button", { name: "Use project folder", exact: true }).click();
+    await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("Renal/Reviewed");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("button", { name: "Chat settings", exact: true }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("chat waits for saved destination metadata before allowing a new conversation", async ({ page }) => {
+    let release;
+    const pending = new Promise((resolve) => (release = resolve));
+    await page.route("**/api/conversations", async (route) => {
+        if (route.request().method() === "GET") await pending;
+        await route.continue();
+    });
+    await login(page);
+    await expect(page.locator("#new-chat")).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Add files and images", exact: true })).toBeDisabled();
+    release();
+    await expect(page.locator("#new-chat")).toBeEnabled();
 });

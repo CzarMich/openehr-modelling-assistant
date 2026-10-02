@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { INSTRUCTIONS, toolOutput, toolSucceeded } from "./provider-tools.mjs";
+import { INSTRUCTIONS, toolOutput, toolSucceeded, toolError } from "./provider-tools.mjs";
 
 export class CodexProvider {
     constructor(config) {
@@ -150,14 +150,14 @@ export class CodexProvider {
                             },
                         });
                     })
-                    .catch(() =>
+                    .catch((error) =>
                         send({
                             id: message.id,
                             result: {
                                 contentItems: [
                                     {
                                         type: "inputText",
-                                        text: "The tool was not executed. It was declined, unavailable, or exceeded a limit.",
+                                        text: toolError(error),
                                     },
                                 ],
                                 success: false,

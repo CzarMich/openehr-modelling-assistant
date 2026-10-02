@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { CodexProvider } from "../src/codex.mjs";
 import { loadConfig } from "../src/config.mjs";
+import { problem } from "../src/personal-http.mjs";
 const config = {
     ...loadConfig(),
     codexWorkDir: "/tmp",
@@ -89,5 +90,20 @@ test("Codex receives explicit source images and removes temporary copies on succ
         else assert.equal(await run, "Verified response");
         const path = JSON.parse(readFileSync(join(directory, "image-path.json")));
         assert.equal(existsSync(path), false);
+    }
+});
+
+test("Codex receives actionable local save errors and redacts unknown errors", async () => {
+    for (const error of [problem("Choose the selected repository folder."), new Error("secret-token-from-remote")]) {
+        const result = await new CodexProvider(config).run({
+            messages: [{ role: "user", content: "VERIFY_TOOL_ERROR" }],
+            tools,
+            signal: AbortSignal.timeout(5000),
+            onEvent() {},
+            callTool() {
+                throw error;
+            },
+        });
+        assert.equal(result, "Verified response");
     }
 });

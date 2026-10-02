@@ -11,6 +11,7 @@ import { readModels } from "./models.mjs";
 import { PersonalConnections } from "./personal-connections.mjs";
 import { Attachments, UPLOAD_LIMIT } from "./attachments.mjs";
 import { Shares } from "./shares.mjs";
+import { repositoryFolder } from "./repository-paths.mjs";
 import { WorkspaceTools, PERSONAL_WRITE } from "./workspace-tools.mjs";
 import { CHOICE_TOOL, choiceQuestion, choiceAnswer, choiceMessage } from "./choices.mjs";
 
@@ -402,8 +403,14 @@ export function createApplication(
             if (path === "/chat/api/projects") {
                 if (req.method === "GET") return json(res, 200, { projects: store.projects(identity) });
                 if (req.method === "POST") {
-                    const input = await body(req, ["name"]);
-                    return json(res, 201, store.saveProject(identity, input.name));
+                    const input = await body(req, ["name", "repository", "folder"]);
+                    if (
+                        input.repository !== undefined &&
+                        input.repository !== null &&
+                        connections.get(identity, input.repository).kind === "ckm"
+                    )
+                        throw Object.assign(new Error("Choose a repository."), { status: 400 });
+                    return json(res, 201, store.saveProject(identity, input.name, null, input));
                 }
             }
             const projectRoute = path.match(/^\/chat\/api\/projects\/([a-f0-9-]{36})$/);
@@ -411,8 +418,14 @@ export function createApplication(
                 const id = projectRoute[1];
                 store.project(identity, id);
                 if (req.method === "PUT") {
-                    const input = await body(req, ["name"]);
-                    return json(res, 200, store.saveProject(identity, input.name, id));
+                    const input = await body(req, ["name", "repository", "folder"]);
+                    if (
+                        input.repository !== undefined &&
+                        input.repository !== null &&
+                        connections.get(identity, input.repository).kind === "ckm"
+                    )
+                        throw Object.assign(new Error("Choose a repository."), { status: 400 });
+                    return json(res, 200, store.saveProject(identity, input.name, id, input));
                 }
                 if (req.method === "DELETE") {
                     const owner = store.owner(identity) + ":";
@@ -427,20 +440,28 @@ export function createApplication(
             }
             if (path === "/chat/api/conversations") {
                 if (req.method === "GET")
-                    return json(res, 200, { conversations: store.list(identity), projects: store.projects(identity) });
+                    return json(res, 200, {
+                        conversations: store.list(identity),
+                        projects: store.projects(identity),
+                        destination: store.destination(identity),
+                    });
                 if (req.method === "POST") {
                     const input =
                         (req.headers["content-length"] && req.headers["content-length"] !== "0") ||
                         req.headers["transfer-encoding"]
-                            ? await body(req, ["provider", "repository", "project"])
+                            ? await body(req, ["provider", "repository", "project", "folder"])
                             : {};
                     const selected = input.provider || "codex";
                     if (!["codex", "claude"].includes(selected))
                         throw Object.assign(new Error("Choose a provider."), { status: 400 });
-                    const repository = input.repository ?? null;
+                    const defaults = store.destination(identity, input.project ?? null);
+                    const repository = input.repository !== undefined ? input.repository : defaults.repository;
                     if (repository !== null && connections.get(identity, repository).kind === "ckm")
                         throw Object.assign(new Error("Choose a repository."), { status: 400 });
-                    return json(res, 201, store.create(identity, selected, repository, input.project ?? null));
+                    const created = store.create(identity, selected, repository, input.project ?? null, input.folder);
+                    if (Object.hasOwn(input, "repository") || Object.hasOwn(input, "folder"))
+                        store.saveDestination(identity, repository, created.folder, created.project || null);
+                    return json(res, 201, created);
                 }
             }
             const route = path.match(
@@ -465,7 +486,7 @@ export function createApplication(
             if (["settings", "share", "attachments"].includes(action) && mutation && active.has(key))
                 throw Object.assign(new Error("Stop the response before changing this conversation."), { status: 409 });
             if (action === "settings" && req.method === "PUT") {
-                const input = await body(req, ["repository", "project"]);
+                const input = await body(req, ["repository", "project", "folder"]);
                 if (!Object.keys(input).length)
                     throw Object.assign(new Error("Choose a repository or chat project."), { status: 400 });
                 conversation = freshConversation();
@@ -475,8 +496,17 @@ export function createApplication(
                         throw Object.assign(new Error("Choose a repository."), { status: 400 });
                 }
                 if (Object.hasOwn(input, "project") && input.project !== null) store.project(identity, input.project);
+                if (Object.hasOwn(input, "folder")) input.folder = repositoryFolder(input.folder);
                 if (Object.hasOwn(input, "repository")) conversation.repository = input.repository;
+                if (Object.hasOwn(input, "folder")) conversation.folder = input.folder;
                 if (Object.hasOwn(input, "project")) conversation.project = input.project;
+                if (Object.hasOwn(input, "repository") || Object.hasOwn(input, "folder"))
+                    store.saveDestination(
+                        identity,
+                        conversation.repository || null,
+                        conversation.folder || "",
+                        conversation.project || null,
+                    );
                 store.save(identity, conversation);
                 return json(res, 200, conversation);
             }
@@ -576,7 +606,7 @@ export function createApplication(
                 typeof input.content !== "string" ||
                 !input.content.trim() ||
                 input.content.length > 8000 ||
-                Object.keys(input).some((k) => !["content", "repository"].includes(k)) ||
+                Object.keys(input).some((k) => !["content", "repository", "folder"].includes(k)) ||
                 (Object.hasOwn(input, "repository") &&
                     input.repository !== null &&
                     typeof input.repository !== "string")
@@ -586,6 +616,11 @@ export function createApplication(
             if (Object.hasOwn(input, "repository") && input.repository !== (conversation.repository || null))
                 throw Object.assign(
                     new Error("The repository choice changed. Check Save artifacts to, then send your message again."),
+                    { status: 409 },
+                );
+            if (Object.hasOwn(input, "folder") && input.folder !== (conversation.folder || ""))
+                throw Object.assign(
+                    new Error("The repository folder changed. Review the destination, then send your message again."),
                     { status: 409 },
                 );
             provider.assertConnected?.(identity, conversation.provider || "codex");
@@ -713,6 +748,7 @@ export function createApplication(
                                 };
                             }
                             if (WRITE_TOOLS.has(name) || name === PERSONAL_WRITE) {
+                                workspace.checkWrite(name, args);
                                 const approved = await new Promise((resolve) => {
                                     const approvalId = randomUUID();
                                     let timer;
