@@ -1120,3 +1120,84 @@ test("moving a chat previews artefact paths, requires confirmation and adopts th
     await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("AKI");
     await expect(page.getByLabel("Save artifacts to")).toHaveValue(/^[a-f0-9-]{36}$/);
 });
+
+test("saved artefacts expose current paths and exact-version links after reload and moves", async ({
+    page,
+    context,
+}) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await login(page);
+    await addRepository(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    const repository = await page.getByLabel("Save artifacts to").inputValue();
+    await send(page, "Link my saved files");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    let path = "AKI/data/json/terminology/codes.json",
+        commit = "a".repeat(40);
+    await page.route(/\/api\/conversations\/[a-f0-9-]{36}$/, async (route) => {
+        const response = await route.fetch(),
+            data = await response.json();
+        await route.fulfill({
+            response,
+            json: {
+                ...data,
+                artifacts: [
+                    {
+                        repository,
+                        path,
+                        folder: "AKI",
+                        commit,
+                        destination: {
+                            kind: "github",
+                            url: "https://github.com/example/personal-models",
+                            branch: "main",
+                        },
+                    },
+                ],
+            },
+        });
+    });
+    await page.reload();
+    await page.getByRole("button", { name: "Link my saved files", exact: true }).click();
+    const files = page.locator("#conversation-artifacts");
+    await files.locator("summary").click();
+    await expect(files).toContainText(path);
+    await expect(files.getByRole("link", { name: "Open file", exact: true })).toHaveAttribute(
+        "href",
+        "https://github.com/example/personal-models/blob/main/" + path,
+    );
+    await expect(files.getByRole("link", { name: "Saved version", exact: true })).toHaveAttribute(
+        "href",
+        "https://github.com/example/personal-models/blob/" + commit + "/" + path,
+    );
+    await files.getByRole("button", { name: "Copy path", exact: true }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(path);
+    await files.getByRole("button", { name: "Copy version link", exact: true }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+        "https://github.com/example/personal-models/blob/" + commit + "/" + path,
+    );
+    await page.route("**/api/connections", (route) =>
+        route.fulfill({ json: { personal: [], enterprise: [], enterpriseUnavailable: false } }),
+    );
+    await page.reload();
+    await page.getByRole("button", { name: "Link my saved files", exact: true }).click();
+    await files.locator("summary").click();
+    await expect(files.getByRole("link", { name: "Open file", exact: true })).toHaveAttribute(
+        "href",
+        "https://github.com/example/personal-models/blob/main/" + path,
+    );
+    path = "Renal/data/json/terminology/codes.json";
+    commit = "b".repeat(40);
+    await page.getByRole("button", { name: "Link my saved files", exact: true }).click();
+    await expect(files).toContainText(path);
+    await expect(files.getByRole("link", { name: "Saved version", exact: true })).toHaveAttribute(
+        "href",
+        "https://github.com/example/personal-models/blob/" + commit + "/" + path,
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole("button", { name: "Toggle conversations", exact: true }).click();
+    await page.locator("#new-chat").click();
+    await expect(files).toBeHidden();
+});

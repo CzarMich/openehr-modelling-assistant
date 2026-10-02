@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Chat organises supporting artefacts by file type and exposes saved-file paths and version links.
+
 - Chat moves saved artefacts into project folders and places connection settings behind a gear.
 
 - Chat projects retain repository destinations and organise saved artefacts in selected folders.

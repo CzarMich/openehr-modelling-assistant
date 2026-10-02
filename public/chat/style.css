@@ -940,6 +940,49 @@ textarea::placeholder {
 #settings-notice {
     color: #9e2a1e;
 }
+#conversation-artifact-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 28dvh;
+    overflow-y: auto;
+}
+#conversation-artifact-list li {
+    display: grid;
+    gap: 6px;
+    padding: 10px 2px;
+    border-top: 1px solid var(--line);
+    overflow-wrap: anywhere;
+}
+#conversation-artifact-list small {
+    color: var(--muted);
+}
+.artifact-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+.artifact-actions button {
+    padding: 5px 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+}
+.artifact-folder-guide {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.artifact-folder-guide th,
+.artifact-folder-guide td {
+    padding: 8px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    overflow-wrap: anywhere;
+}
 .provider-bar select,
 .provider-bar input {
     font: inherit;
