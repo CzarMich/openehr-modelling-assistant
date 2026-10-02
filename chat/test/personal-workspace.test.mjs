@@ -626,3 +626,87 @@ test("interactive choices require the owner, valid options and CSRF, persist ans
         if (!stop) assert.match(messages[1].content, /My choice.*Clinical documentation/);
     }
 });
+
+test("private chat projects create, rename, group, move and safely remove conversations", async (t) => {
+    const f = await httpFixture(t, async () => "Draft");
+    assert.equal(
+        (await f.request("projects", { method: "POST", csrf: false, data: { name: "Kidney care" } })).status,
+        403,
+    );
+    const created = await f.request("projects", { method: "POST", data: { name: " Kidney care " } });
+    assert.equal(created.status, 201);
+    const project = await created.json();
+    assert.equal(project.name, "Kidney care");
+    assert.deepEqual((await (await f.request("projects", { user: "bob" })).json()).projects, []);
+    for (const method of ["PUT", "DELETE"])
+        assert.equal(
+            (
+                await f.request("projects/" + project.id, {
+                    user: "bob",
+                    method,
+                    ...(method === "PUT" ? { data: { name: "Stolen" } } : {}),
+                })
+            ).status,
+            404,
+        );
+    assert.equal((await f.request("projects", { method: "POST", data: { name: "kidney care" } })).status, 409);
+    for (const name of ["", "a".repeat(81), "bad\nname"])
+        assert.equal((await f.request("projects", { method: "POST", data: { name } })).status, 400);
+    const repository = f.connections.add("alice", github).connection.id;
+    assert.equal(
+        (await f.request("conversations", { method: "POST", user: "bob", data: { project: project.id } })).status,
+        404,
+    );
+    const chat = await (
+        await f.request("conversations", { method: "POST", data: { project: project.id, repository } })
+    ).json();
+    const base = "conversations/" + chat.id;
+    const source = await (
+        await f.request(base + "/attachments", { method: "POST", bytes: Buffer.from("field\ncreatinine") })
+    ).json();
+    const turn = await f.request(base + "/messages", { method: "POST", data: { content: "Keep my evidence" } });
+    await turn.text();
+    const before = f.store.get("alice", chat.id);
+    await f.request("projects/" + project.id, { method: "PUT", data: { name: "Renal models" } });
+    assert.equal(f.store.projects("alice")[0].name, "Renal models");
+    const second = await (await f.request("projects", { method: "POST", data: { name: "Research" } })).json();
+    const moved = await (await f.request(base + "/settings", { method: "PUT", data: { project: second.id } })).json();
+    assert.equal(moved.project, second.id);
+    assert.equal(moved.repository, repository);
+    assert.deepEqual(moved.messages, before.messages);
+    assert.deepEqual(moved.attachments, before.attachments);
+    await f.request(base + "/settings", { method: "PUT", data: { repository: null } });
+    assert.equal(f.store.get("alice", chat.id).project, second.id);
+    assert.equal((await f.request(base + "/settings", { method: "PUT", data: { project: "../outside" } })).status, 404);
+    const listed = await (await f.request("conversations")).json();
+    assert.equal(listed.conversations[0].project, second.id);
+    assert.equal(listed.projects.length, 2);
+    const reloaded = new Store(f.store.directory);
+    assert.equal(reloaded.projects("alice").length, 2);
+    assert.equal(reloaded.get("alice", chat.id).project, second.id);
+    assert.equal((await f.request("projects/" + second.id, { method: "DELETE" })).status, 200);
+    const unfiled = f.store.get("alice", chat.id);
+    assert.equal(unfiled.project, null);
+    assert.deepEqual(unfiled.messages, before.messages);
+    assert.deepEqual(f.attachments.bytes("alice", unfiled, source.id), Buffer.from("field\ncreatinine"));
+    assert.equal((await f.request(base + "/settings", { method: "PUT", data: { project: second.id } })).status, 404);
+});
+
+test("chat project moves and removal cannot race an active response", async (t) => {
+    const f = await httpFixture(
+        t,
+        async ({ signal }) =>
+            new Promise((resolve, reject) =>
+                signal.addEventListener("abort", () => reject(new Error("Stopped")), { once: true }),
+            ),
+    );
+    const project = f.store.saveProject("alice", "Protected");
+    const conversation = f.store.create("alice", "codex", null, project.id);
+    const base = "conversations/" + conversation.id;
+    const turn = await f.request(base + "/messages", { method: "POST", data: { content: "Wait" } });
+    assert.equal((await f.request(base + "/settings", { method: "PUT", data: { project: null } })).status, 409);
+    assert.equal((await f.request("projects/" + project.id, { method: "DELETE" })).status, 409);
+    await f.request(base + "/stop", { method: "POST" });
+    await turn.text();
+    assert.equal(f.store.get("alice", conversation.id).project, project.id);
+});

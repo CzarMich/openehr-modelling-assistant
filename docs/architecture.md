@@ -8,6 +8,8 @@ REQ-F15 adds an optional Node chat service alongside the PHP MCP core. It uses v
 
 The browser-only `request_user_choice` tool pauses a turn for a bounded single/multiple-choice question. SSE carries the question; an owner-authenticated, CSRF-protected endpoint validates the answer against its pending ID and offered options. The answer is returned to the provider and saved in private history. Timeout, stop and disconnect cancel the question. Decision answers remain separate from exact-change write confirmation and governance approval.
 
+Chat projects are a private history index in each owner's conversation directory. Conversation records store an optional project ID; legacy records remain unfiled. Owner-authenticated project and conversation-settings endpoints create, rename and move folders/chats with CSRF protection. Folder removal moves chats to unfiled without deleting messages or files, and is blocked during that owner's active uploads or responses. Projects do not alter provider context, repository selection or model governance.
+
 ## Human governance adapter
 
 REQ-F16 adds transport-independent exact-revision governance, a protected append-only ledger, authenticated browser review and a versioned review API. MCP exposes preparation and review requests, never clinical approval. Browser role claims and dedicated request assertions establish interactive identity; qualified validation remains mandatory. [ADR-0015](decisions/0015-persisted-governance-and-interactive-human-approval.md) records this boundary. [OpenAPI](openapi/reviews.json), [governance](GOVERNANCE.md) and [deployment](REVIEW_DEPLOYMENT.md) describe its contracts.

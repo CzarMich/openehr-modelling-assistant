@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Chat projects organise private conversations into collapsible folders.
 - Chat keeps repository selections consistent when creating conversations and sending messages.
 - Chat adds explicit repository activation and token updates, and restores enterprise CKM discovery.
 - Chat adds clickable modelling decisions, progress indicators and clearer PDF upload feedback.

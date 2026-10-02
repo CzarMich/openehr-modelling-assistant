@@ -53,6 +53,26 @@ history. Saving a draft does not approve or release a model. The **Models** and
 **Governance** tabs work without a provider connection. See the
 [workspace guide](BROWSER_WORKSPACE.md).
 
+### Organise chats into projects
+
+Use **Create project** in the sidebar to make a private folder (for example, Kidney
+care). New conversations then belong to that project. Open a project's heading to
+see its chats; **+ Chat** starts another conversation there. Use a chat's **Move to
+a project** arrow to move an existing conversation or return it to **Unfiled chats**.
+Projects can be renamed. **Delete** deletes only the folder: its conversations and
+files stay available as unfiled chats. On phones, **Toggle conversations** opens
+the sidebar controls. Empty folders stay available for later work.
+
+Use **× (Delete conversation)** beside a chat to delete its messages and uploaded
+files after confirmation. Other chats and the containing project are kept.
+
+Chat projects organise history within your profile. Each conversation keeps its
+own provider, attachments and repository destination; moving it preserves those
+settings. The **Models** tab continues to show repository modelling projects.
+Limits are 40 chat projects and the existing 100 conversations per profile. Chat
+retention still applies inside projects; project names persist until removed.
+
+
 ## Personal workspace
 
 ### Personal sources and repositories

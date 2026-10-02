@@ -9,7 +9,13 @@ let uploading = false,
     repositoryDraft = "",
     uploadQueue = [],
     sharedView = false,
-    personalConnections = [];
+    personalConnections = [],
+    chatProjects = [],
+    projectDraft = "",
+    projectSaving = false,
+    editingProject = null,
+    movingConversation = null;
+const expandedProjects = new Set();
 const toolLabels = {
     request_user_choice: "Your modelling choice",
     attachment_read: "Read source file",
@@ -81,15 +87,21 @@ async function api(path, { method = "GET", data } = {}) {
 }
 function controls() {
     const ready = !!session?.authenticated && session.enabled && !sharedView;
-    const busy = running || uploading || repositorySaving;
+    const busy = running || uploading || repositorySaving || projectSaving;
     const unsavedRepository = repositoryDraft !== (current?.repository || "");
     const connected = session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected);
     $("chat-provider").disabled = busy || sharedView || !!current?.messages?.length || !!current?.attachments?.length;
-    $("sign-out").disabled = uploading || repositorySaving;
-    document.querySelectorAll(".conversation-row button").forEach((button) => (button.disabled = busy));
+    $("sign-out").disabled = uploading || repositorySaving || projectSaving;
+    document
+        .querySelectorAll(".conversation-row button, .project-actions button")
+        .forEach((button) => (button.disabled = busy));
     $("message").disabled = !ready || running;
     $("send").disabled = !ready || !connected || busy || unsavedRepository || !$("message").value.trim();
     $("new-chat").disabled = !ready || busy;
+    $("new-project").disabled = !ready || busy;
+    $("save-chat-project").disabled = !ready || busy;
+    $("confirm-move-chat").disabled = !ready || busy;
+    renderProjectContext();
     if (sharedView) $("new-chat").disabled = false;
     $("upload-files").disabled = !ready || busy || unsavedRepository;
     $("attach-files").disabled = !ready || busy || unsavedRepository;
@@ -104,7 +116,8 @@ function controls() {
     renderDestinationStatus();
     $("chat-form").setAttribute("aria-busy", String(busy));
     $("activity").dataset.working = String(busy);
-    if (repositorySaving) $("activity").textContent = "Saving your repository selection…";
+    if (projectSaving) $("activity").textContent = "Organising your chats…";
+    else if (repositorySaving) $("activity").textContent = "Saving your repository selection…";
     else if (uploading) $("activity").textContent = "Uploading and reading your files…";
     else if (!running) {
         $("activity").textContent = "";
@@ -167,44 +180,185 @@ $("sign-in").onclick = (event) => {
     $("login-panel").scrollIntoView({ block: "center" });
     $("login-panel").querySelector("form:not([hidden]) input:not([type=hidden]), a:not([hidden])")?.focus();
 };
+function renderProjectContext() {
+    const project = chatProjects.find((item) => item.id === projectDraft);
+    $("chat-project-context").textContent = project ? "Chat project: " + project.name : "";
+    $("chat-project-context").hidden = !project || sharedView;
+}
+async function projectAction(action, errorTarget) {
+    if (running || uploading || repositorySaving || projectSaving) return;
+    projectSaving = true;
+    controls();
+    try {
+        await action();
+        await list();
+    } catch (error) {
+        if (errorTarget) errorTarget.textContent = error.message;
+        else notice(error.message);
+    } finally {
+        projectSaving = false;
+        controls();
+    }
+}
+function editProject(project = null) {
+    editingProject = project;
+    $("chat-project-dialog-title").textContent = project ? "Rename chat project" : "Create chat project";
+    $("chat-project-input").value = project?.name || "";
+    $("save-chat-project").textContent = project ? "Save name" : "Create project";
+    $("chat-project-error").textContent = "";
+    $("chat-project-dialog").showModal();
+    $("chat-project-input").focus();
+}
+$("new-project").onclick = () => editProject();
+$("cancel-chat-project").onclick = () => $("chat-project-dialog").close();
+$("chat-project-form").onsubmit = (event) => {
+    event.preventDefault();
+    projectAction(async () => {
+        const project = await api("api/projects" + (editingProject ? "/" + editingProject.id : ""), {
+            method: editingProject ? "PUT" : "POST",
+            data: { name: $("chat-project-input").value },
+        });
+        expandedProjects.add(project.id);
+        if (!editingProject) {
+            reset(project.id);
+            $("tab-chat").click();
+        }
+        $("chat-project-dialog").close();
+    }, $("chat-project-error"));
+};
+$("cancel-move-chat").onclick = () => $("move-chat-dialog").close();
+$("move-chat-form").onsubmit = (event) => {
+    event.preventDefault();
+    projectAction(async () => {
+        const updated = await api("api/conversations/" + movingConversation.id + "/settings", {
+            method: "PUT",
+            data: { project: $("move-chat-project").value || null },
+        });
+        if (current?.id === updated.id) {
+            current = updated;
+            projectDraft = updated.project || "";
+        }
+        if (updated.project) expandedProjects.add(updated.project);
+        $("move-chat-dialog").close();
+    }, $("move-chat-error"));
+};
+function conversationRow(c) {
+    const row = document.createElement("div");
+    row.className = "conversation-row" + (current?.id === c.id ? " selected" : "");
+    const button = document.createElement("button");
+    button.textContent = c.title;
+    button.title = c.title;
+    button.onclick = () => open(c.id).catch((e) => notice(e.message));
+    const move = document.createElement("button");
+    move.className = "move-chat";
+    move.textContent = "↪";
+    move.title = "Move to a project";
+    move.setAttribute("aria-label", "Move " + c.title + " to a project");
+    move.onclick = () => {
+        movingConversation = c;
+        $("move-chat-project").replaceChildren(new Option("Unfiled chats", ""));
+        for (const project of chatProjects) $("move-chat-project").add(new Option(project.name, project.id));
+        $("move-chat-project").value = c.project || "";
+        $("move-chat-error").textContent = "";
+        $("move-chat-dialog").showModal();
+    };
+    const remove = document.createElement("button");
+    remove.className = "delete-chat";
+    remove.textContent = "×";
+    remove.title = "Delete conversation";
+    remove.setAttribute("aria-label", "Delete " + c.title);
+    remove.onclick = async () => {
+        if (!confirm("Delete this conversation, its messages and uploaded files?")) return;
+        try {
+            await api("api/conversations/" + c.id, { method: "DELETE" });
+            if (current?.id === c.id) reset(projectDraft);
+            await list();
+        } catch (e) {
+            notice(e.message);
+        }
+    };
+    row.append(button, move, remove);
+    return row;
+}
 async function list() {
     const result = await api("api/conversations");
+    chatProjects = result.projects || [];
     $("conversations").replaceChildren();
-    if (!result.conversations.length) {
+    for (const project of chatProjects) {
+        const group = document.createElement("details"),
+            summary = document.createElement("summary");
+        group.className = "chat-project";
+        group.dataset.project = project.id;
+        const chats = result.conversations.filter((c) => c.project === project.id);
+        summary.textContent = project.name + " (" + chats.length + ")";
+        summary.title = project.name;
+        group.append(summary);
+        group.open = expandedProjects.has(project.id);
+        group.ontoggle = () => (group.open ? expandedProjects.add(project.id) : expandedProjects.delete(project.id));
+        const actions = document.createElement("div");
+        actions.className = "project-actions";
+        for (const [label, text, action] of [
+            [
+                "New chat in " + project.name,
+                "+ Chat",
+                () => {
+                    reset(project.id);
+                    $("tab-chat").click();
+                    list().catch((e) => notice(e.message));
+                    $("sidebar").classList.remove("open");
+                    $("message").focus();
+                },
+            ],
+            ["Rename " + project.name, "Rename", () => editProject(project)],
+            [
+                "Delete project " + project.name,
+                "Delete",
+                () => {
+                    if (!confirm("Delete this project? Its conversations will be kept in Unfiled chats.")) return;
+                    projectAction(async () => {
+                        await api("api/projects/" + project.id, { method: "DELETE" });
+                        if (projectDraft === project.id) projectDraft = "";
+                        if (current?.project === project.id) current.project = null;
+                        expandedProjects.delete(project.id);
+                    });
+                },
+            ],
+        ]) {
+            const button = document.createElement("button");
+            button.textContent = text;
+            button.setAttribute("aria-label", label);
+            button.onclick = action;
+            actions.append(button);
+        }
+        group.append(actions);
+        for (const c of chats) group.append(conversationRow(c));
+        if (!chats.length) {
+            const empty = document.createElement("p");
+            empty.className = "empty-list";
+            empty.textContent = "No conversations yet.";
+            group.append(empty);
+        }
+        $("conversations").append(group);
+    }
+    const unfiled = result.conversations.filter((c) => !chatProjects.some((project) => project.id === c.project));
+    if (chatProjects.length && unfiled.length) {
+        const heading = document.createElement("p");
+        heading.className = "unfiled-heading";
+        heading.textContent = "Unfiled chats";
+        $("conversations").append(heading);
+    }
+    for (const c of unfiled) $("conversations").append(conversationRow(c));
+    if (!result.conversations.length && !chatProjects.length) {
         const p = document.createElement("p");
         p.className = "empty-list";
         p.textContent = "Your conversations will appear here.";
         $("conversations").append(p);
     }
-    for (const c of result.conversations) {
-        const row = document.createElement("div");
-        row.className = "conversation-row" + (current?.id === c.id ? " selected" : "");
-        const button = document.createElement("button");
-        button.textContent = c.title;
-        button.title = c.title;
-        button.disabled = running || uploading;
-        button.onclick = () => open(c.id).catch((e) => notice(e.message));
-        const remove = document.createElement("button");
-        remove.className = "delete-chat";
-        remove.textContent = "×";
-        remove.setAttribute("aria-label", "Delete " + c.title);
-        remove.disabled = running || uploading;
-        remove.onclick = async () => {
-            if (!confirm("Delete this conversation and its messages?")) return;
-            try {
-                await api("api/conversations/" + c.id, { method: "DELETE" });
-                if (current?.id === c.id) reset();
-                await list();
-            } catch (e) {
-                notice(e.message);
-            }
-        };
-        row.append(button, remove);
-        $("conversations").append(row);
-    }
+    controls();
 }
-function reset() {
+function reset(project = "") {
     current = null;
+    projectDraft = project;
     repositoryDraft = "";
     renderDestinations();
     sharedView = false;
@@ -310,9 +464,11 @@ function toolChip(container, tool) {
         (toolLabels[tool.name] || tool.name.replaceAll("_", " "));
 }
 async function open(id) {
-    if (running || uploading || repositorySaving) return;
+    if (running || uploading || repositorySaving || projectSaving) return;
     current = await api("api/conversations/" + id);
     repositoryDraft = current.repository || "";
+    projectDraft = current.project || "";
+    if (projectDraft) expandedProjects.add(projectDraft);
     sharedView = false;
     renderAttachments();
     renderDestinations();
@@ -449,7 +605,7 @@ function completeChoice(event) {
     card.replaceChildren(heading, result);
 }
 async function send(text) {
-    if (running || uploading || repositorySaving || sharedView || !text.trim()) return;
+    if (running || uploading || repositorySaving || projectSaving || sharedView || !text.trim()) return;
     if (repositoryDraft !== (current?.repository || "")) {
         notice("Press Save repository selection before sending your message.");
         return;
@@ -562,7 +718,8 @@ $("message").onkeydown = (event) => {
     }
 };
 $("new-chat").onclick = () => {
-    reset();
+    reset(projectDraft);
+    $("tab-chat").click();
     list().catch((e) => notice(e.message));
     $("message").focus();
 };
@@ -677,7 +834,11 @@ async function ensureConversation() {
     if (!current) {
         current = await api("api/conversations", {
             method: "POST",
-            data: { provider: $("chat-provider").value, repository: repositoryDraft || null },
+            data: {
+                provider: $("chat-provider").value,
+                repository: repositoryDraft || null,
+                project: projectDraft || null,
+            },
         });
         renderDestinations();
     }
@@ -956,6 +1117,7 @@ async function uploadFiles(files) {
         running ||
         uploading ||
         repositorySaving ||
+        projectSaving ||
         repositoryDraft !== (current?.repository || "") ||
         sharedView ||
         !session?.authenticated ||
@@ -1097,7 +1259,14 @@ $("revoke-share").onclick = async () => {
     }
 };
 async function showShared() {
-    if (running || uploading || repositorySaving || !session?.authenticated || !location.hash.startsWith("#share="))
+    if (
+        running ||
+        uploading ||
+        repositorySaving ||
+        projectSaving ||
+        !session?.authenticated ||
+        !location.hash.startsWith("#share=")
+    )
         return;
     try {
         const snapshot = await api("api/shares/" + encodeURIComponent(location.hash.slice(7)));

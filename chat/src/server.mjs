@@ -387,13 +387,40 @@ export function createApplication(
                 }
                 throw Object.assign(new Error("Not found"), { status: 404 });
             }
+            if (path === "/chat/api/projects") {
+                if (req.method === "GET") return json(res, 200, { projects: store.projects(identity) });
+                if (req.method === "POST") {
+                    const input = await body(req, ["name"]);
+                    return json(res, 201, store.saveProject(identity, input.name));
+                }
+            }
+            const projectRoute = path.match(/^\/chat\/api\/projects\/([a-f0-9-]{36})$/);
+            if (projectRoute) {
+                const id = projectRoute[1];
+                store.project(identity, id);
+                if (req.method === "PUT") {
+                    const input = await body(req, ["name"]);
+                    return json(res, 200, store.saveProject(identity, input.name, id));
+                }
+                if (req.method === "DELETE") {
+                    const owner = store.owner(identity) + ":";
+                    if ([...active.keys(), ...uploading].some((key) => key.startsWith(owner)))
+                        throw Object.assign(
+                            new Error("Finish active responses and uploads before removing a project."),
+                            { status: 409 },
+                        );
+                    store.deleteProject(identity, id);
+                    return json(res, 200, { success: true });
+                }
+            }
             if (path === "/chat/api/conversations") {
-                if (req.method === "GET") return json(res, 200, { conversations: store.list(identity) });
+                if (req.method === "GET")
+                    return json(res, 200, { conversations: store.list(identity), projects: store.projects(identity) });
                 if (req.method === "POST") {
                     const input =
                         (req.headers["content-length"] && req.headers["content-length"] !== "0") ||
                         req.headers["transfer-encoding"]
-                            ? await body(req, ["provider", "repository"])
+                            ? await body(req, ["provider", "repository", "project"])
                             : {};
                     const selected = input.provider || "codex";
                     if (!["codex", "claude"].includes(selected))
@@ -401,7 +428,7 @@ export function createApplication(
                     const repository = input.repository ?? null;
                     if (repository !== null && connections.get(identity, repository).kind === "ckm")
                         throw Object.assign(new Error("Choose a repository."), { status: 400 });
-                    return json(res, 201, store.create(identity, selected, repository));
+                    return json(res, 201, store.create(identity, selected, repository, input.project ?? null));
                 }
             }
             const route = path.match(
@@ -426,14 +453,18 @@ export function createApplication(
             if (["settings", "share", "attachments"].includes(action) && mutation && active.has(key))
                 throw Object.assign(new Error("Stop the response before changing this conversation."), { status: 409 });
             if (action === "settings" && req.method === "PUT") {
-                const input = await body(req, ["repository"]);
+                const input = await body(req, ["repository", "project"]);
+                if (!Object.keys(input).length)
+                    throw Object.assign(new Error("Choose a repository or chat project."), { status: 400 });
                 conversation = freshConversation();
-                if (input.repository !== null) {
+                if (Object.hasOwn(input, "repository") && input.repository !== null) {
                     const selected = connections.get(identity, input.repository);
                     if (selected.kind === "ckm")
                         throw Object.assign(new Error("Choose a repository."), { status: 400 });
                 }
-                conversation.repository = input.repository;
+                if (Object.hasOwn(input, "project") && input.project !== null) store.project(identity, input.project);
+                if (Object.hasOwn(input, "repository")) conversation.repository = input.repository;
+                if (Object.hasOwn(input, "project")) conversation.project = input.project;
                 store.save(identity, conversation);
                 return json(res, 200, conversation);
             }

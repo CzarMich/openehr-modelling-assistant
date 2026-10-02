@@ -153,7 +153,67 @@ textarea:focus-visible {
 .conversation-row .delete-chat {
     flex: 0 0 28px;
     padding: 5px;
-    opacity: 0;
+    opacity: 1;
+}
+.conversation-row .move-chat {
+    flex: 0 0 28px;
+    padding: 5px;
+}
+.new-project {
+    margin-top: 8px;
+    background: #eef5fc;
+    border-color: var(--line);
+    color: var(--ink);
+}
+.chat-project {
+    border-bottom: 1px solid var(--line);
+    padding: 6px 0;
+}
+.chat-project > summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 8px 4px;
+    overflow-wrap: anywhere;
+}
+.project-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.project-actions button {
+    border: 0;
+    border-radius: 4px;
+    background: #eef5fc;
+    color: var(--ink);
+    padding: 5px 7px;
+    font-size: 12px;
+}
+.unfiled-heading {
+    color: var(--muted);
+    font-size: 12px;
+    padding: 4px;
+}
+.chat-project-form {
+    display: grid;
+    gap: 10px;
+}
+.chat-project-form input,
+.chat-project-form select {
+    min-width: 0;
+    width: 100%;
+    padding: 8px;
+}
+.chat-project-form button {
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #eef5fc;
+    color: var(--ink);
+}
+.chat-project-context {
+    margin: 8px 24px 0;
+    color: var(--muted);
+    font-size: 12px;
 }
 .conversation-row:hover .delete-chat,
 .delete-chat:focus-visible {
