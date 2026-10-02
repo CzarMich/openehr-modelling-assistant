@@ -452,13 +452,22 @@
                     <section id="thread" class="thread" aria-label="Chat messages" hidden></section>
                     <div id="activity" class="activity" role="status" aria-live="polite"></div>
                     <div class="composer-wrap">
-                        <div
-                            id="attachment-list"
-                            class="attachment-list"
-                            role="group"
-                            aria-label="Conversation files"
-                        ></div>
+                        <details id="conversation-files" class="conversation-files" hidden>
+                            <summary id="conversation-files-title">Files in this chat</summary>
+                            <div
+                                id="conversation-file-list"
+                                class="attachment-list"
+                                role="group"
+                                aria-label="Files already sent"
+                            ></div>
+                        </details>
                         <form id="chat-form" class="composer">
+                            <div
+                                id="attachment-list"
+                                class="attachment-list"
+                                role="group"
+                                aria-label="Files for your message"
+                            ></div>
                             <label class="sr-only" for="message">Message the modelling assistant</label
                             ><textarea
                                 id="message"
@@ -468,21 +477,65 @@
                                 disabled
                             ></textarea>
                             <div class="composer-actions">
-                                <label class="upload-label" for="upload-files">Attach files</label
-                                ><input id="upload-files" type="file" multiple aria-label="Attach files" disabled />
+                                <button
+                                    id="attach-files"
+                                    type="button"
+                                    class="attach-button"
+                                    aria-label="Add files and images"
+                                    title="Add files and images"
+                                    disabled
+                                >
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 24 24"
+                                        width="22"
+                                        height="22"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        stroke-linecap="round"
+                                    >
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                </button>
+                                <input
+                                    id="upload-files"
+                                    type="file"
+                                    multiple
+                                    aria-label="Attach files"
+                                    hidden
+                                    disabled
+                                />
                                 <span id="composer-hint">Sign in to begin</span
                                 ><button id="stop" type="button" class="stop-button" hidden>Stop response</button
                                 ><button id="send" type="submit" class="send-button" aria-label="Send message" disabled>
                                     ↑
                                 </button>
                             </div>
+                            <p id="upload-status" class="upload-status" role="status" aria-live="polite"></p>
                         </form>
                         <p class="disclaimer">
-                            Upload PDF, spreadsheets, DOCX, XML, JSON, CSV or other source files (10 MiB each).
+                            Add files with +, drop files here, or paste an image. PNG, JPG, PDF, spreadsheets and more
+                            (10 MiB each).
                             <a href="#help-files">Help with uploads</a>. Generated models remain drafts. Check sources
                             and obtain qualified review before use.
                         </p>
                     </div>
+                    <dialog
+                        id="attachment-preview"
+                        class="attachment-preview"
+                        aria-labelledby="attachment-preview-title"
+                    >
+                        <div class="preview-heading">
+                            <h2 id="attachment-preview-title">Image preview</h2>
+                            <button id="close-attachment-preview" type="button" class="text-button">
+                                Close preview
+                            </button>
+                        </div>
+                        <img id="attachment-preview-image" alt="" />
+                        <p id="attachment-preview-note"></p>
+                        <a id="attachment-preview-download">Download original</a>
+                    </dialog>
                 </section>
 
                 <section id="panel-models" role="tabpanel" aria-labelledby="tab-models" class="content-panel" hidden>
@@ -689,11 +742,16 @@
                     <section class="help-topic" aria-labelledby="help-files">
                         <h2 id="help-files" tabindex="-1">2. Upload documents</h2>
                         <ol>
-                            <li>In Chat, select <strong>Attach files</strong> and choose one or more files.</li>
                             <li>
-                                Wait for each file's status. <strong>ready</strong> means text was extracted.
-                                <strong>partial</strong> means some content may be missing; check the explanation beside
-                                the file.
+                                In Chat, select the <strong>+</strong> button (<strong>Add files and images</strong>)
+                                inside the message box. You can also drop files onto the box or paste a PNG/JPG image
+                                while writing.
+                            </li>
+                            <li>
+                                Each file appears as a card. <strong>Text ready</strong> means text was extracted;
+                                <strong>Image ready</strong> means the assistant can view the image.
+                                <strong>Partly read</strong> or <strong>Needs attention</strong> includes an
+                                explanation. You can keep typing while files upload.
                             </li>
                             <li>
                                 Ask the assistant to read the files, summarise the requirements, and use them to prepare
@@ -703,8 +761,19 @@
                         <p>
                             Text PDFs, Excel and OpenDocument spreadsheets, Word documents (DOCX), CSV, JSON, XML and
                             plain text can be read. Other formats can be attached, but may need conversion before their
-                            contents can be used. Scanned PDFs and images need a text version; images are not
-                            automatically read.
+                            contents can be used. PNG and JPG images can be interpreted by your selected assistant. For
+                            a scanned PDF, attach the relevant pages as PNG/JPG images or provide a text version.
+                        </p>
+                        <p>
+                            Select an image thumbnail to preview it, or × to remove an attachment before sending. Sent
+                            files appear beside your message and remain available under
+                            <strong>Files in this chat</strong>, where you can remove them from future responses. Use a
+                            clear crop for small print. Image interpretation can miss details; check extracted clinical
+                            information against the original before using it in a model.
+                        </p>
+                        <p>
+                            PNG/JPG images must be single-frame and no larger than <strong>20 megapixels</strong>. A
+                            prepared copy up to 2048 pixels per side is sent to the assistant; the original is kept.
                         </p>
                         <p>
                             Each file can be up to <strong>10 MiB</strong>. A conversation can hold
@@ -713,8 +782,8 @@
                             remove button to detach it.
                         </p>
                         <p>
-                            Only upload information you are allowed to use with your chosen AI provider. Source excerpts
-                            may be sent to that provider when the assistant reads a file.
+                            Only upload information you are allowed to use with your chosen AI provider. Attached images
+                            and source excerpts may be sent to that provider when you send a message.
                         </p>
                         <p class="help-example">
                             After attaching a publication, try: “Read this publication. Extract the assessment findings,
@@ -828,8 +897,9 @@
                             <dt>My file says unsupported or failed.</dt>
                             <dd>
                                 Read the message beside it. Try a text-based PDF, DOCX, CSV or plain-text version. For a
-                                scanned publication, extract its text first and attach that. Split files that exceed the
-                                size limit.
+                                scanned publication, attach the relevant pages as PNG/JPG images or extract its text
+                                first. Reattach images uploaded before image support was available. Split files that
+                                exceed the size limit.
                             </dd>
                             <dt>My repository refuses a save.</dt>
                             <dd>

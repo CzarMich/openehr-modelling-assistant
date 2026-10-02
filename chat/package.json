@@ -17,6 +17,7 @@
     "mammoth": "1.13.0",
     "openid-client": "6.8.8",
     "pdfjs-dist": "6.3.289",
+    "sharp": "0.35.5",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {

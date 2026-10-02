@@ -16,7 +16,7 @@ export class ClaudeProvider {
         this.config = config;
         this.client = client;
     }
-    async run({ messages, tools, callTool, onEvent, signal }) {
+    async run({ messages, images = [], tools, callTool, onEvent, signal }) {
         let remaining = 60000,
             text = "";
         const history = [];
@@ -27,6 +27,19 @@ export class ClaudeProvider {
             remaining -= content.length;
         }
         while (history[0]?.role === "assistant") history.shift();
+        if (images.length) {
+            const latest = history.at(-1);
+            latest.content = [
+                ...images.flatMap((image) => [
+                    {
+                        type: "text",
+                        text: "Attached source image: " + JSON.stringify({ id: image.id, name: image.name }),
+                    },
+                    { type: "image", source: { type: "base64", media_type: image.mimeType, data: image.data } },
+                ]),
+                { type: "text", text: latest.content },
+            ];
+        }
         for (let step = 0; step < 17; step++) {
             signal.throwIfAborted();
             const stream = this.client.messages.stream(

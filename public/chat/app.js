@@ -5,6 +5,7 @@ let session = null,
     running = false,
     controller = null;
 let uploading = false,
+    uploadQueue = [],
     sharedView = false,
     personalConnections = [];
 const toolLabels = {
@@ -76,21 +77,25 @@ async function api(path, { method = "GET", data } = {}) {
     return result;
 }
 function controls() {
-    const ready = !!session?.authenticated && session.enabled && !uploading && !sharedView;
+    const ready = !!session?.authenticated && session.enabled && !sharedView;
     const connected = session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected);
     $("chat-provider").disabled =
         running || uploading || sharedView || !!current?.messages?.length || !!current?.attachments?.length;
     $("sign-out").disabled = uploading;
     document.querySelectorAll(".conversation-row button").forEach((button) => (button.disabled = running || uploading));
     $("message").disabled = !ready || running;
-    $("send").disabled = !ready || !connected || running || !$("message").value.trim();
-    $("new-chat").disabled = !ready || running;
+    $("send").disabled = !ready || !connected || running || uploading || !$("message").value.trim();
+    $("new-chat").disabled = !ready || running || uploading;
     if (sharedView) $("new-chat").disabled = false;
-    $("upload-files").disabled = !ready || running;
-    $("save-destination").disabled = !ready || running;
-    $("share-chat").disabled = !ready || running || !current?.messages?.length;
+    $("upload-files").disabled = !ready || running || uploading;
+    $("attach-files").disabled = !ready || running || uploading;
+    $("save-destination").disabled = !ready || running || uploading;
+    $("share-chat").disabled = !ready || running || uploading || !current?.messages?.length;
+    document.querySelectorAll(".attachment-remove").forEach((button) => (button.disabled = running || uploading));
     $("stop").hidden = !running;
-    document.querySelectorAll(".suggestion").forEach((button) => (button.disabled = !ready || !connected || running));
+    document
+        .querySelectorAll(".suggestion")
+        .forEach((button) => (button.disabled = !ready || !connected || running || uploading));
     $("composer-hint").textContent = running
         ? "Working with your modelling tools…"
         : ready
@@ -150,7 +155,11 @@ async function list() {
 function reset() {
     current = null;
     sharedView = false;
+    uploadQueue = [];
     $("attachment-list").replaceChildren();
+    $("conversation-file-list").replaceChildren();
+    $("conversation-files").hidden = true;
+    $("upload-status").textContent = "";
     $("thread").replaceChildren();
     $("thread").hidden = true;
     $("welcome").hidden = false;
@@ -211,6 +220,13 @@ function bubble(message) {
     tools.className = "tool-list";
     for (const tool of message.tools || []) toolChip(tools, tool);
     article.append(title, tools, content);
+    if (message.attachments?.length && !sharedView) {
+        const files = document.createElement("div");
+        files.className = "attachment-list message-attachments";
+        files.setAttribute("aria-label", "Attached files");
+        for (const item of message.attachments) files.append(attachmentCard(item, false));
+        article.insertBefore(files, content);
+    }
     if (message.role === "assistant") {
         const copy = document.createElement("button");
         copy.className = "copy-button";
@@ -312,7 +328,10 @@ async function send(text) {
     $("welcome").hidden = true;
     $("thread").hidden = false;
     $("message").value = "";
-    bubble({ role: "user", content: text });
+    const message = { role: "user", content: text, attachments: pendingAttachments() };
+    current.messages.push(message);
+    bubble(message);
+    renderAttachments();
     const target = bubble({ role: "assistant", content: "" });
     $("thread").scrollTop = $("thread").scrollHeight;
     running = true;
@@ -603,70 +622,225 @@ $("save-destination").onchange = async () => {
         notice(e.message);
     }
 };
-function renderAttachments() {
-    $("attachment-list").replaceChildren();
-    for (const item of current?.attachments || []) {
-        const row = document.createElement("div"),
-            link = document.createElement("a"),
-            info = document.createElement("span"),
-            remove = document.createElement("button");
-        link.textContent = item.name;
-        link.href = "/chat/api/conversations/" + current.id + "/attachments/" + item.id;
-        link.download = item.name;
-        info.textContent = " · " + item.status + " · " + item.note;
+function pendingAttachments() {
+    const sent = new Set(
+        (current?.messages || []).flatMap((message) => (message.attachments || []).map((item) => item.id)),
+    );
+    return (current?.attachments || []).filter((item) => !sent.has(item.id));
+}
+function fileSize(size) {
+    return size >= 1024 * 1024
+        ? (size / (1024 * 1024)).toFixed(1) + " MiB"
+        : Math.max(1, Math.ceil(size / 1024)) + " KiB";
+}
+function attachmentCard(item, removable = true, queued = false) {
+    const card = document.createElement("div");
+    card.className = "attachment-card";
+    card.dataset.status = item.status;
+    const available = queued || current?.attachments?.some((file) => file.id === item.id);
+    const url = available && !queued ? "/chat/api/conversations/" + current.id + "/attachments/" + item.id : null;
+    if (item.image && url) {
+        const preview = document.createElement("button"),
+            image = document.createElement("img");
+        preview.type = "button";
+        preview.className = "attachment-thumbnail";
+        preview.setAttribute("aria-label", "Preview " + item.name);
+        image.src = url + "/preview";
+        image.alt = "";
+        image.loading = "lazy";
+        preview.append(image);
+        preview.onclick = () => {
+            $("attachment-preview-title").textContent = item.name;
+            $("attachment-preview-image").src = image.src;
+            $("attachment-preview-image").alt = "Preview of " + item.name;
+            $("attachment-preview-note").textContent = item.note;
+            $("attachment-preview-download").href = url;
+            $("attachment-preview-download").download = item.name;
+            $("attachment-preview").showModal();
+        };
+        card.append(preview);
+    } else {
+        const icon = document.createElement("span");
+        icon.className = "attachment-file-icon";
+        icon.setAttribute("aria-hidden", "true");
+        icon.innerHTML =
+            '<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>';
+        card.append(icon);
+    }
+    const description = document.createElement("div"),
+        name = document.createElement(url ? "a" : "span"),
+        info = document.createElement("span");
+    description.className = "attachment-description";
+    name.className = "attachment-name";
+    name.textContent = item.name;
+    name.title = item.name;
+    if (url) {
+        name.href = url;
+        name.download = item.name;
+    }
+    const statuses = {
+        ready: "Text ready",
+        image: "Image ready",
+        partial: "Partly read",
+        no_text: "No text found",
+        unsupported: "Original only",
+        failed: "Needs attention",
+        uploading: "Uploading…",
+        queued: "Waiting…",
+    };
+    info.className = "attachment-status";
+    info.textContent =
+        fileSize(item.size) + " · " + (available ? statuses[item.status] || item.status : "Removed from chat");
+    description.append(name, info);
+    if (item.note && !["ready", "image"].includes(item.status)) {
+        const note = document.createElement("span");
+        note.className = "attachment-note";
+        note.textContent = item.note;
+        description.append(note);
+    }
+    card.title = item.note || item.name;
+    card.append(description);
+    if (removable) {
+        const remove = document.createElement("button");
         remove.type = "button";
-        remove.textContent = "Remove " + item.name;
+        remove.className = "attachment-remove";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", "Remove " + item.name);
         remove.disabled = running || uploading;
         remove.onclick = async () => {
             try {
-                const result = await api("api/conversations/" + current.id + "/attachments/" + item.id, {
-                    method: "DELETE",
-                });
-                current.attachments = result.attachments;
+                if (queued) uploadQueue = uploadQueue.filter((entry) => entry !== item);
+                else {
+                    const result = await api("api/conversations/" + current.id + "/attachments/" + item.id, {
+                        method: "DELETE",
+                    });
+                    current.attachments = result.attachments;
+                    renderThread();
+                }
                 renderAttachments();
-            } catch (e) {
-                notice(e.message);
+            } catch (error) {
+                notice(error.message);
             }
         };
-        row.append(link, info, remove);
-        $("attachment-list").append(row);
+        card.append(remove);
     }
+    return card;
 }
-$("upload-files").onchange = async () => {
-    const files = Array.from($("upload-files").files);
-    $("upload-files").value = "";
-    if (!files.length || running || uploading) return;
+function renderThread() {
+    $("thread").replaceChildren();
+    for (const message of current?.messages || []) bubble(message);
+}
+function renderAttachments() {
+    $("attachment-list").replaceChildren();
+    const pending = pendingAttachments();
+    for (const item of pending) $("attachment-list").append(attachmentCard(item));
+    for (const item of uploadQueue) $("attachment-list").append(attachmentCard(item, true, true));
+    const sent = (current?.attachments || []).filter((item) => !pending.includes(item));
+    $("conversation-files").hidden = !sent.length || sharedView;
+    $("conversation-files-title").textContent = "Files in this chat (" + sent.length + ")";
+    $("conversation-file-list").replaceChildren();
+    for (const item of sent) $("conversation-file-list").append(attachmentCard(item));
+}
+async function uploadFiles(files) {
+    if (!files.length || running || uploading || sharedView || !session?.authenticated || !session.enabled) return;
     uploading = true;
+    uploadQueue = files.map((file) => ({ file, name: file.name, size: file.size, status: "queued" }));
     controls();
+    renderAttachments();
+    let added = 0;
     try {
         await ensureConversation();
-        for (const file of files) {
-            if (file.size > 10 * 1024 * 1024) throw new Error(file.name + " exceeds the 10 MiB file limit.");
-            notice("Reading " + file.name + "…");
-            const response = await fetch("/chat/api/conversations/" + current.id + "/attachments", {
-                method: "POST",
-                headers: {
-                    "X-CSRF-Token": session.csrf,
-                    "X-File-Name": encodeURIComponent(file.name),
-                    "Content-Type": "application/octet-stream",
-                },
-                body: file,
-            });
-            const item = await response.json();
-            if (!response.ok) throw new Error(item.error || "File upload failed.");
-            current.attachments = [...(current.attachments || []), item];
+        for (const entry of [...uploadQueue]) {
+            entry.status = "uploading";
+            $("upload-status").textContent = "Adding " + entry.name + "… You can keep writing your message.";
+            renderAttachments();
+            try {
+                if (entry.size > 10 * 1024 * 1024) throw new Error("This file exceeds the 10 MiB limit.");
+                if (!entry.size) throw new Error("This file is empty.");
+                const existing = current.attachments || [];
+                if (
+                    existing.length >= 10 ||
+                    existing.reduce((sum, item) => sum + item.size, 0) + entry.size > 30 * 1024 * 1024
+                )
+                    throw new Error("A chat supports 10 files and 30 MiB in total. Remove a file or start a new chat.");
+                const response = await fetch("/chat/api/conversations/" + current.id + "/attachments", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRF-Token": session.csrf,
+                        "X-File-Name": encodeURIComponent(entry.name),
+                        "Content-Type": "application/octet-stream",
+                    },
+                    body: entry.file,
+                });
+                const item = await response.json();
+                if (!response.ok) throw new Error(item.error || "File upload failed.");
+                current.attachments = [...existing, item];
+                uploadQueue = uploadQueue.filter((item) => item !== entry);
+                added++;
+            } catch (error) {
+                entry.status = "failed";
+                entry.note = error.message;
+                delete entry.file;
+            }
             renderAttachments();
         }
-        notice("Files added. Describe what you want to model; the assistant can read their extracted content.");
+        $("upload-status").textContent =
+            added +
+            (added === 1 ? " file added." : " files added.") +
+            (uploadQueue.length ? " Some files need attention." : " Ready to send with your instructions.");
         await list();
-    } catch (e) {
-        notice(e.message);
+    } catch (error) {
+        uploadQueue = uploadQueue.map(({ file, ...item }) => ({ ...item, status: "failed", note: error.message }));
+        $("upload-status").textContent = "Files could not be added. Check the message on each card.";
     } finally {
         uploading = false;
         controls();
         renderAttachments();
     }
+}
+$("attach-files").onclick = () => $("upload-files").click();
+$("upload-files").onchange = () => {
+    const files = Array.from($("upload-files").files);
+    $("upload-files").value = "";
+    uploadFiles(files);
 };
+$("close-attachment-preview").onclick = () => $("attachment-preview").close();
+$("attachment-preview").addEventListener("close", () => $("attachment-preview-image").removeAttribute("src"));
+let dragDepth = 0;
+const composer = $("chat-form");
+const fileDrag = (event) => Array.from(event.dataTransfer?.types || []).includes("Files");
+composer.addEventListener("dragenter", (event) => {
+    if (fileDrag(event)) {
+        event.preventDefault();
+        dragDepth++;
+        composer.classList.add("drag-over");
+    }
+});
+composer.addEventListener("dragover", (event) => {
+    if (fileDrag(event)) event.preventDefault();
+});
+composer.addEventListener("dragleave", () => {
+    if (--dragDepth <= 0) {
+        dragDepth = 0;
+        composer.classList.remove("drag-over");
+    }
+});
+composer.addEventListener("drop", (event) => {
+    if (!fileDrag(event)) return;
+    event.preventDefault();
+    dragDepth = 0;
+    composer.classList.remove("drag-over");
+    uploadFiles(Array.from(event.dataTransfer.files));
+});
+$("message").addEventListener("paste", (event) => {
+    const images = Array.from(event.clipboardData?.files || []).filter((file) =>
+        ["image/png", "image/jpeg"].includes(file.type),
+    );
+    if (images.length) {
+        event.preventDefault();
+        uploadFiles(images);
+    }
+});
 $("share-chat").onclick = () => {
     $("share-url").value = "";
     $("share-status").textContent = current.share

@@ -73,29 +73,17 @@ connection to rotate its token or change its branch. API contracts:
 
 ### Source uploads
 
-Use **Attach files**, then describe what to model from the evidence. The assistant
-receives filenames, hashes and extraction status, and reads extracted text in bounded
-chunks through `attachment_read`. Cite/check the original publication, page or sheet
-when reviewing derived requirements; extraction does not establish clinical validity.
+Select **+ (Add files and images)** inside the composer, drop files onto it, or paste a PNG/JPG image. File cards show upload progress, extraction status and image thumbnails. Typing remains available during uploads; sending waits until they finish. Select a thumbnail for a larger preview or × to remove a pending file. Sent attachments appear with their message and can be managed under **Files in this chat**. The original remains downloadable.
 
-PDF with selectable text, Excel XLS/XLSX/XLSB, ODS, DOCX, UTF-8/UTF-16 text, CSV, XML,
-JSON and other text formats are supported. Every format can be attached and downloaded
-as its original bytes, but unsupported binary formats, scanned PDFs, damaged or
-password-protected documents clearly report missing extraction. OCR is not included.
-Formulas, macros, scripts and external document references are not executed. Layout
-and tables can lose structure during text extraction; verify against the original.
+The assistant receives source names, hashes and extraction status. It reads extracted text in bounded chunks through `attachment_read`. PNG/JPG images are supplied as actual image inputs to the selected Codex or Claude connection on each subsequent turn while attached, including after reload. Images are not persisted as base64 in messages or shared snapshots. Cite/check the original publication, page, sheet or image when reviewing derived requirements; extraction and visual interpretation do not establish clinical validity.
 
-Limits: 10 MiB per file, 10 files and 30 MiB per conversation. Extraction has a 20-second
-deadline, a 192 MiB JavaScript heap, 240,000 text characters, 200 PDF pages, 30 sheets
-and 5,001 rows per sheet. A reached limit is reported as partial extraction. Tool reads
-return 12,000 characters plus the next offset; ordinary turn/tool limits still apply.
-The reverse proxy grants the larger request limit only to upload endpoints. Additional
-deployment proxies must also allow 10 MiB there.
+PDF with selectable text, Excel XLS/XLSX/XLSB, ODS, DOCX, UTF-8/UTF-16 text, CSV, XML, JSON and other text formats are supported. Every format can be attached and downloaded as its original bytes. Unsupported binaries, scanned PDFs and damaged/password-protected documents report missing extraction. For a scanned publication, provide a text version or attach the relevant pages as PNG/JPG images. Images uploaded before vision support must be reattached. Formulas, macros, scripts and external document references are not executed.
 
-Originals and extracted text belong to the conversation, are private to its owner,
-and are removed on file/chat deletion or the conversation's 30-day retention expiry.
-Removing a file does not erase text already quoted in messages or sent to a provider.
-Uploads are source evidence, separate from the immutable model-import/governance API.
+Limits: 10 MiB per file, 10 files and 30 MiB per conversation. Extraction has a 20-second deadline and a 192 MiB JavaScript heap, with up to 240,000 text characters, 200 PDF pages, 30 sheets and 5,001 rows per sheet. A reached text limit reports partial extraction. Tool reads return 12,000 characters plus the next offset. The larger proxy limit applies only to upload endpoints.
+
+PNG/JPG inputs are signature-checked and fully decoded in the isolated worker, limited to 20 million pixels and a single frame. A metadata-free, orientation-corrected JPEG copy is prepared at up to 2048 pixels per side and 2 MiB; larger or invalid inputs report failure and are not sent as images. Previews use an owner-authenticated endpoint with no caching. The same prepared bytes reach the provider: Codex uses explicit [`localImage` turn input](https://learn.chatgpt.com/docs/app-server#turns) with private temporary files removed on completion/cancellation; Claude uses [base64 image content blocks](https://platform.claude.com/docs/en/build-with-claude/vision). Layout, small print and visual details can be lost; users should crop unclear regions and verify against the unchanged original. Image-based diagnosis is outside the modelling workflow.
+
+Originals, extracted text and prepared images belong to the conversation and are removed on file/chat deletion or its 30-day retention expiry. Removing a file excludes it from future image inputs but does not erase excerpts already quoted in messages or sent to a provider. Uploads are source evidence, separate from the immutable model-import/governance API.
 
 ### Sharing conversations
 

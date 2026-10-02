@@ -12,7 +12,31 @@ export async function extract(path, name) {
         if (value.length > room) truncated = true;
         text += value.slice(0, room);
     };
-    if (bytes.subarray(0, 5).toString() === "%PDF-") {
+    const png = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    const jpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+    if (png || jpeg || [".png", ".jpg", ".jpeg"].includes(extension)) {
+        if (!png && !jpeg) throw new Error("Invalid image");
+        const { default: sharp } = await import("sharp");
+        sharp.cache(false);
+        sharp.concurrency(1);
+        const source = sharp(bytes, { limitInputPixels: 20000000, failOn: "warning" });
+        const metadata = await source.metadata();
+        if (!["png", "jpeg"].includes(metadata.format) || (metadata.pages || 1) !== 1)
+            throw new Error("Unsupported image");
+        const { data, info } = await source
+            .rotate()
+            .resize({ width: 2048, height: 2048, fit: "inside", withoutEnlargement: true })
+            .flatten({ background: "#ffffff" })
+            .jpeg({ quality: 85 })
+            .toBuffer({ resolveWithObject: true });
+        if (data.length > 2 * 1024 * 1024) throw new Error("Image preview too large");
+        return {
+            text: "",
+            status: "image",
+            note: "Image ready for the assistant. A prepared copy (up to 2048 pixels per side) is used; crop small or unclear text for better results. The original is kept.",
+            image: { data: data.toString("base64"), mimeType: "image/jpeg", width: info.width, height: info.height },
+        };
+    } else if (bytes.subarray(0, 5).toString() === "%PDF-") {
         const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
         const task = getDocument({
             data: new Uint8Array(bytes),
@@ -38,7 +62,7 @@ export async function extract(path, name) {
             return {
                 text: "",
                 status: "no_text",
-                note: "No selectable text found. OCR is not available; upload a text version of scanned pages.",
+                note: "No selectable text found. Upload a text version or attach the relevant scanned pages as PNG/JPG images.",
             };
     } else if ([".xlsx", ".xls", ".ods", ".xlsb"].includes(extension)) {
         const XLSX = await import("xlsx");
@@ -95,7 +119,7 @@ if (process.send)
                 {
                     text: "",
                     status: "failed",
-                    note: "Original saved, but extraction failed. The file may be damaged or password protected.",
+                    note: "Original saved, but it could not be prepared. It may be damaged, password protected, animated, or exceed the 20-megapixel image limit. Try a smaller image or another export.",
                 },
                 () => process.exit(0),
             );
