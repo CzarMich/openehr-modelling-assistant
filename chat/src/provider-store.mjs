@@ -4,14 +4,15 @@ import { join } from "node:path";
 
 // Credentials are bound to both the verified browser identity and provider.
 export class ProviderStore {
-    constructor(directory, key) {
+    constructor(directory, key, scopes = ["codex", "claude"]) {
         if (!/^[a-f0-9]{64}$/.test(key || "")) throw new Error("Configure CHAT_PROVIDER_ENCRYPTION_KEY");
         this.directory = directory;
         this.key = Buffer.from(key, "hex");
+        this.scopes = scopes;
         mkdirSync(directory, { recursive: true, mode: 0o700 });
     }
     id(identity, provider) {
-        if (!["codex", "claude"].includes(provider)) throw new Error("Unknown provider");
+        if (!this.scopes.includes(provider)) throw new Error("Unknown provider");
         return createHash("sha256").update(identity).digest("hex") + "-" + provider;
     }
     get(identity, provider) {

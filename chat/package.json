@@ -13,7 +13,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.131.0",
-    "openid-client": "6.8.8"
+    "ipaddr.js": "2.5.0",
+    "mammoth": "1.13.0",
+    "openid-client": "6.8.8",
+    "pdfjs-dist": "6.3.289",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

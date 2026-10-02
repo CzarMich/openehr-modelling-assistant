@@ -8,6 +8,10 @@ import { McpClient, WRITE_TOOLS } from "./mcp.mjs";
 import { Providers } from "./providers.mjs";
 import { ReviewClient } from "./reviews.mjs";
 import { readModels } from "./models.mjs";
+import { PersonalConnections } from "./personal-connections.mjs";
+import { Attachments, UPLOAD_LIMIT } from "./attachments.mjs";
+import { Shares } from "./shares.mjs";
+import { WorkspaceTools, PERSONAL_WRITE } from "./workspace-tools.mjs";
 
 const publicDir = fileURLToPath(new URL("../../public/chat/", import.meta.url));
 const json = (res, status, data) => {
@@ -58,15 +62,21 @@ export function createApplication(
         provider = new Providers(config),
         mcpFactory = (signal) => new McpClient(config, signal),
         reviews = new ReviewClient(config),
+        connections = new PersonalConnections(config),
+        attachments = new Attachments(store),
+        shares = new Shares(store),
     } = {},
 ) {
     const active = new Map(),
         rate = new Map(),
         modelReads = new Map();
+    const uploading = new Set();
     store.prune();
+    shares.prune();
     const cleanup = setInterval(() => {
         try {
             store.prune();
+            shares.prune();
         } catch {
             console.error('{"event":"chat_retention_failed"}');
         }
@@ -326,6 +336,33 @@ export function createApplication(
             }
             if (!config.enabled)
                 throw Object.assign(new Error("Browser chat is not configured on this deployment."), { status: 503 });
+            if (path === "/chat/api/connections") {
+                if (!["GET", "POST"].includes(req.method)) throw Object.assign(new Error("Not found"), { status: 404 });
+                const input =
+                    req.method === "POST" ? await body(req, ["kind", "label", "url", "token", "branch"]) : null;
+                const mcp = mcpFactory(AbortSignal.timeout(20000));
+                try {
+                    let enterprise = [],
+                        enterpriseUnavailable = false;
+                    try {
+                        enterprise = await connections.enterprise(mcp);
+                    } catch (error) {
+                        if (input?.kind === "ckm") throw error;
+                        enterpriseUnavailable = true;
+                    }
+                    if (input) return json(res, 200, connections.add(identity, input, enterprise));
+                    return json(res, 200, { enterprise, personal: connections.list(identity), enterpriseUnavailable });
+                } finally {
+                    await mcp.close?.();
+                }
+            }
+            const personalRoute = path.match(/^\/chat\/api\/connections\/([a-f0-9-]{36})$/);
+            if (personalRoute && req.method === "DELETE") {
+                connections.remove(identity, personalRoute[1]);
+                return json(res, 200, { success: true });
+            }
+            const sharedRoute = path.match(/^\/chat\/api\/shares\/([A-Za-z0-9_-]{43})$/);
+            if (sharedRoute && req.method === "GET") return json(res, 200, shares.get(sharedRoute[1]));
             if (path === "/chat/api/providers" && req.method === "GET")
                 return json(res, 200, { providers: provider.status(identity) });
             const connection = path.match(/^\/chat\/api\/providers\/(codex|claude)$/);
@@ -363,15 +400,97 @@ export function createApplication(
                     return json(res, 201, store.create(identity, selected));
                 }
             }
-            const route = path.match(/^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval))?$/);
+            const route = path.match(
+                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|settings|share|attachments)(?:\/([a-f0-9-]{36}))?)?$/,
+            );
             if (!route) throw Object.assign(new Error("Not found"), { status: 404 });
-            const [, id, action] = route,
-                conversation = store.get(identity, id),
+            const [, id, action, attachmentId] = route,
                 key = store.owner(identity) + ":" + id;
+            let conversation = store.get(identity, id);
+            const freshConversation = () => {
+                if (uploading.has(key) || active.has(key))
+                    throw Object.assign(new Error("Wait for the current upload or response to finish."), {
+                        status: 409,
+                    });
+                return store.get(identity, id);
+            };
+            if (attachmentId && action !== "attachments") throw Object.assign(new Error("Not found"), { status: 404 });
+            if (mutation && uploading.has(key))
+                throw Object.assign(new Error("Wait for the file upload to finish."), { status: 409 });
+            if (["settings", "share", "attachments"].includes(action) && mutation && active.has(key))
+                throw Object.assign(new Error("Stop the response before changing this conversation."), { status: 409 });
+            if (action === "settings" && req.method === "PUT") {
+                const input = await body(req, ["repository"]);
+                conversation = freshConversation();
+                if (input.repository !== null) {
+                    const selected = connections.get(identity, input.repository);
+                    if (selected.kind === "ckm")
+                        throw Object.assign(new Error("Choose a repository."), { status: 400 });
+                }
+                conversation.repository = input.repository;
+                store.save(identity, conversation);
+                return json(res, 200, conversation);
+            }
+            if (action === "share") {
+                if (req.method === "POST") {
+                    await body(req, []);
+                    conversation = freshConversation();
+                    return json(res, 201, shares.create(identity, conversation));
+                }
+                if (req.method === "DELETE") {
+                    shares.revoke(identity, conversation);
+                    return json(res, 200, { success: true });
+                }
+            }
+            if (action === "attachments") {
+                if (attachmentId && req.method === "GET") {
+                    const item = attachments.get(conversation, attachmentId);
+                    res.writeHead(200, {
+                        "Content-Type": "application/octet-stream",
+                        "Content-Disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(item.name),
+                    });
+                    return res.end(attachments.bytes(identity, conversation, attachmentId));
+                }
+                if (attachmentId && req.method === "DELETE") {
+                    attachments.remove(identity, conversation, attachmentId);
+                    return json(res, 200, { attachments: conversation.attachments });
+                }
+                if (!attachmentId && req.method === "POST") {
+                    if (uploading.size >= 3)
+                        throw Object.assign(new Error("File extraction is busy. Please retry shortly."), {
+                            status: 429,
+                        });
+                    uploading.add(key);
+                    try {
+                        let size = 0;
+                        const chunks = [];
+                        for await (const chunk of req) {
+                            size += chunk.length;
+                            if (size > UPLOAD_LIMIT)
+                                throw Object.assign(new Error("Files must be no larger than 10 MiB."), { status: 413 });
+                            chunks.push(chunk);
+                        }
+                        let name;
+                        try {
+                            name = decodeURIComponent(req.headers["x-file-name"] || "");
+                        } catch {
+                            throw Object.assign(new Error("Invalid filename."), { status: 400 });
+                        }
+                        return json(
+                            res,
+                            201,
+                            await attachments.add(identity, conversation, name, Buffer.concat(chunks)),
+                        );
+                    } finally {
+                        uploading.delete(key);
+                    }
+                }
+            }
             if (!action && req.method === "GET") return json(res, 200, { ...conversation, running: active.has(key) });
             if (!action && req.method === "DELETE") {
                 if (active.has(key))
                     throw Object.assign(new Error("Stop the response before deleting this chat."), { status: 409 });
+                shares.revoke(identity, conversation);
                 store.delete(identity, id);
                 return json(res, 200, { success: true });
             }
@@ -398,6 +517,7 @@ export function createApplication(
                 Object.keys(input).some((k) => k !== "content")
             )
                 throw Object.assign(new Error("Enter a message of up to 8,000 characters."), { status: 400 });
+            conversation = freshConversation();
             provider.assertConnected?.(identity, conversation.provider || "codex");
             if (active.has(key)) throw Object.assign(new Error("A response is already running."), { status: 409 });
             if (active.size >= config.maxConcurrentTurns)
@@ -442,12 +562,21 @@ export function createApplication(
             try {
                 emit({ type: "status", text: "Connecting to modelling tools…" });
                 mcp = mcpFactory(controller.signal);
-                const tools = await mcp.tools(),
+                const workspace = new WorkspaceTools(
+                    mcp,
+                    connections,
+                    attachments,
+                    identity,
+                    conversation,
+                    controller.signal,
+                    config.allowWrites,
+                );
+                const tools = await workspace.tools(),
                     names = new Set(tools.map((t) => t.name));
                 const result = await provider.run({
                     identity,
                     provider: turn.provider,
-                    messages: conversation.messages,
+                    messages: workspace.context(conversation.messages),
                     tools,
                     signal: controller.signal,
                     onEvent: (event) => {
@@ -461,7 +590,7 @@ export function createApplication(
                         toolActivity.push(trace);
                         emit({ type: "tool", ...trace });
                         try {
-                            if (WRITE_TOOLS.has(name)) {
+                            if (WRITE_TOOLS.has(name) || name === PERSONAL_WRITE) {
                                 const approved = await new Promise((resolve) => {
                                     const approvalId = randomUUID();
                                     let timer;
@@ -475,12 +604,20 @@ export function createApplication(
                                     timer.unref();
                                     controller.signal.addEventListener("abort", deny, { once: true });
                                     turn.approval = { id: approvalId, resolve: finish };
-                                    emit({ type: "approval", id: approvalId, tool: name, arguments: args });
+                                    emit({
+                                        type: "approval",
+                                        id: approvalId,
+                                        tool: name,
+                                        arguments:
+                                            name === PERSONAL_WRITE
+                                                ? { ...args, destination: workspace.destination() }
+                                                : args,
+                                    });
                                 });
                                 turn.approval = null;
                                 if (!approved || controller.signal.aborted) throw new Error("Change was not confirmed");
                             }
-                            const result = await mcp.call(name, args);
+                            const result = await workspace.call(name, args);
                             trace.status =
                                 result?.isError || result?.structuredContent?.success === false
                                     ? "failed"

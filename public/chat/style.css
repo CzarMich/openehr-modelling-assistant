@@ -763,3 +763,63 @@ textarea::placeholder {
     font-weight: 600;
     font-size: 0.85rem;
 }
+
+.personal-form {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.5rem;
+}
+.personal-form p {
+    font-size: 0.85rem;
+}
+#connection-list > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+}
+.destination-control {
+    display: grid;
+    gap: 0.2rem;
+    max-width: 100%;
+}
+.composer-actions {
+    flex-wrap: wrap;
+}
+#upload-files {
+    max-width: 13rem;
+    font: inherit;
+    font-size: 0.8rem;
+}
+.upload-label {
+    font-size: 0.85rem;
+}
+.attachment-list {
+    max-height: 9rem;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+}
+.attachment-list > div {
+    padding: 0.4rem;
+    border-bottom: 1px solid var(--line);
+}
+.attachment-list button {
+    margin-left: 0.5rem;
+}
+#share-dialog {
+    max-width: min(36rem, 90vw);
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    color: var(--ink);
+}
+#share-dialog::backdrop {
+    background: #17324d88;
+}
+#share-dialog input {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+}

@@ -242,7 +242,7 @@ requirements:
     adr: ["0008"]
 
   - id: REQ-F15
-    title: Authenticated browser modelling chat
+    title: Authenticated browser modelling chat and built-in user help
     canonical: docs/requirements.md
     status: draft
     implementation: landed
@@ -321,3 +321,12 @@ requirements:
     packages: [src/Application/ModelImports.php, src/Domain/Modelling/ArtifactTypes.php, src/Domain/Repository/Original*.php, src/Validation/ArtifactTypeInspector.php, src/Tools/ModelImportTools.php]
     tests: [tests/Enterprise/OriginalRepositoryTest.php, tests/Enterprise/ArtifactTypeInspectorTest.php, tests/Enterprise/ModelImportsTest.php, tests/Tools/ImportOutputCases.php, chat/test/models.test.mjs, chat/test/browser.spec.mjs]
     adr: ["0023"]
+
+  - id: REQ-F23
+    title: Personal modelling sources, artifact destinations, uploads and chat sharing
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [chat/src/personal-*.mjs, chat/src/attachments.mjs, chat/src/extract-worker.mjs, chat/src/shares.mjs, chat/src/workspace-tools.mjs, chat/src/server.mjs, chat/src/store.mjs, public/chat, .docker/Caddyfile]
+    tests: [chat/test/personal-workspace.test.mjs, chat/test/browser.spec.mjs]
+    verification: npm --prefix chat test and npm --prefix chat run test:browser

@@ -1,8 +1,12 @@
 # Browser modelling workspace
 
-Open the deployment's main URL to use a single workspace with **Chat**, **Models** and **Governance** tabs. No additional browser window, embedded iframe or model-provider account is required for navigation and review. Conversational chat uses the configured optional provider adapter. All tabs share the verified browser identity and one sign-out action.
+Open the deployment's main URL to use a single workspace with **Chat**, **Models**, **Governance** and **Help** tabs. No additional browser window, embedded iframe or model-provider account is required for navigation and review. Conversational chat uses the configured optional provider adapter. All tabs share the verified browser identity and one sign-out action.
 
-The interface uses an openEHR blue, white and slate palette with system sans-serif typography, responsive layouts, visible keyboard focus, labelled forms and status messages. Tabs support arrow keys, Home and End; the skip link goes directly to the workspace. Mobile navigation keeps all three tabs visible. Motion respects the browser's reduced-motion preference.
+The interface uses an openEHR blue, white and slate palette with system sans-serif typography, responsive layouts, visible keyboard focus, labelled forms and status messages. Tabs support arrow keys, Home and End, skipping unavailable tabs; the skip link goes directly to the workspace. Mobile navigation keeps the tabs accessible. Motion respects the browser's reduced-motion preference.
+
+## Built-in user guide
+
+**Help** and **User guide** open the same guide inside the workspace, including before sign-in. Plain-language steps cover getting started, document uploads and extraction limits, personal CKMs and Git repositories, confirmed saves, model review, sharing and common problems. Contextual links beside connections, uploads and sharing open the relevant topic. Topic links such as `/chat/#help-files` can be bookmarked; switching to Help preserves the current conversation and unsent message. Users do not need GitHub to read the guide.
 
 ## Work with models
 
@@ -24,4 +28,4 @@ Run `npm --prefix chat test`, `npm --prefix chat run check:format`, and `npm --p
 
 With the native engine configured, ask chat to validate an ADL 2 template or compile it into OPT 2. The `template_compile` call computes an output; saving a repository build through `template_compile_project` asks for confirmation of the exact input revisions. [Formats and build evidence](OPT_COMPILATION.md).
 
-The Models tab reads immutable originals alongside ordinary model revisions. Text is displayed safely; binary originals show a byte count and can be downloaded using **Download source**. Downloads preserve original bytes and filenames in the same workspace. Upload and native model editing remain separate work; MCP clients can use the [manual import tools](MODEL_IMPORTS.md).
+The Models tab reads immutable originals alongside ordinary model revisions. Text is displayed safely; binary originals show a byte count and can be downloaded using **Download source**. Downloads preserve original bytes and filenames in the same workspace. Chat supports [source uploads, personal CKMs and repositories, and revocable sharing](BROWSER_CHAT.md#personal-workspace). These chat sources are separate from the enterprise [manual model-import tools](MODEL_IMPORTS.md); native model editing remains separate work.

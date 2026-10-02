@@ -48,6 +48,57 @@ async function send(page, message) {
     expect((await response).status()).toBe(200);
 }
 
+test("personal CKMs and repository destinations persist, while enterprise duplicates are ignored", async ({ page }) => {
+    await login(page);
+    await page.locator("#personal-settings > summary").click();
+    await page.getByLabel("Connection name", { exact: true }).fill("Already provided");
+    await page.getByLabel("HTTPS URL", { exact: true }).fill("https://ckm.example.org/ckm/rest/");
+    await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("No duplicate was added");
+    await expect(page.getByRole("button", { name: "Remove Already provided" })).toHaveCount(0);
+    await page.getByLabel("Connection type").selectOption("github");
+    await page.getByLabel("Connection name", { exact: true }).fill("Personal models");
+    await page.getByLabel("HTTPS URL", { exact: true }).fill("https://github.com/example/personal-models");
+    await page.getByLabel("Target branch", { exact: true }).fill("drafts");
+    await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Remove Personal models" })).toBeVisible();
+    await page.locator("#personal-settings > summary").click();
+    await page.getByLabel("Save artifacts to").selectOption({ label: "Personal models · drafts" });
+    await send(page, "Use my personal repository");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await page.reload();
+    await page.getByRole("button", { name: "Use my personal repository", exact: true }).click();
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(/^[a-f0-9-]{36}$/);
+});
+
+test("upload source files, create a read-only snapshot and revoke its link", async ({ page, context }) => {
+    await login(page);
+    await page.getByLabel("Attach files", { exact: true }).setInputFiles({
+        name: "renal.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("requirement,unit\nurine volume,mL\n"),
+    });
+    await expect(page.locator("#attachment-list")).toContainText("ready");
+    await expect(page.getByRole("link", { name: "renal.csv", exact: true })).toBeVisible();
+    await send(page, "Model the source requirements");
+    await expect(page.getByRole("button", { name: "Share chat", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: "Share chat", exact: true }).click();
+    await page.getByRole("button", { name: "Create link", exact: true }).click();
+    await expect(page.getByLabel("Share link", { exact: true })).toHaveValue(/#share=/);
+    const link = await page.getByLabel("Share link", { exact: true }).inputValue();
+    const viewer = await context.newPage();
+    await viewer.goto(link);
+    await expect(viewer.getByRole("alert")).toContainText("Shared snapshot");
+    await expect(viewer.getByRole("textbox", { name: "Message the modelling assistant" })).toBeDisabled();
+    await expect(viewer.locator("#attachment-list")).toBeEmpty();
+    await expect(viewer.locator(".message.user")).toContainText("Participant");
+    await page.getByRole("button", { name: "Revoke link", exact: true }).click();
+    await expect(page.locator("#share-status")).toHaveText("Link revoked.");
+    await viewer.reload();
+    await expect(viewer.getByRole("alert")).toContainText("not found or expired");
+    await viewer.close();
+});
+
 test("sign in, tool-backed chat, code rendering, history and sign out", async ({ page }) => {
     await login(page);
     await send(page, "Which CKMs are configured?");
@@ -266,10 +317,38 @@ test("repository outage has a recoverable error and keeps navigation available",
     await expect(page.getByRole("textbox", { name: "Message the modelling assistant" })).toBeEnabled();
 });
 
+test("help is available before sign-in and topic links survive reload on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/chat/#help-files");
+    await expect(page.getByRole("tab", { name: "Help", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "2. Upload documents" })).toBeFocused();
+    await expect(page.locator("#panel-help")).toContainText("10 files");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "2. Upload documents" })).toBeFocused();
+    await page.getByRole("tab", { name: "Help", exact: true }).click();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByRole("tab", { name: "Governance", exact: true })).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(page.getByRole("tab", { name: "Help", exact: true })).toBeFocused();
+});
+
+test("contextual help stays in the workspace and preserves a draft message", async ({ page }) => {
+    await login(page);
+    await page.locator("#message").fill("Review the requirements in my publication");
+    await page.getByRole("link", { name: "Help with uploads", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "2. Upload documents" })).toBeFocused();
+    await page.getByRole("link", { name: "Add sources and repositories", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "3. Add sources and repositories" })).toBeFocused();
+    await page.getByRole("link", { name: "Return to Chat", exact: true }).click();
+    await expect(page.locator("#message")).toHaveValue("Review the requirements in my publication");
+    await expect(page.getByRole("link", { name: "User guide", exact: true })).toHaveAttribute("href", "#help");
+});
+
 test("workspace has no detected WCAG AA accessibility violations in its primary views", async ({ page }) => {
     const { default: AxeBuilder } = await import("@axe-core/playwright");
     await login(page);
-    for (const name of ["Chat", "Models", "Governance"]) {
+    for (const name of ["Chat", "Models", "Governance", "Help"]) {
         await page.getByRole("tab", { name, exact: true }).click();
         if (name === "Models") await page.getByRole("button", { name: /admission.oet/ }).click();
         if (name === "Governance")
@@ -308,7 +387,7 @@ test("provider choice is retained per conversation and connection controls expla
     await expect(page.locator("#thread")).toContainText("configured source");
     await expect(page.locator("#chat-provider")).toBeDisabled();
     await expect(page.locator("#chat-provider")).toHaveValue("claude");
-    await page.getByText("My AI connections", { exact: true }).click();
+    await page.locator("#provider-settings > summary").click();
     await expect(page.locator("#claude-connection")).toContainText("billed separately from a Claude subscription");
     await page.locator("#new-chat").click();
     await expect(page.locator("#chat-provider")).toBeEnabled();
@@ -340,7 +419,7 @@ test("disconnected users connect a personal Claude key before chatting", async (
     await page.locator("#chat-provider").selectOption("claude");
     await page.locator("#message").fill("List sources");
     await expect(page.locator("#send")).toBeDisabled();
-    await page.getByText("My AI connections", { exact: true }).click();
+    await page.locator("#provider-settings > summary").click();
     await page.locator("#claude-key").fill("sk-ant-browser-fixture");
     await page.locator("#connect-claude").click();
     await expect(page.locator("#claude-key")).toHaveValue("");

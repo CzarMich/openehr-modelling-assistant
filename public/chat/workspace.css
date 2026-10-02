@@ -229,6 +229,46 @@ body:not([data-section="chat"]) .sidebar-label {
     max-width: 860px;
     margin-bottom: 24px;
 }
+.help-panel {
+    scroll-behavior: auto;
+}
+.help-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    max-width: 860px;
+    margin-bottom: 28px;
+}
+.help-topic {
+    max-width: 860px;
+    padding: 24px;
+    margin: 18px 0;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow-wrap: anywhere;
+}
+.help-topic h2 {
+    scroll-margin-top: 24px;
+}
+.help-topic li {
+    margin: 10px 0;
+}
+.help-topic ol {
+    padding-left: 24px;
+}
+.help-example {
+    padding: 14px 18px;
+    background: var(--blue-soft);
+    border-left: 3px solid var(--blue);
+}
+.help-topic dt {
+    margin-top: 18px;
+    font-weight: 600;
+}
+.help-topic dd {
+    margin: 6px 0 18px;
+}
 .page-intro h1 {
     margin: 8px 0 12px;
 }
@@ -661,6 +701,7 @@ body:not([data-section="chat"]) .sidebar-label {
     }
     .workspace-tabs {
         flex-direction: row;
+        flex-wrap: wrap;
         gap: 4px;
         margin-top: 12px;
     }

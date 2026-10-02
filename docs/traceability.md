@@ -94,3 +94,5 @@ REQ-F19 maps CKM credentials/federation to its configuration, HTTP/domain/integr
 REQ-F21 maps the native engine boundary, compiler and project build evidence to their PHP, Java and actual MCP acceptance tests; see ADR-0020. The bounded legacy OET-to-OPT 1.4 compatibility profile and JSON transport regression are covered by ADR-0022 and the same container contract.
 
 REQ-F22 links immutable external originals and protected import receipts to repository, audit, actual MCP and browser-download tests. See [ADR-0023](decisions/0023-immutable-originals-and-import-receipts.md) and the [workflow](MODEL_IMPORTS.md).
+
+REQ-F23 links personal browser connections, attachment extraction and read-only sharing to isolated HTTP, parser, credential, revision and browser tests in `chat/test/personal-workspace.test.mjs` and `chat/test/browser.spec.mjs`. These tests use synthetic documents and mocked Git/CKM responses, not live user credentials.

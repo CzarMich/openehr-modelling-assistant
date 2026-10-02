@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Browser workspace includes a simple user guide with contextual help.
+- Browser chat adds private CKM and Git connections, source uploads and revocable conversation sharing.
 - Browser chat supports personal Claude and Codex connections with shared MCP tools.
 - MCP discovery includes the full catalogue for Codex.
 - Remove unused extension stubs, duplicate chat validation, redundant Git fetches and obsolete handoff documents.

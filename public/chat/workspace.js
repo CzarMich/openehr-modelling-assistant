@@ -11,6 +11,7 @@ const headings = {
     models: "Model repository",
     governance: "Model governance",
     accounts: "Accounts and access",
+    help: "Workspace help",
 };
 function activate(name, update = true) {
     if (!headings[name]) name = "chat";
@@ -31,22 +32,30 @@ function activate(name, update = true) {
 for (const tab of tabs) {
     tab.onclick = () => activate(tab.dataset.tab);
     tab.onkeydown = (event) => {
-        const index = tabs.indexOf(tab);
+        const available = tabs.filter((item) => !item.hidden);
+        const index = available.indexOf(tab);
         let next;
-        if (["ArrowRight", "ArrowDown"].includes(event.key)) next = (index + 1) % tabs.length;
-        else if (["ArrowLeft", "ArrowUp"].includes(event.key)) next = (index + tabs.length - 1) % tabs.length;
+        if (["ArrowRight", "ArrowDown"].includes(event.key)) next = (index + 1) % available.length;
+        else if (["ArrowLeft", "ArrowUp"].includes(event.key)) next = (index + available.length - 1) % available.length;
         else if (event.key === "Home") next = 0;
-        else if (event.key === "End") next = tabs.length - 1;
+        else if (event.key === "End") next = available.length - 1;
         else return;
         event.preventDefault();
-        tabs[next].focus();
-        activate(tabs[next].dataset.tab);
+        available[next].focus();
+        activate(available[next].dataset.tab);
     };
 }
-window.addEventListener("hashchange", () => {
+function navigateHash(initial = false) {
     const name = location.hash.slice(1);
-    if (headings[name] || !name) activate(name, false);
-});
+    const topic = name.startsWith("help-") ? $(name) : null;
+    if (topic && $("panel-help").contains(topic)) {
+        activate("help", false);
+        topic.focus();
+        topic.scrollIntoView({ block: "start" });
+    } else if (headings[name] || !name || initial) activate(name, false);
+}
+window.addEventListener("hashchange", () => navigateHash());
+$("share-help").addEventListener("click", () => $("share-dialog").close());
 
 function status(message) {
     $("model-notice").textContent = message;
@@ -205,4 +214,4 @@ fetch("/chat/api/session")
     .then((r) => r.json())
     .then(updateSession)
     .catch(() => status("Sign-in status could not be loaded. Refresh to retry."));
-activate(location.hash.slice(1), false);
+navigateHash(true);

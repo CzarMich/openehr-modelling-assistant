@@ -9,6 +9,7 @@ import {
     statSync,
     lstatSync,
     rmdirSync,
+    rmSync,
 } from "node:fs";
 import { join } from "node:path";
 
@@ -26,7 +27,10 @@ export class Store {
             for (const file of readdirSync(directory)) {
                 if (!/^[a-f0-9-]{36}\.json$/.test(file)) continue;
                 const path = join(directory, file);
-                if (Date.now() - lstatSync(path).mtimeMs > this.retentionMs) unlinkSync(path);
+                if (Date.now() - lstatSync(path).mtimeMs > this.retentionMs) {
+                    unlinkSync(path);
+                    rmSync(path.slice(0, -5), { recursive: true, force: true });
+                }
             }
             if (readdirSync(directory).length === 0) rmdirSync(directory);
         }
@@ -51,6 +55,7 @@ export class Store {
             const path = join(directory, file);
             if (Date.now() - statSync(path).mtimeMs > this.retentionMs) {
                 unlinkSync(path);
+                rmSync(path.slice(0, -5), { recursive: true, force: true });
                 continue;
             }
             const conversation = JSON.parse(readFileSync(path, "utf8"));
@@ -73,7 +78,13 @@ export class Store {
     }
     get(identity, id) {
         try {
-            return JSON.parse(readFileSync(this.path(identity, id), "utf8"));
+            const path = this.path(identity, id);
+            if (Date.now() - statSync(path).mtimeMs > this.retentionMs) {
+                unlinkSync(path);
+                rmSync(path.slice(0, -5), { recursive: true, force: true });
+                throw new Error("Expired");
+            }
+            return JSON.parse(readFileSync(path, "utf8"));
         } catch {
             throw Object.assign(new Error("Conversation not found"), { status: 404 });
         }
@@ -88,5 +99,6 @@ export class Store {
     delete(identity, id) {
         this.get(identity, id);
         unlinkSync(this.path(identity, id));
+        rmSync(this.path(identity, id).slice(0, -5), { recursive: true, force: true });
     }
 }
