@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // Protocol fixture, never shipped in the runtime image.
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 import assert from "node:assert/strict";
 const args = process.argv.slice(2).join(" ");
@@ -20,6 +22,22 @@ const send = (data) => process.stdout.write(JSON.stringify(data) + "\n");
 createInterface({ input: process.stdin }).on("line", (line) => {
     const m = JSON.parse(line);
     if (m.method === "initialize") send({ id: m.id, result: { userAgent: "fixture" } });
+    if (m.method === "account/login/start") {
+        assert.equal(m.params.type, "chatgptDeviceCode");
+        assert.ok(process.env.CODEX_HOME);
+        writeFileSync(join(process.env.CODEX_HOME, "auth.json"), JSON.stringify({ token: "personal-fixture" }), {
+            mode: 0o600,
+        });
+        send({
+            id: m.id,
+            result: {
+                type: "chatgptDeviceCode",
+                verificationUrl: "https://auth.openai.com/codex/device",
+                userCode: "TEST-CODE",
+            },
+        });
+        send({ method: "account/login/completed", params: { success: true } });
+    }
     if (m.method === "thread/start") {
         assert.equal(m.params.sandbox, "read-only");
         assert.equal(m.params.approvalPolicy, "never");

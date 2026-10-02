@@ -82,15 +82,14 @@ export class McpClient {
         this.sequence = 0;
         this.session = null;
         this.protocolVersion = "2025-03-26";
+        this.initialized = false;
     }
     async rpc(method, params, notification = false) {
         const id = ++this.sequence,
             headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream" };
         if (this.config.mcpKey) headers[this.config.mcpKeyHeader] = this.config.mcpKey;
-        if (this.session) {
-            headers["Mcp-Session-Id"] = this.session;
-            headers["MCP-Protocol-Version"] = this.protocolVersion;
-        }
+        if (this.session) headers["Mcp-Session-Id"] = this.session;
+        if (this.initialized) headers["MCP-Protocol-Version"] = this.protocolVersion;
         const response = await fetch(this.config.mcpUrl, {
             method: "POST",
             headers,
@@ -131,6 +130,7 @@ export class McpClient {
         return result.result;
     }
     async tools() {
+        if (this.catalogue) return this.catalogue;
         const initialized = await this.rpc("initialize", {
             protocolVersion: "2025-11-25",
             capabilities: {},
@@ -139,18 +139,43 @@ export class McpClient {
         if (!["2025-03-26", "2025-06-18", "2025-11-25"].includes(initialized.protocolVersion))
             throw new Error("Unsupported modelling protocol version");
         this.protocolVersion = initialized.protocolVersion;
+        this.initialized = true;
         await this.rpc("notifications/initialized", {}, true);
         const tools = [];
+        const cursors = new Set();
         let cursor;
         do {
             const result = await this.rpc("tools/list", cursor ? { cursor } : {});
             tools.push(...result.tools);
             cursor = result.nextCursor;
-            if (tools.length > 100) throw new Error("Tool catalogue too large");
+            if (tools.length > 100 || cursors.size >= 100 || (cursor && cursors.has(cursor)))
+                throw new Error("Tool catalogue too large or pagination did not advance");
+            if (cursor) cursors.add(cursor);
         } while (cursor);
-        return tools.filter(
+        this.catalogue = tools.filter(
             (tool) => READ_TOOLS.has(tool.name) || (this.config.allowWrites && WRITE_TOOLS.has(tool.name)),
         );
+        return this.catalogue;
+    }
+    async close() {
+        if (!this.session) return;
+        const session = this.session;
+        this.session = null;
+        try {
+            const response = await fetch(this.config.mcpUrl, {
+                method: "DELETE",
+                headers: {
+                    "Mcp-Session-Id": session,
+                    "MCP-Protocol-Version": this.protocolVersion,
+                    ...(this.config.mcpKey ? { [this.config.mcpKeyHeader]: this.config.mcpKey } : {}),
+                },
+                signal: AbortSignal.timeout(3000),
+                redirect: "error",
+            });
+            await response.body?.cancel();
+        } catch {
+            // Expiry remains the fallback if the server is unreachable during cleanup.
+        }
     }
     async call(name, args) {
         if (!READ_TOOLS.has(name) && !(this.config.allowWrites && WRITE_TOOLS.has(name)))

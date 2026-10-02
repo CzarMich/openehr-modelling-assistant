@@ -6,7 +6,7 @@ openEHR Modelling Assistant is a PHP 8.4 application. MCP and a versioned human 
 flowchart TB
     Browser[Unified workspace: Chat, Models and Governance] --> Chat[Chat service: sessions, history and write confirmation]
     Chat <--> Identity[OIDC identity provider]
-    Chat <--> Codex[Isolated Codex client]
+    Chat <--> Codex[Personal Claude or Codex connection]
     Chat --> MCP[MCP tools, prompts and resources]
     AI[Codex, Copilot Studio or another MCP client] --> MCP[MCP tools, prompts and resources]
     UI[Future visual editor / general API] -.-> Core[Modelling domain services]
@@ -73,7 +73,7 @@ XML/JSON parsing is deterministic and separate from document structure. OET/OPT 
 
 Source selection and outbound credentials are deployment-controlled. The CKM domain port isolates shared federated aggregation from its configured integration; credentials never appear in source discovery. Each CKM tool accepts a configured source name; it cannot accept an arbitrary destination URL. See [configuration](CONFIGURATION.md), [repository](MODEL_REPOSITORY.md), [terminology](TERMINOLOGY.md), [governance](GOVERNANCE.md), and the [capability matrix](../CAPABILITIES.md).
 
-The optional [browser chat](BROWSER_CHAT.md) is a separate Node MCP client with a pinned Codex runtime. It keeps provider/MCP credentials server-side and requires exact-change confirmation for repository writes. Browser OIDC authenticates chat users independently of native MCP bearer verification; neither boundary yet supplies project-level RBAC. Conversation storage is private to each signed-in identity, while the configured model repository may be shared.
+The optional [browser chat](BROWSER_CHAT.md) is a separate Node MCP client with personal Claude and Codex connections. It keeps provider/MCP credentials server-side and requires exact-change confirmation for repository writes. Browser OIDC authenticates chat users independently of native MCP bearer verification; neither boundary yet supplies project-level RBAC. Conversation storage is private to each signed-in identity, while the configured model repository may be shared.
 
 The [binding-plan application service](TERMINOLOGY_BINDING_PLANS.md) combines a domain inspector interface, an XML adapter and a pure membership planner. It preserves source bytes, records source/catalogue revisions, exposes unresolved choices, and recomputes evidence freshness. It never applies native bindings or approves a clinical model. Native inherited semantics remain an engine boundary.
 

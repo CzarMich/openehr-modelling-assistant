@@ -1,6 +1,6 @@
 # Testing
 
-Run offline unit, schema and regression checks with `make ci`. Tests mock external HTTP. Coverage spans preserved upstream tools/prompts/resources, configuration, auth rejection, named CKMs, secure XML, draft provenance, storage traversal/concurrency/history, governance refusal, traceability and local/FHIR terminology. `make conformance` runs isolated production HTTP/stdio product probes and pinned applicable official MCP scenarios, with no expected failures in the gate. The historical whole demonstration-suite result remains diagnostic evidence; see [the protocol profile](MCP_PROTOCOL.md).
+Run offline unit, schema and regression checks with `make ci`. Run `npm --prefix chat test`, `npm --prefix chat run check:format` and `npm --prefix chat run test:browser` for the browser service, including personal provider isolation. Tests mock external HTTP. Coverage spans preserved upstream tools/prompts/resources, configuration, auth rejection, named CKMs, secure XML, draft provenance, storage traversal/concurrency/history, governance refusal, traceability and local/FHIR terminology. `make conformance` runs isolated production HTTP/stdio product probes and pinned applicable official MCP scenarios, with no expected failures in the gate. The historical whole demonstration-suite result remains diagnostic evidence; see [the protocol profile](MCP_PROTOCOL.md).
 
 Run the independent protocol client against a running container:
 

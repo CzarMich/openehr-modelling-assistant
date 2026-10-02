@@ -6,12 +6,13 @@
     "node": ">=22.22"
   },
   "scripts": {
-    "start": "node src/server.mjs",
+    "start": "node entrypoint.mjs",
     "test": "node --test test/*.test.mjs",
     "test:browser": "playwright test --config playwright.config.mjs",
     "check:format": "prettier --check src test entrypoint.mjs playwright.config.mjs ../public/chat"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "openid-client": "6.8.8"
   },
   "devDependencies": {

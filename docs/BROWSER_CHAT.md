@@ -1,114 +1,131 @@
-# Chat with the modelling assistant
+# Browser chat
 
-Open the [development chat](https://dev-openehr-modelling.sandbox.hygeoniq.com/chat/) and select **Sign in to start chatting**. Sign in through the organisation's identity provider. No terminal, MCP configuration or API key is needed in the browser. The development instance uses its configured Codex account to answer questions and call the modelling tools.
+Open `/chat/`, sign in to the modelling workspace, and open **My AI connections**.
+Each user connects their own provider account. Choose **Codex** or **Claude** before
+starting a conversation; a conversation keeps that provider when reopened.
 
-## Using the workspace
+- **Codex:** select **Connect Codex**, open the displayed sign-in link and enter the
+  one-time code. Complete sign-in with your ChatGPT account. Device-code access must
+  be enabled for that account or organisation.
+- **Claude:** enter an Anthropic API key. Claude API usage is billed separately from
+  a Claude subscription. Subscription sign-in is not offered in this application.
+- **Disconnect** removes that connection from the modelling service and stops its
+  active responses. To revoke access at the provider too, use that provider's account
+  settings. Signing out of the workspace leaves the saved connection available for
+  your next sign-in.
 
-- Start with a suggested question or type your own. Enter sends; Shift+Enter adds a line.
-- Ask to find an archetype, explain modelling guidance, inspect a project, review a draft or plan a template. For example: “List the available CKM sources and find a blood pressure archetype.”
-- Replies stream into the conversation. Activity badges show actual modelling-tool calls and whether they completed or failed. Follow source links and copy code blocks or responses as needed.
-- Continue with a follow-up question. Previous user/assistant messages supply conversational context; older context is bounded, so restate important details in a long discussion.
-- Use **New conversation** for another topic. Conversations are private to the signed-in identity and can be reopened or deleted from the sidebar. The model repository can be shared with other authorised users.
-- When writes are enabled, review the exact proposed project/artifact change and select **Confirm save** or **Cancel change**. Every write requires a separate confirmation. Revision conflicts are returned by the existing repository adapter. Confirming a draft save does not approve or release a model.
-- **Stop response** cancels further processing. A write already completed remains in repository history. Sign out ends this browser's chat session and stops that user's active turns; it does not globally sign out of other organisational applications.
+Codex uses its [official app-server device flow](https://learn.chatgpt.com/docs/app-server).
+Anthropic requires approval to offer Claude subscription sign-in in third-party
+applications; its [supported integration](https://code.claude.com/docs/en/agent-sdk/overview)
+uses API credentials. External Claude and Codex clients can independently use the
+[same MCP endpoint](MCP_CLIENTS.md).
 
-Terminology servers and bindings remain optional. The chat uses the same domain tools as other MCP clients, including [native ADL 2 validation, AQL parsing and format-specific OPT compilation](OPT_COMPILATION.md) when the engine is enabled. Saving a project build requires exact-change confirmation. Visual editing, CDR execution and clinical approval remain separate capabilities. Use modelling examples and synthetic data in the development environment.
+## Conversations
 
-## Architecture
+Ask to find an archetype, inspect a project, explain guidance, review a draft or plan
+a template. For example: “List the CKM sources and find a blood pressure archetype.”
+Replies stream into the conversation; activity badges show modelling-tool calls.
 
-```mermaid
-flowchart LR
-    User[Browser user] --> UI[Chat workspace]
-    UI --> Gateway[Chat service: sessions, history and streaming]
-    Gateway <--> Identity[OIDC identity provider]
-    Gateway <--> Agent[Isolated Codex client]
-    Agent --> Calls[Declared modelling tools]
-    Calls --> Confirm{Repository write?}
-    Confirm -->|Read or compute| MCP[Existing MCP service]
-    Confirm -->|Write| Human[Exact change confirmed in browser]
-    Human --> MCP
-    MCP --> Models[Filesystem or Git Model Repository]
-    MCP --> CKM[Named CKM sources]
-    MCP --> Terms[Optional terminology provider]
-```
+Enter sends a message; Shift+Enter adds a line. **New conversation** starts another
+topic or lets you select a different provider. Conversations are private to the
+signed-in identity; the model repository can be shared with other authorised users.
+Older conversation context is bounded, so restate details needed in long discussions.
 
-The Node chat service is a separate MCP client. PHP modelling services stay client-neutral. Codex receives a bounded transcript and explicitly declared modelling tools. Shell execution, image tools, external apps and agent delegation are disabled; unhandled permission requests are rejected. Its code-mode helper supports tool dispatch within the isolated container. The container has no application source checkout, host workspace, Docker socket or model-storage mount. The browser receives neither the MCP key nor the model-provider credential. Codex account credentials stay in its private runtime volume.
+Model writes require **Confirm save** for the exact proposed change. Cancelling or
+stopping a response prevents further calls; a completed write stays in repository
+history. Saving a draft does not approve or release a model. The **Models** and
+**Governance** tabs work without a provider connection. See the
+[workspace guide](BROWSER_WORKSPACE.md).
 
-The adapter uses the [official Codex app-server protocol](https://learn.chatgpt.com/docs/app-server). Its dynamic-tool interface is experimental, so the runtime version is pinned and protocol changes need testing before upgrades. The identity client uses [openid-client](https://github.com/panva/openid-client), with authorization code flow, PKCE, state, nonce and ID-token signature/issuer/audience/time verification.
+## Deployment
 
-## Deploying browser chat
+1. Copy `.env.chat.example` to a protected file outside Git and set
+   `MODELLING_CHAT_ENV_FILE` to that path.
+2. Configure [OIDC or native workspace identity](IDENTITY_AND_ACCESS.md). For OIDC,
+   register the exact callback `https://<host>/chat/auth/callback` with PKCE S256.
+3. Set `CHAT_MCP_URL` and its service credential. Allow the internal hostname in
+   `MCP_ALLOWED_HOSTS` when using Docker-internal HTTP.
+4. Generate a separate encryption key with `openssl rand -hex 32` and store it as
+   `CHAT_PROVIDER_ENCRYPTION_KEY`. Back it up separately from `chat-data`.
+5. Set `MODELLING_BROWSER_TARGET=chat` and `CHAT_ENABLED=true`, then rebuild with
+   `docker compose up -d --build --wait`.
+6. Sign in, connect a personal provider and request a read-only tool call. A healthy
+   container does not prove that an account can generate a reply.
 
-The default Compose stack builds the chat image but keeps chat disabled until configured. MCP remains available independently. Caddy forwards `/chat` and `/chat/*` to the private chat service; only the existing ingress port is published. The root introduction page links to the chat workspace.
+The default `reviews` image supports model browsing and human review without the
+Codex executable. The `chat` image adds the pinned Codex runtime. Claude uses the
+pinned Anthropic SDK. The PHP MCP service remains independent of both.
 
-1. Copy `.env.chat.example` to a protected external environment file. Set `MODELLING_CHAT_ENV_FILE` to its absolute path when running Compose. Keep it outside Git and restrict it to the deployment account.
-2. Register a confidential OIDC client with authorization code flow and PKCE S256. Register the exact redirect URI `https://<modelling-host>/chat/auth/callback`; use the site's exact origin for permitted web origins. Password grants, implicit flow and service accounts are unnecessary for browser sign-in.
-3. Set the public URL, issuer, client ID and secret. Optionally restrict admission with `CHAT_ALLOWED_GROUPS`; configure a signed `groups` claim in the ID token. An empty list admits authenticated users of the configured issuer.
-4. Set the fixed MCP URL and its service key. For Docker-internal HTTP, include the internal hostname in `MCP_ALLOWED_HOSTS`; HTTPS must verify the endpoint's certificate. Browser requests never choose the upstream URL or header.
-5. Provision a Codex account for this service. Mount a protected initial `auth.json` at `/run/secrets/codex-auth.json:ro`. Startup copies it into the dedicated `chat-codex` volume only when that volume has no credential; token refresh updates the runtime copy. Reauthentication/rotation requires replacing the runtime credential and restarting the service. Do not mount the administrator's entire Codex directory or share personal workspace tools. The development setup uses the already authorised local account; this is not evidence of enterprise provider approval or a separate account for every browser user.
-6. Enable `CHAT_ENABLED=true`. Enable `CHAT_ALLOW_WRITES=true` only if model writes are intended and also enabled on the MCP service. The browser confirmation remains mandatory when writes are enabled.
-7. Run `docker compose up -d --build --wait`, verify Keycloak sign-in in an actual browser, ask for a CKM lookup, inspect the tool activity and verify that the response uses real results. A healthy container alone does not prove the provider account can generate a reply.
+The development override `deploy/compose.chat-dev.yml` adds the private CA and
+identity routing. It needs `MODELLING_CHAT_ENV_FILE` and `MODELLING_CA_FILE`.
+Certificate verification stays enabled.
 
-`deploy/compose.chat-dev.yml` documents the development credential/CA mounts and local identity routing. Layer it over the normal development, gateway and Git-secret Compose files. It uses `MODELLING_CHAT_ENV_FILE`, `MODELLING_CODEX_AUTH_FILE` and `MODELLING_CA_FILE`. The development CA must be trusted by browsers, Node and the provider runtime; certificate verification stays enabled. Hosted clients do not inherit a workstation's hosts file.
+### Migrating the shared-account deployment
+
+Set the new encryption key before rebuilding an enabled chat service. The service
+no longer reads `/run/secrets/codex-auth.json` or the shared `chat-codex` volume.
+Existing conversations and model data remain intact; each user must connect their
+own provider before continuing. Old conversations belong to Codex. The old credential
+volume is left untouched by the upgrade and can be retired separately after migration.
 
 ## Configuration
 
-These settings belong to the optional chat service, not PHP `Settings` or inbound MCP authentication.
-
 | Variable | Default | Purpose |
 |---|---|---|
-| `CHAT_ENABLED` | `false` | Enable authenticated browser conversations |
-| `CHAT_PUBLIC_URL` | `http://localhost:8350` | Exact browser origin; HTTPS required except explicit loopback development |
-| `CHAT_OIDC_ISSUER` | empty | Pinned HTTPS identity issuer |
-| `CHAT_OIDC_CLIENT_ID` | empty | Confidential browser application's client identifier |
-| `CHAT_OIDC_CLIENT_SECRET` | empty | Server-side client credential |
-| `CHAT_LOCAL_IDENTITY_ENABLED` | `false` | Enable native local accounts alongside or instead of OIDC |
-| `CHAT_LOCAL_IDENTITY_ISSUER` | `<browser-origin>/identity/local` | Stable issuer for local review identity; match `GOVERNANCE_LOCAL_IDENTITY_ISSUER` |
-| `CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY` | empty | Separate 32-byte hex secret used to encrypt TOTP seeds; required for native identity |
-| `CHAT_ALLOWED_GROUPS` | empty | Comma-separated allowed signed ID-token groups; empty admits issuer users |
-| `CHAT_MCP_URL` | `http://ingress:8343/mcp` | Fixed modelling-service endpoint |
-| `CHAT_MCP_API_KEY` | empty | Server-side service credential, if required by MCP |
-| `CHAT_MCP_API_KEY_HEADER` | `X-API-Key` | MCP credential header |
-| `CHAT_ALLOW_WRITES` | `false` | Expose project/artifact writes with per-call browser confirmation |
-| `CHAT_MODEL` | `gpt-6-sol` | Model available to the configured Codex account |
-| `CHAT_TURN_TIMEOUT_SECONDS` | `240` | Turn timeout, bounded to 30–600 seconds |
-| `CHAT_DATA_DIR` | `/data/chat` | Private conversation storage |
-| `CHAT_CODEX_WORK_DIR` | `/workspace` | Empty isolated working directory |
-| `CHAT_CODEX_BINARY` | `codex` | Administrator-controlled executable, never a browser parameter |
-| `CHAT_PORT` | `8350` | Private HTTP listener |
-| `MODELLING_CHAT_ENV_FILE` | `.env.chat` | Compose environment file path |
+| `CHAT_ENABLED` | `false` | Enable authenticated chat |
+| `CHAT_PUBLIC_URL` | `http://localhost:8350` | Exact origin; HTTPS except loopback development |
+| `CHAT_OIDC_ISSUER`, `CHAT_OIDC_CLIENT_ID`, `CHAT_OIDC_CLIENT_SECRET` | empty | Workspace OIDC client |
+| `CHAT_ALLOWED_GROUPS` | empty | Optional signed group allowlist |
+| `CHAT_LOCAL_IDENTITY_ENABLED` | `false` | Enable native accounts; see [identity configuration](IDENTITY_AND_ACCESS.md) |
+| `CHAT_LOCAL_IDENTITY_ISSUER` | `<origin>/identity/local` | Stable native identity issuer |
+| `CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY` | empty | Separate native TOTP encryption key |
+| `CHAT_PROVIDER_ENCRYPTION_KEY` | empty | Required 32-byte hex key for personal provider credentials |
+| `CHAT_MCP_URL` | `http://ingress:8343/mcp` | Fixed MCP endpoint |
+| `CHAT_MCP_API_KEY`, `CHAT_MCP_API_KEY_HEADER` | empty, `X-API-Key` | Server-side MCP credential |
+| `CHAT_ALLOW_WRITES` | `false` | Enable confirmed writes; MCP write permission is also required |
+| `CHAT_MODEL` | `gpt-6-sol` | Codex model |
+| `CHAT_CLAUDE_MODEL` | `claude-sonnet-5-5` | Claude model available to the user's API account |
+| `CHAT_TURN_TIMEOUT_SECONDS` | `240` | Turn deadline, bounded to 30–600 seconds |
+| `CHAT_DATA_DIR` | `/data/chat` | Private identity, conversations and encrypted connections |
+| `CHAT_CODEX_WORK_DIR`, `CHAT_CODEX_BINARY` | `/workspace`, `codex` | Isolated working directory and executable |
+| `CHAT_PORT` | `8350` | Internal HTTP port |
 
-Sessions use opaque HttpOnly, SameSite cookies, Secure on HTTPS. Mutations require a same-origin request and session-bound CSRF token. OIDC login state is single-use. Native local accounts require a one-time owner bootstrap, password plus TOTP, and store persistent revocable sessions, one-use recovery codes, role assignments and a chained identity audit. Their identity data is isolated under `CHAT_DATA_DIR/identity`; TOTP seeds use the separate encryption key. This backend supports one chat instance on one host only; do not share it between replicas. Invitations and recovery links are operator-delivered because no mail service is configured. Conversations persist across restart, expire after 30 days without activity and are pruned at startup and hourly. Limits include 100 conversations per user, 80 messages per conversation, 8,000 characters per submitted message, 16 tool calls per turn, three simultaneous turns and 10 message submissions per user per minute. Long transcripts and tool outputs are bounded. Per-project user RBAC remains separate work.
+Review settings are documented in [review deployment](REVIEW_DEPLOYMENT.md).
 
-Back up `chat-data` as private application data and preserve the external local-identity encryption key separately; restore both together in an isolated test. Protect `chat-codex` as credential storage. User deletion and retention remove active conversation files; backup retention is an operator responsibility. Provider account data handling and retention follow that account's configuration. Application logs omit prompts, replies and credentials.
+## Privacy and limits
 
-## Repeatable verification
+Both providers receive the conversation and selected tool results. Neither receives
+the MCP service key. Credentials are encrypted using AES-256-GCM and bound to the
+verified workspace identity and provider. They are never returned by status endpoints.
+Codex receives a private temporary credential directory per operation, removed after
+the process exits. Refreshed credentials cannot restore a disconnected account.
+There is no shared-account fallback.
+
+The browser and provider use the same tool allowlist, call limits and write-confirmation
+path. Native shell, files, external plugins and agent delegation are disabled in Codex;
+Claude receives only the declared modelling tools. The container has no Docker socket,
+source checkout or model-storage mount.
+
+Sessions use HttpOnly, SameSite cookies with Secure on HTTPS. Mutations require
+same-origin requests and a session CSRF token. Limits include 100 conversations per
+user, 80 messages per conversation, 8,000 characters per message, 16 tool calls per
+turn and three simultaneous turns. A user can run one Codex turn at a time to avoid
+refresh-token races. Up to three device sign-ins can run at once, each for ten minutes.
+
+Conversation files expire after 30 days without activity. Backups have their own
+retention. Protect `chat-data` and the encryption keys; restore them together.
+This file-backed browser service supports one instance, not multiple replicas.
+
+## Verification
 
 ```sh
 npm ci --prefix chat
 npm --prefix chat test
-cd chat
-npx playwright install --with-deps chromium
-npm run test:browser
+npm --prefix chat run check:format
+npm --prefix chat run test:browser
 ```
 
-Security tests exercise identity signatures/claims, state replay, group restrictions, sessions, CSRF, cross-user conversation access, tool allowlists, exact write confirmation, cancellation, provider protocol and retention. Browser tests use a clearly separated deterministic fixture and cover sign-in UX, streaming, history, code rendering, write confirmation, cancellation, mobile layout and untrusted markup. The fixture is excluded from the runtime image. Live development verification uses the actual identity provider, Codex account and MCP service; see the implementation report and evidence. Native MCP bearer-token verification is a separate [implemented identity adapter](OIDC.md); the browser client retains its explicitly configured upstream credential.
-
-To check the configured container's three-turn concurrency limit with actual provider and read-only MCP calls, run from the repository root:
-
-```sh
-docker exec -i openehr-modelling-dev-chat-1 node --input-type=module < chat/test/live-concurrency.mjs
-```
-
-This probe uses the configured provider account and reports successful turns and container task limits without printing conversation content or credentials. The container allows 512 tasks; each provider process limits its Tokio and Rayon worker pools to two threads. This avoids exhausting the process/thread allowance on hosts with many CPU cores.
-
-The MCP client bounds a complete response at 16 MiB, including both structured and text representations. This permits bounded catalogue/model records without truncating the protocol result; streaming is cancelled above the limit. Tool outputs remain untrusted input to the assistant, and writes still require exact-change confirmation.
-
-Draft binding-plan saves display the exact model revision, plan revision and declared aliases for confirmation. This confirms a repository write only; it cannot approve clinical content. Read-only inspection, planning and freshness checks are available without an external terminology server.
-
-## Independent human review
-
-The **Model review** link opens `/chat/reviews`. Select a project, inspect the exact source revision, validation findings and audit history, and explicitly confirm a role-permitted decision. This workspace can run with `CHAT_ENABLED=false` and no model-provider account. See [review identity/deployment](REVIEW_DEPLOYMENT.md) and [governance](GOVERNANCE.md). Chat tools can prepare and request review but cannot clinically approve a model.
-
-The default browser image now uses the `reviews` target. To enable conversational chat, set `MODELLING_BROWSER_TARGET=chat` in the Compose environment or use the existing development chat override before rebuilding. This keeps the default deployment independent of a provider executable.
-
-The [unified browser workspace](BROWSER_WORKSPACE.md) provides Chat, Models and Governance in one window. Model browsing reads the configured filesystem, Git or SharePoint repository and carries the selected revision into chat.
+Tests cover provider isolation and encryption, cancellation, tool results and errors,
+write confirmation, sessions, CSRF, history, mobile layout and accessibility. Provider
+fixtures use no live accounts. Live acceptance requires each user's sign-in or API
+key; a simulated reply is not provider acceptance.

@@ -91,6 +91,7 @@ test("configuration refuses non-TLS public origins, embedded credentials, missin
     assert.equal(
         loadConfig({
             CHAT_ENABLED: "true",
+            CHAT_PROVIDER_ENCRYPTION_KEY: "cd".repeat(32),
             CHAT_LOCAL_IDENTITY_ENABLED: "true",
             CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY: "ab".repeat(32),
             CHAT_PUBLIC_URL: "https://models.example",
@@ -519,4 +520,71 @@ test("concurrent model reads are bounded and capacity is recovered after errors"
     release();
     await Promise.all([first, second]);
     assert.equal((await f.request("/chat/api/models/projects")).status, 503);
+});
+
+test("JSON scalar and array request bodies return client errors", async (t) => {
+    const f = await fixture(t);
+    const conversation = await (await f.request("/chat/api/conversations", { method: "POST" })).json();
+    for (const data of [null, [], "text", 42]) {
+        const response = await f.request("/chat/api/conversations/" + conversation.id + "/messages", {
+            method: "POST",
+            data,
+        });
+        assert.equal(response.status, 400);
+    }
+});
+
+test("personal provider routes enforce identity, CSRF and connection ownership", async (t) => {
+    const { Providers } = await import("../src/providers.mjs");
+    const directory = mkdtempSync(join(tmpdir(), "provider-http-"));
+    t.after(() => rmSync(directory, { recursive: true, force: true }));
+    const provider = new Providers(
+        { enabled: true, dataDir: directory, providerEncryptionKey: "ef".repeat(32) },
+        {
+            claude: () => ({
+                run: async ({ onEvent }) => {
+                    onEvent({ type: "delta", text: "Personal reply" });
+                    return "Personal reply";
+                },
+            }),
+        },
+    );
+    const f = await fixture(t, { provider });
+    const key = "sk-ant-" + "x".repeat(40);
+    for (const options of [{ user: null }, { csrf: false }, { originHeader: "https://untrusted.example" }]) {
+        const response = await f.request("/chat/api/providers/claude", {
+            method: "POST",
+            data: { apiKey: key },
+            ...options,
+        });
+        assert.ok([401, 403].includes(response.status));
+    }
+    assert.equal(
+        (await f.request("/chat/api/providers/claude", { method: "POST", data: { apiKey: key } })).status,
+        200,
+    );
+    const alice = await (await f.request("/chat/api/providers")).json();
+    const bob = await (await f.request("/chat/api/providers", { user: "bob" })).json();
+    assert.equal(alice.providers.find((p) => p.id === "claude").connected, true);
+    assert.equal(bob.providers.find((p) => p.id === "claude").connected, false);
+    assert.ok(!JSON.stringify(alice).includes(key));
+    const conversation = await (
+        await f.request("/chat/api/conversations", { method: "POST", data: { provider: "claude" } })
+    ).json();
+    assert.equal(conversation.provider, "claude");
+    const response = await f.request("/chat/api/conversations/" + conversation.id + "/messages", {
+        method: "POST",
+        data: { content: "Hello" },
+    });
+    assert.match(await response.text(), /Personal reply/);
+    await f.request("/chat/api/providers/claude", { method: "DELETE" });
+    const disconnected = await f.request("/chat/api/conversations/" + conversation.id + "/messages", {
+        method: "POST",
+        data: { content: "Hello again" },
+    });
+    assert.equal(disconnected.status, 409);
+    assert.equal(
+        (await f.request("/chat/api/conversations", { method: "POST", data: { provider: "external" } })).status,
+        400,
+    );
 });

@@ -19,7 +19,8 @@ not permission to perform external writes.
 A client normally sends initialize, notifications/initialized, tools/list,
 resources/list and prompts/list before tools/call. It may also request resource
 contents and prompt bodies. Protocol version is negotiated by the SDK; this server
-retains the upstream preferred version 2025-03-26.
+supports 2025-03-26, 2025-06-18 and 2025-11-25. The current catalogue fits in one
+discovery page so clients that stop after the first page can discover every tool.
 
 ## stdio
 
@@ -54,8 +55,25 @@ startup_timeout_sec = 30
 tool_timeout_sec = 120
 ```
 
-Supply `OPENEHR_MODELLING_API_KEY` to the Codex process from your secret manager. Do not paste it into a repository configuration file. Recent Codex versions also support `http_headers_helper`, an absolute local command that returns a JSON header map. A helper can read a private credential file, avoiding a secret in TOML or dependence on the launching shell's environment. Do not run the helper interactively or log its output. Verify support with the installed Codex version.
+Supply `OPENEHR_MODELLING_API_KEY` to the Codex process from your secret manager.
+Do not put its value in repository configuration. `codex mcp list` shows the configured
+servers; the MCP status view confirms discovery. Codex CLI and its IDE extension share
+this configuration. The endpoint and service credential are the same ones used by
+other authorised MCP clients; no second server or client plugin is needed.
 
-The configured development connection is named `openehr_modelling_dev` and uses `https://dev-openehr-modelling.sandbox.hygeoniq.com/mcp`. On the development machine a private credential helper supplies its separate dev API key. The installed Codex app-server successfully initialized and discovered the tools; evidence is in `evidence/codex-dev-connection.json`. New Codex sessions load this configuration. An already-running conversation may need to reconnect before the tools appear.
+For the managed deployments, use either
+`https://openehr-modelling.sandbox.hygeoniq.com/mcp` or
+`https://dev-openehr-modelling.sandbox.hygeoniq.com/mcp` with that deployment's credential.
+The development host requires network access and trust in its private CA. Hosted
+clients do not inherit your workstation's hosts file or VPN connection.
 
-Check configuration with `codex mcp get openehr_modelling_dev`; verify discovery in Codex's MCP status view. The service root links to the optional [browser chat](BROWSER_CHAT.md), which provides its own protected chat interface. The local Codex connection remains independent. For hosted clients, local hosts-file mappings do not provide network reachability: their execution environment must resolve and reach the endpoint and trust its certificate authority.
+## Claude
+
+Use the existing remote connector at the same HTTPS `/mcp` URL. Keep the
+administrator-configured authentication for that deployment. Claude's remote-connector
+settings and Codex's TOML are client-specific; the server setup and tools are shared.
+If your Claude surface cannot send the configured API-key header, use an authenticated
+MCP gateway supported by that surface rather than disabling server authentication.
+
+The browser `/chat/` is a separate client of this same service. It provides one workspace
+with personal Claude or Codex connections; see [browser setup](BROWSER_CHAT.md).

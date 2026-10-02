@@ -133,7 +133,7 @@ For the configured private model remote, also supply `MODEL_GIT_KEY_HOST_PATH` a
 
 ## Optional browser chat
 
-See [browser chat deployment](BROWSER_CHAT.md#deploying-browser-chat) for the separate OIDC client, Codex account, private conversation/credential volumes, environment variables and browser acceptance tests. Default deployments keep chat disabled until those dependencies are configured. Enabling it does not change MCP API-key authentication or require a terminology server.
+See [browser chat deployment](BROWSER_CHAT.md#deploying-browser-chat) for the workspace identity, personal provider connections, private conversation storage, environment variables and browser acceptance tests. Default deployments keep chat disabled until those dependencies are configured. Enabling it does not change MCP API-key authentication or require a terminology server.
 
 For hosted model review workflows, use `MODEL_REPOSITORY_PROVIDER=github` or `gitlab` with the existing Git remote/cache/key settings and a privately injected `MODEL_HOSTED_TOKEN`. Set `MODEL_GIT_REVIEW_TARGET` separately from the working branch. Run the [hosted acceptance harness](HOSTED_REPOSITORIES.md#repeatable-verification) against a disposable synthetic branch before enabling repository writes for users. Neither a terminology server nor a CDR is required.
 

@@ -2,11 +2,10 @@ import http from "node:http";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { loadConfig } from "./config.mjs";
 import { Auth } from "./auth.mjs";
 import { Store } from "./store.mjs";
 import { McpClient, WRITE_TOOLS } from "./mcp.mjs";
-import { CodexProvider } from "./codex.mjs";
+import { Providers } from "./providers.mjs";
 import { ReviewClient } from "./reviews.mjs";
 import { readModels } from "./models.mjs";
 
@@ -15,8 +14,8 @@ const json = (res, status, data) => {
     res.writeHead(status, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data));
 };
-async function body(req) {
-    if (!req.headers["content-type"]?.startsWith("application/json"))
+async function body(req, allowed, message = "Invalid request fields.") {
+    if (!/^application\/json(?:\s*;|$)/i.test(req.headers["content-type"] || ""))
         throw Object.assign(new Error("Expected JSON"), { status: 415 });
     let size = 0,
         parts = [];
@@ -25,11 +24,20 @@ async function body(req) {
         if (size > 32768) throw Object.assign(new Error("Message is too large"), { status: 413 });
         parts.push(chunk);
     }
+    let input;
     try {
-        return JSON.parse(Buffer.concat(parts).toString("utf8"));
+        input = JSON.parse(Buffer.concat(parts).toString("utf8"));
     } catch {
         throw Object.assign(new Error("Invalid JSON"), { status: 400 });
     }
+    if (
+        !input ||
+        typeof input !== "object" ||
+        Array.isArray(input) ||
+        (allowed && Object.keys(input).some((key) => !allowed.includes(key)))
+    )
+        throw Object.assign(new Error(message), { status: 400 });
+    return input;
 }
 
 // Serialize tool calls so each write confirmation identifies exactly one pending change.
@@ -47,7 +55,7 @@ export function createApplication(
     {
         auth = new Auth(config),
         store = new Store(config.dataDir + "/conversations", config.retentionDays),
-        provider = new CodexProvider(config),
+        provider = new Providers(config),
         mcpFactory = (signal) => new McpClient(config, signal),
         reviews = new ReviewClient(config),
     } = {},
@@ -130,6 +138,13 @@ export function createApplication(
                         ? { totpSecret: session.totpSecret, otpAuthUrl: session.otpAuthUrl }
                         : {}),
                     retentionDays: config.retentionDays,
+                    providers:
+                        session && !session.mfaSetupRequired && config.enabled
+                            ? provider.status?.(session.identity) || [
+                                  { id: "codex", name: "Codex", connected: true },
+                                  { id: "claude", name: "Claude", connected: true },
+                              ]
+                            : [],
                 });
             }
             if (!config.enabled && !config.reviewEnabled && !config.identityEnabled)
@@ -142,74 +157,44 @@ export function createApplication(
             if (req.method === "POST" && path.startsWith("/chat/auth/") && req.headers.origin !== config.origin)
                 throw Object.assign(new Error("Request could not be verified"), { status: 403 });
             if (req.method === "POST" && path === "/chat/auth/local") {
-                const input = await body(req);
-                if (
-                    !input ||
-                    typeof input !== "object" ||
-                    Array.isArray(input) ||
-                    Object.keys(input).some((key) => !["username", "password", "otp", "recoveryCode"].includes(key))
-                )
-                    throw Object.assign(new Error("Invalid sign-in request."), { status: 400 });
+                const input = await body(
+                    req,
+                    ["username", "password", "otp", "recoveryCode"],
+                    "Invalid sign-in request.",
+                );
                 const result = await auth.localLogin(input, req, res);
                 return json(res, 200, result);
             }
             if (req.method === "POST" && path === "/chat/auth/bootstrap") {
-                const input = await body(req);
-                if (
-                    !input ||
-                    typeof input !== "object" ||
-                    Array.isArray(input) ||
-                    Object.keys(input).some((key) => !["token", "username", "displayName", "password"].includes(key))
-                )
-                    throw Object.assign(new Error("Invalid bootstrap request."), { status: 400 });
+                const input = await body(
+                    req,
+                    ["token", "username", "displayName", "password"],
+                    "Invalid bootstrap request.",
+                );
                 return json(res, 201, auth.bootstrap(input, res));
             }
             if (req.method === "POST" && path === "/chat/auth/invitations/accept") {
-                const input = await body(req);
-                if (
-                    !input ||
-                    typeof input !== "object" ||
-                    Array.isArray(input) ||
-                    Object.keys(input).some((key) => !["token", "username", "displayName", "password"].includes(key))
-                )
-                    throw Object.assign(new Error("Invalid invitation request."), { status: 400 });
+                const input = await body(
+                    req,
+                    ["token", "username", "displayName", "password"],
+                    "Invalid invitation request.",
+                );
                 return json(res, 201, auth.acceptInvite(input, res));
             }
             if (req.method === "POST" && path === "/chat/auth/mfa") {
                 auth.require(req, true, true);
-                const input = await body(req);
-                if (
-                    !input ||
-                    typeof input !== "object" ||
-                    Array.isArray(input) ||
-                    Object.keys(input).some((key) => key !== "code")
-                )
-                    throw Object.assign(new Error("Invalid MFA request."), { status: 400 });
+                const input = await body(req, ["code"], "Invalid MFA request.");
                 return json(res, 200, auth.finishMfa(req, input));
             }
             if (req.method === "POST" && path === "/chat/auth/password-reset") {
                 if (!auth.identityStore)
                     throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
-                const input = await body(req);
-                if (
-                    !input ||
-                    typeof input !== "object" ||
-                    Array.isArray(input) ||
-                    Object.keys(input).some((key) => !["token", "password"].includes(key))
-                )
-                    throw Object.assign(new Error("Invalid password reset request."), { status: 400 });
+                const input = await body(req, ["token", "password"], "Invalid password reset request.");
                 auth.identityStore.resetPassword(input.token, input.password);
                 return json(res, 200, { success: true });
             }
             if (req.method === "POST" && path === "/chat/auth/account-recovery") {
-                const input = await body(req);
-                if (
-                    !input ||
-                    typeof input !== "object" ||
-                    Array.isArray(input) ||
-                    Object.keys(input).some((key) => !["token", "password"].includes(key))
-                )
-                    throw Object.assign(new Error("Invalid account recovery request."), { status: 400 });
+                const input = await body(req, ["token", "password"], "Invalid account recovery request.");
                 return json(res, 200, auth.completeAccountRecovery(input, res));
             }
             if (req.method === "GET" && path === "/chat/auth/login") return await auth.login(req, res);
@@ -220,6 +205,7 @@ export function createApplication(
             if (req.method === "POST" && path === "/chat/auth/logout") {
                 for (const [key, turn] of active)
                     if (key.startsWith(store.owner(identity) + ":")) turn.controller.abort();
+                provider.cancelLogin?.(identity);
                 auth.logout(req, res);
                 return json(res, 200, { success: true });
             }
@@ -234,14 +220,7 @@ export function createApplication(
                 if (req.method === "GET" && path === "/chat/api/identity/audit")
                     return json(res, 200, store.listUsers(actor).audit);
                 if (req.method === "POST" && path === "/chat/api/identity/invitations") {
-                    const input = await body(req);
-                    if (
-                        !input ||
-                        typeof input !== "object" ||
-                        Array.isArray(input) ||
-                        Object.keys(input).some((key) => !["email", "roles", "expiresSeconds"].includes(key))
-                    )
-                        throw Object.assign(new Error("Invalid invitation request."), { status: 400 });
+                    const input = await body(req, ["email", "roles", "expiresSeconds"], "Invalid invitation request.");
                     return json(res, 201, store.invite(actor, input.email, input.roles, input.expiresSeconds));
                 }
                 const userRoute = path.match(
@@ -250,14 +229,7 @@ export function createApplication(
                 if (userRoute) {
                     const [, userId, action] = userRoute;
                     if (action === "roles" && req.method === "PUT") {
-                        const input = await body(req);
-                        if (
-                            !input ||
-                            typeof input !== "object" ||
-                            Array.isArray(input) ||
-                            Object.keys(input).some((key) => key !== "roles")
-                        )
-                            throw Object.assign(new Error("Invalid role assignment."), { status: 400 });
+                        const input = await body(req, ["roles"], "Invalid role assignment.");
                         return json(res, 200, { user: store.setRoles(actor, userId, input.roles) });
                     }
                     if (action === "disable" && req.method === "POST")
@@ -268,14 +240,7 @@ export function createApplication(
                         return json(res, 200, { success: store.revokeUserSessions(actor, userId) });
                 }
                 if (req.method === "POST" && path === "/chat/api/identity/service-accounts") {
-                    const input = await body(req);
-                    if (
-                        !input ||
-                        typeof input !== "object" ||
-                        Array.isArray(input) ||
-                        Object.keys(input).some((key) => !["name", "scopes"].includes(key))
-                    )
-                        throw Object.assign(new Error("Invalid service account request."), { status: 400 });
+                    const input = await body(req, ["name", "scopes"], "Invalid service account request.");
                     return json(res, 201, store.issueServiceAccount(actor, input.name, input.scopes));
                 }
                 const recoveryRoute = path.match(/^\/chat\/api\/identity\/users\/([a-f0-9-]{36})\/recovery$/);
@@ -348,10 +313,12 @@ export function createApplication(
                 modelReads.set(identity, count + 1);
                 const controller = new AbortController();
                 const deadline = setTimeout(() => controller.abort(), 20000);
+                const client = mcpFactory(controller.signal);
                 try {
-                    return json(res, 200, await readModels(mcpFactory(controller.signal), req.url));
+                    return json(res, 200, await readModels(client, req.url));
                 } finally {
                     clearTimeout(deadline);
+                    await client.close?.();
                     const remaining = (modelReads.get(identity) || 1) - 1;
                     if (remaining) modelReads.set(identity, remaining);
                     else modelReads.delete(identity);
@@ -359,9 +326,42 @@ export function createApplication(
             }
             if (!config.enabled)
                 throw Object.assign(new Error("Browser chat is not configured on this deployment."), { status: 503 });
+            if (path === "/chat/api/providers" && req.method === "GET")
+                return json(res, 200, { providers: provider.status(identity) });
+            const connection = path.match(/^\/chat\/api\/providers\/(codex|claude)$/);
+            if (connection) {
+                const name = connection[1];
+                if (req.method === "DELETE") {
+                    for (const [key, turn] of active)
+                        if (key.startsWith(store.owner(identity) + ":") && turn.provider === name)
+                            turn.controller.abort();
+                    provider.disconnect(identity, name);
+                    return json(res, 200, { success: true });
+                }
+                if (req.method === "POST" && name === "codex") {
+                    await body(req, []);
+                    return json(res, 200, await provider.startLogin(identity));
+                }
+                if (req.method === "POST" && name === "claude") {
+                    const input = await body(req, ["apiKey"]);
+                    provider.connectClaude(identity, input.apiKey);
+                    return json(res, 200, { success: true });
+                }
+                throw Object.assign(new Error("Not found"), { status: 404 });
+            }
             if (path === "/chat/api/conversations") {
                 if (req.method === "GET") return json(res, 200, { conversations: store.list(identity) });
-                if (req.method === "POST") return json(res, 201, store.create(identity));
+                if (req.method === "POST") {
+                    const input =
+                        (req.headers["content-length"] && req.headers["content-length"] !== "0") ||
+                        req.headers["transfer-encoding"]
+                            ? await body(req, ["provider"])
+                            : {};
+                    const selected = input.provider || "codex";
+                    if (!["codex", "claude"].includes(selected))
+                        throw Object.assign(new Error("Choose a provider."), { status: 400 });
+                    return json(res, 201, store.create(identity, selected));
+                }
             }
             const route = path.match(/^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval))?$/);
             if (!route) throw Object.assign(new Error("Not found"), { status: 404 });
@@ -398,6 +398,7 @@ export function createApplication(
                 Object.keys(input).some((k) => k !== "content")
             )
                 throw Object.assign(new Error("Enter a message of up to 8,000 characters."), { status: 400 });
+            provider.assertConnected?.(identity, conversation.provider || "codex");
             if (active.has(key)) throw Object.assign(new Error("A response is already running."), { status: 409 });
             if (active.size >= config.maxConcurrentTurns)
                 throw Object.assign(new Error("The assistant is busy. Please try again shortly."), { status: 429 });
@@ -413,7 +414,7 @@ export function createApplication(
             if (conversation.messages.length === 1) conversation.title = input.content.trim().slice(0, 70);
             store.save(identity, conversation);
             const controller = new AbortController(),
-                turn = { controller, approval: null };
+                turn = { controller, approval: null, provider: conversation.provider || "codex" };
             active.set(key, turn);
             const timeout = setTimeout(() => controller.abort(), config.turnTimeoutMs);
             timeout.unref();
@@ -434,15 +435,18 @@ export function createApplication(
                 if (!res.destroyed) res.write(": keepalive\n\n");
             }, 15000);
             heartbeat.unref();
+            let mcp;
             let content = "",
                 toolCount = 0,
                 toolActivity = [];
             try {
                 emit({ type: "status", text: "Connecting to modelling tools…" });
-                const mcp = mcpFactory(controller.signal),
-                    tools = await mcp.tools(),
+                mcp = mcpFactory(controller.signal);
+                const tools = await mcp.tools(),
                     names = new Set(tools.map((t) => t.name));
                 const result = await provider.run({
+                    identity,
+                    provider: turn.provider,
                     messages: conversation.messages,
                     tools,
                     signal: controller.signal,
@@ -513,6 +517,7 @@ export function createApplication(
             } finally {
                 clearTimeout(timeout);
                 clearInterval(heartbeat);
+                await mcp?.close?.();
                 active.delete(key);
                 turn.approval?.resolve(false);
                 res.off("close", disconnected);
@@ -558,13 +563,8 @@ export function createApplication(
     server.maxHeadersCount = 40;
     server.on("close", () => {
         clearInterval(cleanup);
+        provider.close?.();
         for (const turn of active.values()) turn.controller.abort();
     });
     return server;
-}
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    const config = loadConfig();
-    createApplication(config).listen(config.port, "0.0.0.0", () =>
-        console.log(JSON.stringify({ event: "chat_started", port: config.port, enabled: config.enabled })),
-    );
 }

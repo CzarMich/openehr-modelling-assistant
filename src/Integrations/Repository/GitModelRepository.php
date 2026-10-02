@@ -464,7 +464,8 @@ final class GitModelRepository implements HostedGitRepository, OriginalRepositor
             }
         } elseif ($remote['code'] !== 0) {
             throw new \RuntimeException('GIT_REMOTE_UNAVAILABLE');
-        } else {
+        } elseif ($this->head === null || trim($remote['output']) !== $this->head . "\trefs/heads/" . $this->branch) {
+            // ls-remote already identifies unchanged content; fetching it again adds a network round trip.
             $this->git(['fetch', '--no-tags', 'origin', '+refs/heads/' . $this->branch . ':refs/remotes/origin/' . $this->branch]);
             $next = trim($this->git(['rev-parse', 'refs/remotes/origin/' . $this->branch]));
             $this->validatedTree($next);
