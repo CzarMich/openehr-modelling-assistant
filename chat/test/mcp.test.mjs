@@ -69,3 +69,63 @@ test("MCP SSE accepts empty priming events before its matching response", async 
     const client = new McpClient({ mcpUrl: "https://modelling.example/mcp" }, new AbortController().signal);
     assert.deepEqual(await client.rpc("ping", {}), { ok: true });
 });
+
+test("stateless MCP retains the negotiated version and reuses discovery", async (t) => {
+    const original = globalThis.fetch;
+    t.after(() => (globalThis.fetch = original));
+    const calls = [];
+    globalThis.fetch = async (_url, options) => {
+        const request = JSON.parse(options.body);
+        calls.push({ request, headers: options.headers });
+        if (request.method === "notifications/initialized") return new Response(null, { status: 202 });
+        const result = request.method === "initialize" ? { protocolVersion: "2025-06-18" } : { tools: [] };
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: request.id, result }));
+    };
+    const client = new McpClient({ mcpUrl: "https://modelling.example/mcp" }, new AbortController().signal);
+    await client.tools();
+    await client.tools();
+    assert.equal(calls.length, 3);
+    assert.equal(calls[2].headers["MCP-Protocol-Version"], "2025-06-18");
+    assert.equal(calls[2].headers["Mcp-Session-Id"], undefined);
+});
+
+test("repeated pagination cursors stop discovery even when pages are empty", async (t) => {
+    const original = globalThis.fetch;
+    t.after(() => (globalThis.fetch = original));
+    let calls = 0;
+    globalThis.fetch = async (_url, options) => {
+        const request = JSON.parse(options.body);
+        calls++;
+        if (request.method === "notifications/initialized") return new Response(null, { status: 202 });
+        const result =
+            request.method === "initialize" ? { protocolVersion: "2025-11-25" } : { tools: [], nextCursor: "stuck" };
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: request.id, result }));
+    };
+    const client = new McpClient({ mcpUrl: "https://modelling.example/mcp" }, new AbortController().signal);
+    await assert.rejects(client.tools(), /pagination did not advance/);
+    assert.equal(calls, 4);
+});
+
+test("session cleanup authenticates and works after a cancelled turn", async (t) => {
+    const original = globalThis.fetch;
+    t.after(() => (globalThis.fetch = original));
+    const calls = [];
+    globalThis.fetch = async (_url, options) => {
+        calls.push(options);
+        return new Response(null, { status: 204 });
+    };
+    const controller = new AbortController();
+    const client = new McpClient(
+        { mcpUrl: "https://modelling.example/mcp", mcpKey: "fixture-key", mcpKeyHeader: "X-API-Key" },
+        controller.signal,
+    );
+    client.session = "fixture-session";
+    controller.abort();
+    await client.close();
+    await client.close();
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].method, "DELETE");
+    assert.equal(calls[0].headers["Mcp-Session-Id"], "fixture-session");
+    assert.equal(calls[0].headers["X-API-Key"], "fixture-key");
+    assert.equal(calls[0].signal.aborted, false);
+});

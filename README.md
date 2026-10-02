@@ -1,70 +1,16 @@
 # openEHR Modelling Assistant
 
-A self-hosted, configurable openEHR knowledge and modelling service for AI agents.
-It helps clinical information modellers and engineers find source archetypes,
-draft templates, review ADL and AQL, manage modelling artefacts, and verify
-terminology. **Neither a CDR nor a terminology server is required for modelling. Terminology bindings are optional.**
+A self-hosted MCP server for openEHR modelling. Search CKMs, retrieve modelling
+guidance, work with archetypes and templates, check ADL and AQL, and keep model
+revisions and review history in a shared repository.
 
-Microsoft Copilot Studio is the primary documented enterprise consumer. The core
-speaks standard MCP and contains no Microsoft, OpenAI or Anthropic model client.
-Your agent supplies conversational reasoning, whether its permitted model is
-Claude, GPT or another model. This service supplies retrieval and deterministic
-operations. It does not provide clinical treatment advice, run an EHR, replace
-CKM, or operate as a terminology server.
-
-## What it can do
-
-- Chat in a browser with organisation sign-in, streamed replies, private conversation history
-  and visible modelling-tool activity. Review and confirm each proposed model write.
-
-- Search and retrieve archetypes and templates directly from multiple configured CKMs.
-  Select a named international, national or organisational CKM on each call, or search several
-  with explicit source/version provenance and partial-failure reporting. [Private CKMs](docs/CKM_SOURCES.md)
-  use source-specific deployment credentials.
-- Supply bundled openEHR specifications, modelling guides, examples and terminology.
-- Guide archetype, template, ADL, AQL and simplified-format design/review through MCP prompts.
-- Generate a **draft OET** containing a retrieved COMPOSITION and direct ENTRY archetypes,
-  retaining actual CKM source identifiers and content hashes.
-- Parse XML/JSON securely; check OET/OPT and FLAT/STRUCTURED document profiles and ADL headers.
-  Separate parse, structure and conformance stages; compare XML structure, constraints and leaf values.
-  [Validation and project QA](docs/VALIDATION_AND_QA.md) explain the implemented checks and boundaries.
-- Persist projects, requirements, artefacts, decisions, metadata and immutable revisions
-  using filesystem/SharePoint snapshots or Git, including GitHub/GitLab metadata and draft reviews, with revision conflict detection.
-- Represent local/external value sets and bindings, invoke FHIR terminology operations,
-  discover canonical resources, retain translation candidates for review, compare terminology
-  changes, and produce declared terminology dependency manifests. Inspect explicit OET/OPT coded
-  constraints and save revision-bound binding plans with local catalogue candidates and QA findings.
-- Persist a typed requirements/decision graph and query why an element exists or which elements
-  declare coverage of a requirement. Resolve exact source, anchor and audit references; identify stale
-  or unavailable evidence. Project QA checks exact revisions, provenance, requirement trails and
-  authentic validation/review events, with unavailable qualification checks explicit.
-- Prepare exact model revisions for independent human review, record signed-in reviewer decisions,
-  and retain validation and audit evidence in a separate protected ledger. The review workspace
-  works without an LLM account; agents cannot approve models.
-
-The optional [native engine](docs/OPT_COMPILATION.md) validates ADL 2, parses AQL and compiles ADL 2 into OPT 2 ADL and [supported OET/ADL 1.4](docs/LEGACY_OPT_COMPILATION.md) into OPT 1.4 XML with exact-revision build evidence. Complete OET-to-OPT 1.4 coverage, model-aware AQL validation, CDR execution and visual editing remain separate implementation work. The browser review workspace records authenticated human
-reviews and immutable audit history. Approval/publication still requires qualified governance validation; a compiler result alone does not satisfy that gate. Native OIDC bearer
-verification, signed write permissions and tenant storage isolation are implemented;
-see [identity configuration and migration](docs/OIDC.md). Full project RBAC remains separate work.
-See the [capability matrix](CAPABILITIES.md) and [verification report](docs/IMPLEMENTATION_REPORT.md).
-
-## Chat in your browser
-
-Open the [development chat](https://dev-openehr-modelling.sandbox.hygeoniq.com/chat/),
-select **Sign in to start chatting**, and use your organisation account. Try:
-“List the configured CKMs and find a blood pressure archetype.”
-[Browser chat](docs/BROWSER_CHAT.md) explains use, deployment, identity/model configuration,
-privacy, limits and testing. Other deployments enable this optional client separately.
-The PHP MCP service remains usable with external AI clients and without browser chat.
-Select the **Governance** tab for human review: select a project, inspect the recorded source and
-validation, then record an explicitly confirmed decision permitted by your role.
-See [review deployment and identity configuration](docs/REVIEW_DEPLOYMENT.md).
+Connect Claude, Codex or another MCP client to the same `/mcp` endpoint. The optional
+browser workspace brings chat, model browsing and human review together at `/chat/`.
+A CDR and terminology server are optional.
 
 ## Start locally
 
 Requires Docker Engine and Docker Compose with `env_file.required` support.
-Linux containers can run on Linux or Docker Desktop on macOS/Windows; the executable
-verification environment is recorded in the evidence report.
 
 ```sh
 git clone https://github.com/CzarMich/openehr-modelling-assistant.git
@@ -75,151 +21,89 @@ curl http://127.0.0.1:8343/health
 curl http://127.0.0.1:8343/ready
 ```
 
-Connect a Streamable HTTP MCP client to `http://127.0.0.1:8343/mcp`.
-The example configuration is local development with no authentication and a loopback
-port binding. Enterprise deployment requires authenticated HTTPS through a gateway.
-Read [deployment](docs/DEPLOYMENT.md), [configuration](docs/CONFIGURATION.md),
-and [security](docs/SECURITY.md) before changing the exposure.
+Connect your MCP client to `http://127.0.0.1:8343/mcp`. The default listener is local
+and unauthenticated. For a hosted installation, configure authenticated HTTPS using
+the [deployment guide](docs/DEPLOYMENT.md).
 
-## Agent integration and MCP tools
+- [Connect Claude, Codex or another client](docs/MCP_CLIENTS.md)
+- [Configure browser chat](docs/BROWSER_CHAT.md)
+- [Browse models and review changes](docs/BROWSER_WORKSPACE.md)
+- [Installation and configuration](docs/install.md)
 
-[Microsoft integration](docs/MICROSOFT_AGENT_INTEGRATION.md) documents Copilot Studio,
-Microsoft Agent Framework and Foundry, with tenant tests explicitly distinguished
-from repository-side tests. [Generic MCP clients](docs/MCP_CLIENTS.md) covers HTTP
-and stdio. [Tool catalogue](docs/MCP_TOOLS.md) contains generated signatures,
-return schemas, examples and dependency/failure notes for every exposed tool.
+## Modelling tools
+
+- Search one or more CKMs and retrieve archetypes or templates with source identifiers.
+- Read bundled specifications, guides, examples and terminology.
+- Use prompts for archetype, template, ADL, AQL and simplified-format design and review.
+- Create draft OET templates from retrieved archetypes.
+- Check document structure, compare models and run project quality checks.
+- Store projects and immutable model revisions in filesystem, Git or SharePoint repositories.
+- Preserve imported originals, provenance and requirements linked to exact revisions.
+- Maintain terminology catalogues and binding plans; optionally query a FHIR terminology server.
+- Prepare models for human review and record authenticated decisions in an audit ledger.
+
+The optional [native engine](docs/OPT_COMPILATION.md) validates ADL 2, parses AQL
+and compiles ADL 2 templates to OPT 2. It also compiles the
+[supported OET/ADL 1.4 profile](docs/LEGACY_OPT_COMPILATION.md) to OPT 1.4 XML.
+Full OET coverage, model-aware AQL validation, CDR execution and visual editing
+remain incomplete. See the [capability matrix](CAPABILITIES.md) for the scope of each feature.
 
 - `guide_get` returns the **full** guide file.
-- Existing CKM, guide, example, type-specification and terminology tool names remain stable.
-- New project writes require `MODEL_REPOSITORY_WRITE_ENABLED=true`; no MCP tool can approve or release a model.
+- Model writes require `MODEL_REPOSITORY_WRITE_ENABLED=true` and the configured write permissions.
+- Browser writes require confirmation of the proposed change.
+- Clinical approval requires an independent authorised reviewer and qualified validation.
+  Saving a draft or compiling a template does not grant approval.
 
-## Architecture and workflows
+Tool signatures, schemas and examples are in the [tool catalogue](docs/MCP_TOOLS.md).
+The [MCP protocol profile](docs/MCP_PROTOCOL.md) describes supported transports and capabilities.
 
-```mermaid
-flowchart TD
-    U[Unified browser workspace: Chat, Models and Governance] --> W[Chat service: history, streaming and write confirmation]
-    W <--> I[OIDC sign-in]
-    W <--> AIC[Isolated Codex client]
-    W -->|Declared modelling tools over MCP| S[openEHR Modelling Assistant]
-    HU[Human review workspace: no model provider required] --> HR[Browser OIDC and explicit decision confirmation]
-    HR <--> I
-    HR -->|Short-lived request-bound assertion| RA[Versioned human review REST API]
-    RA --> GV[Shared governance service and validation gate]
-    S -->|Prepare and request review only| GV
-    GV --> AU[PostgreSQL append-only audit ledger; SQLite compatibility]
-    GV --> R
-    M[Copilot Studio, Codex or another MCP client] -->|Verified HTTP / stdio MCP profile| S[openEHR Modelling Assistant]
-    S --> ID[Transport identity: local, API key or verified OIDC]
-    ID --> TEN[Signed tenant namespace and write permissions]
-    S --> FK[Bounded federated CKM discovery: source and version provenance]
-    FK --> K[Multiple named CKMs with source-specific credentials]
-    S --> B[Bundled specifications and guides]
-    S --> D[Modelling services and structural checks]
-    D --> IM[Manual file import: exact original bytes and explicit type assurance]
-    IM --> R
-    IM --> AU
-    D --> NE[Native engine: ADL 1.4/2 and AQL parsers]
-    NE --> LR[Legacy profile: reused nodes, RM attributes and explicit slot constraints]
-    LR --> OPT
-    NE --> OPT[OPT 2 ADL or supported OPT 1.4 XML; exact-revision build evidence]
-    OPT --> R
-    D --> VQ[Separate validation stages and exact-revision project QA]
-    VQ --> R[Model Repository interface]
-    VQ --> TG
-    D --> TG[Requirements and decision graph: deterministic rationale and coverage queries]
-    TG --> R
-    TG -->|Exact validation and human review references| AU
-    R --> F[Filesystem snapshots and revisions]
-    R --> MC[Optional Valkey cache: tenant and immutable revision keys]
-    R --> SP[SharePoint snapshots and conditional project index]
-    R --> G[Git adapter: native model files and commit revisions]
-    G --> O[Persistent local Git object store]
-    G <--> H[Optional GitHub, GitLab or other Git remote]
-    G --> HP[GitHub or GitLab API: metadata, branches and draft reviews]
-    A[Archetype Designer: account connection unverified] -.-> H
-    D --> T[Optional terminology catalogue, inspection and binding plans]
-    T --> BP[Preserved references, explicit candidates and revision-bound evidence]
-    BP --> R
-    T --> L[Local catalogue: code systems, value sets and mapping drafts]
-    T --> E[Optional FHIR: CodeSystem, ValueSet and ConceptMap operations]
-    D -. future extension .-> C[CDR adapter]
-```
-
-Solid edges show implemented paths. Git works locally or with a configured remote;
-filesystem, SharePoint and Git expose the same Model Repository interface. SharePoint passes isolated Graph/OAuth contract checks; live tenant acceptance requires configured access. The shared Git
-round trip is verified, while the dotted Archetype Designer connection still needs
-an authenticated hosted UI acceptance test. The CDR adapter remains unimplemented.
-Modelling and persistence work without a terminology server or terminology bindings.
-[Manual file imports](docs/MODEL_IMPORTS.md) preserve original bytes and protected import receipts across filesystem, Git and SharePoint. Source declarations remain separate from conformance and clinical approval. The Models tab can download the exact source, including binary originals.
+## Architecture
 
 ```mermaid
-flowchart TD
-    Chat[Browser chat or another MCP client] --> P[Select filesystem, SharePoint or Git storage] --> R[Open project and read current revision]
-    R --> IM[Optional manual file import: inspect and preserve original]
-    IM --> D
-    R --> D[Search configured CKMs; select exact source; draft model changes]
-    D --> V[Run available structural checks and inspect diff]
-    V --> COMP[Compile ADL 2 or supported OET; check native OPT and preserve build evidence]
-    COMP --> S[Save model DRAFT with expectedRevision]
-    S --> C{Revision or push conflict?}
-    C -->|Yes: reread and reconcile| R
-    C -->|No| T{Terminology binding needed?}
-    T -->|No| PR[Optional hosted draft review request]
-    T -->|Yes| B[Inspect saved source; preserve references; compare local catalogue]
-    B --> TB[Save binding plan against source revision; review findings and freshness]
-    TB --> PR
-    PR --> TG[Save requirements graph with source and decision links]
-    TG --> GP[Register exact revision and run installed validation]
-    GP --> EV[Link exact validation event; resolve traceability findings]
-    EV --> QA[Run project QA: provenance, source freshness and recorded evidence]
-    QA --> RR[Request human review]
-    RR --> H[Signed-in independent reviewer: inspect source and evidence]
-    H --> Q{Qualified validation available?}
-    Q -->|No| F[Record findings or request changes; approval blocked]
-    Q -->|Yes| A[Human approver confirms exact revision and validation digest]
-    A --> PUB[Human publisher records publication]
+flowchart LR
+    Clients[Claude, Codex and other MCP clients] --> MCP[PHP MCP server]
+    Browser[Browser workspace] --> Chat[Chat and identity service]
+    Chat --> MCP
+    Chat --> Providers[User's model provider]
+    Chat --> Review[Human review API]
+    MCP --> Services[Modelling services]
+    Review --> Services
+    Services --> CKM[CKMs and bundled guidance]
+    Services --> Repository[Filesystem, Git or SharePoint]
+    Services --> Engine[Optional native engine]
+    Services --> Terminology[Optional terminology server]
+    Services --> Audit[Governance ledger]
 ```
 
-Saving a draft does not approve or release it. Hosted Git review remains separate from clinical governance.
-The assistant can prepare and request review; only the authenticated human review adapter exposes
-clinical decisions. Its approval gate requires qualified validation, which the current preflight cannot supply. AQL creation/review
-uses the agent plus grounded prompts and paths; execution is not implemented.
+The PHP server supplies modelling operations independently of any model provider.
+The browser service and external clients use the same MCP tools. Human decisions
+use a separate authenticated review API. [Architecture](docs/ARCHITECTURE.md),
+[identity](docs/IDENTITY_AND_ACCESS.md) and [security](docs/SECURITY.md) describe the boundaries.
 
-Follow the [shared Git model workflow](docs/workflows/shared-git-models.md) or the
-[neonatal modelling workflow](docs/workflows/neonatal-admission.md). See the detailed
-[architecture](docs/ARCHITECTURE.md), [model repository](docs/MODEL_REPOSITORY.md),
-[Archetype Designer integration](docs/ARCHETYPE_DESIGNER_INTEGRATION.md),
-[terminology](docs/TERMINOLOGY.md) and [governance](docs/GOVERNANCE.md).
+For worked examples, see the [shared Git workflow](docs/workflows/shared-git-models.md)
+and [neonatal modelling workflow](docs/workflows/neonatal-admission.md).
+The [documentation index](docs/README.md) links to repository, terminology, import
+and governance guides.
 
-## Development and testing
+## Development
 
 ```sh
 make env
 make build-dev
 make install
 make ci
+make conformance
 ```
 
-Run PHP and Composer inside the development container. Unit tests use mocked
-external dependencies. [Testing](docs/testing.md) separates deterministic tests,
-MCP/container checks and opt-in live probes. [Baseline audit](docs/BASELINE_AUDIT.md)
-records the unmodified upstream results. [Migration](docs/WHITE_LABEL_MIGRATION.md)
-records intentional changes and every remaining upstream vendor reference.
+Run PHP and Composer in Docker. `make ci` checks traceability, PHPStan and PHPUnit;
+`make conformance` checks HTTP and stdio against the product's advertised MCP profile.
+Browser checks and optional integration probes are documented in [testing](docs/testing.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes.
 
-## Licence and attribution
+## Licence
 
-The upstream MIT copyright is retained verbatim in [LICENSE](LICENSE), with
-[third-party notices](THIRD_PARTY_NOTICES.md). The product name, vendor, descriptions,
-URLs and logo are deployment configuration. Branding does not change openEHR standards
-or imply authorship of upstream components, EY certification or clinical validation.
-
-Archetype Designer users: see the [integration guide](docs/ARCHETYPE_DESIGNER_INTEGRATION.md) for shared model repositories, file exchange and the current synchronization limits.
-
-The [MCP protocol profile](docs/MCP_PROTOCOL.md) is verified over production HTTP and stdio, with explicit capabilities and version negotiation.
-
-PostgreSQL is the recommended governance backend. Optional Valkey accelerates repeated model/template reads while source revisions remain authoritative. See [storage and cache deployment](docs/POSTGRES_AND_CACHE.md) for configuration, SQLite migration and recovery.
-
-The main browser URL now opens one [tabbed modelling workspace](docs/BROWSER_WORKSPACE.md). Chat, repository browsing and governance share navigation and sign-in; switching tabs preserves the conversation and selected revision.
+[MIT](LICENSE). Upstream copyright and [third-party notices](THIRD_PARTY_NOTICES.md)
+are retained. Deployment branding is configurable.
 
 ### Acknowledgements
 

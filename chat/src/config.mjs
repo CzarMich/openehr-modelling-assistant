@@ -39,6 +39,8 @@ export function loadConfig(env = process.env) {
         reviewSessionSeconds: Number(env.CHAT_REVIEW_SESSION_MAX_AGE || 900),
         reviewApiOrigin: new URL(env.CHAT_MCP_URL || "http://ingress:8343/mcp").origin,
         model: env.CHAT_MODEL || "gpt-6-sol",
+        claudeModel: env.CHAT_CLAUDE_MODEL || "claude-sonnet-5-5",
+        providerEncryptionKey: env.CHAT_PROVIDER_ENCRYPTION_KEY || "",
         codexBinary: env.CHAT_CODEX_BINARY || "codex",
         codexWorkDir: resolve(env.CHAT_CODEX_WORK_DIR || "/workspace"),
         turnTimeoutMs: Math.min(600, Math.max(30, Number(env.CHAT_TURN_TIMEOUT_SECONDS || 240))) * 1000,
@@ -70,6 +72,8 @@ export function loadConfig(env = process.env) {
         if (!/^[a-f0-9]{64}$/.test(config.identityEncryptionKey))
             throw new Error("Local identity requires a dedicated 32-byte hexadecimal encryption key");
     }
+    if (enabled && !/^[a-f0-9]{64}$/.test(config.providerEncryptionKey))
+        throw new Error("Chat requires a dedicated CHAT_PROVIDER_ENCRYPTION_KEY (32-byte hexadecimal key)");
     const mcp = new URL(config.mcpUrl);
     if (!["http:", "https:"].includes(mcp.protocol) || mcp.username || mcp.password || mcp.search || mcp.hash)
         throw new Error("Invalid CHAT_MCP_URL");

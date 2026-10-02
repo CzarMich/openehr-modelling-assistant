@@ -55,7 +55,8 @@ When adding or changing guidance on archetypes, templates, or clinical modelling
 - `src/Apis`: internal API clients (CKM). `src/Helpers`: internal helpers. `src/Sdd`: the `spec-check` drift gate. `src/templates`: guide and spec-digest authoring templates. `src/constants.php`: env loading and defaults (incl. `APP_VERSION`). `scripts/`: CLI entrypoints (`spec-check.php`).
 - `resources/`: guides, examples, BMM JSON, terminology, prompt bodies, `server-instructions.md`.
 - `tests/`: PHPUnit tests (mirroring `src/`) and the PHPUnit/PHPStan configs.
-- `.docker/`: compose files, multi-stage `Dockerfile`, `Caddyfile`. `.github/workflows/`: `pr-validation.yml`, `release.yml`.
+- `chat/`: optional browser service, personal Claude/Codex provider connections, identity and chat tests. `public/chat/`: browser UI.
+- `Dockerfile`: PHP and ingress images. `.docker/`: development Compose overlay and `Caddyfile`. `.github/workflows/`: `pr-validation.yml`, `release.yml`.
 
 ## Development
 

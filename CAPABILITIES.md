@@ -1,6 +1,6 @@
 # Capability matrix
 
-WORKING means the described subset is implemented; it does not imply clinical approval. Statuses describe delivered functionality on the main branch. Execution evidence and environment limits are in [the implementation report](docs/IMPLEMENTATION_REPORT.md); remaining implementation work and its saved state are in [the continuation handoff](docs/NEXT_SESSION.md).
+WORKING means the described subset is implemented; it does not imply clinical approval. Statuses describe delivered functionality on the main branch. Execution evidence and environment limits are in [the implementation report](docs/IMPLEMENTATION_REPORT.md). Planned work is tracked in the [capability backlog](docs/COMPLETION_QUEUE.json).
 
 | Capability | Status | Implemented boundary |
 |---|---|---|
@@ -36,8 +36,8 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Git storage with GitHub/GitLab/other remotes | WORKING | Plain model files, commit history, remote sync, CAS updates; MCP branch creation and revision diff |
 | Archetype Designer repository layouts | WORKING | Configurable content root; category folders or flat native files; Unicode/spaces preserved; real private Git round trip |
 | Hosted Archetype Designer UI connection | NOT TESTED | Login required; repository integration verified independently, account linking and visual import/export not yet verified |
-| Codex development connection | WORKING | Installed Codex app-server initialized the HTTPS service and discovered the modelling tool catalogue with a private credential helper |
-| Browser modelling chat | WORKING | OIDC sign-in, private persistent conversations, streamed replies, actual tool activity and confirmed draft writes through an isolated Codex client; optional service |
+| Codex development connection | WORKING | Installed Codex app-server initialized the HTTPS service and discovered the modelling tool catalogue using the configured authentication headers |
+| Browser modelling chat | WORKING | OIDC sign-in, private persistent conversations, streamed replies, actual tool activity and confirmed draft writes through personal Claude or Codex connections; optional service |
 | Browser identity and session isolation | WORKING | Authorization code flow with PKCE, signed identity claims, secure cookies, CSRF and per-user conversation ownership; shared model repository principal |
 | Native browser user management | PARTIAL | One-time owner bootstrap, password+TOTP login, recovery, invitations, role administration, revocable sessions, service credential lifecycle and chained audit; single-instance local storage, no email/passkeys or shared transactional identity backend |
 | Unified browser workspace | WORKING | Root URL serves Chat, Models, Governance and role-gated Accounts tabs with shared identity and preserved conversation/draft state |

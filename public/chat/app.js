@@ -67,15 +67,19 @@ async function api(path, { method = "GET", data } = {}) {
 }
 function controls() {
     const ready = !!session?.authenticated && session.enabled;
+    const connected = session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected);
+    $("chat-provider").disabled = running || !!current?.messages?.length;
     $("message").disabled = !ready || running;
-    $("send").disabled = !ready || running || !$("message").value.trim();
+    $("send").disabled = !ready || !connected || running || !$("message").value.trim();
     $("new-chat").disabled = !ready || running;
     $("stop").hidden = !running;
-    document.querySelectorAll(".suggestion").forEach((button) => (button.disabled = !ready || running));
+    document.querySelectorAll(".suggestion").forEach((button) => (button.disabled = !ready || !connected || running));
     $("composer-hint").textContent = running
         ? "Working with your modelling tools…"
         : ready
-          ? "Enter to send · Shift + Enter for a new line"
+          ? connected
+              ? "Enter to send · Shift + Enter for a new line"
+              : "Connect your account in My AI connections"
           : "Sign in to begin";
 }
 async function loadSession() {
@@ -84,6 +88,7 @@ async function loadSession() {
         !!session.authenticated || !(session.enabled || session.reviewEnabled || session.identityEnabled);
     $("sign-out").hidden = !session.authenticated;
     $("user-name").textContent = session.user?.name || "";
+    renderProviders();
     controls();
     document.dispatchEvent(new CustomEvent("workspace:session", { detail: session }));
     if (!session.enabled && !session.reviewEnabled && !session.identityEnabled)
@@ -219,6 +224,8 @@ function toolChip(container, tool) {
 async function open(id) {
     if (running) return;
     current = await api("api/conversations/" + id);
+    $("chat-provider").value = current.provider || "codex";
+    controls();
     $("welcome").hidden = true;
     $("thread").hidden = false;
     $("thread").replaceChildren();
@@ -274,7 +281,13 @@ function approval(event, target) {
 async function send(text) {
     if (running || !text.trim()) return;
     notice("");
-    if (!current) current = await api("api/conversations", { method: "POST" });
+    if (!session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected)) {
+        $("provider-settings").open = true;
+        notice("Connect your provider account before sending a message.");
+        return;
+    }
+    if (!current)
+        current = await api("api/conversations", { method: "POST", data: { provider: $("chat-provider").value } });
     $("welcome").hidden = true;
     $("thread").hidden = false;
     $("message").value = "";
@@ -382,6 +395,69 @@ $("toggle-sidebar").onclick = () => {
 document
     .querySelectorAll(".suggestion")
     .forEach((button) => (button.onclick = () => send(button.dataset.prompt).catch((e) => notice(e.message))));
+let providerPoll;
+function renderProviders() {
+    $("provider-bar").hidden = !session?.authenticated || !session.enabled;
+    for (const provider of session?.providers || []) {
+        $(provider.id + "-status").textContent = provider.connected
+            ? "Connected"
+            : provider.signingIn
+              ? "Waiting for sign-in…"
+              : "Not connected";
+        $("connect-" + provider.id).disabled = provider.connected || provider.signingIn;
+        $("disconnect-" + provider.id).hidden = !provider.connected && !provider.signingIn;
+    }
+    if (!session?.providers?.some((p) => p.signingIn)) {
+        clearTimeout(providerPoll);
+        $("codex-device").hidden = true;
+    }
+}
+$("chat-provider").onchange = () => {
+    if (!current?.messages?.length) current = null;
+    controls();
+};
+$("connect-codex").onclick = async () => {
+    $("connect-codex").disabled = true;
+    try {
+        const result = await api("api/providers/codex", { method: "POST", data: {} });
+        await loadSession();
+        $("codex-verification").href = result.verificationUrl;
+        $("codex-code").textContent = result.userCode;
+        $("codex-device").hidden = false;
+        const poll = async () => {
+            try {
+                await loadSession();
+                if (session.providers.some((p) => p.signingIn)) providerPoll = setTimeout(poll, 3000);
+            } catch (error) {
+                notice(error.message);
+            }
+        };
+        providerPoll = setTimeout(poll, 3000);
+    } catch (error) {
+        notice(error.message);
+        $("connect-codex").disabled = false;
+    }
+};
+$("claude-connection").onsubmit = async (event) => {
+    event.preventDefault();
+    const apiKey = $("claude-key").value.trim();
+    $("claude-key").value = "";
+    try {
+        await api("api/providers/claude", { method: "POST", data: { apiKey } });
+        await loadSession();
+    } catch (error) {
+        notice(error.message);
+    }
+};
+for (const name of ["codex", "claude"])
+    $("disconnect-" + name).onclick = async () => {
+        try {
+            await api("api/providers/" + name, { method: "DELETE" });
+            await loadSession();
+        } catch (error) {
+            notice(error.message);
+        }
+    };
 loadSession()
     .then(() => {
         if (session.authenticated && session.enabled) return list();

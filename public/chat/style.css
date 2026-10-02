@@ -715,3 +715,39 @@ textarea::placeholder {
 .welcome {
     flex: 1;
 }
+
+.provider-bar {
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid #dbe3ed;
+    display: flex;
+    align-items: start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.provider-bar select,
+.provider-bar input {
+    font: inherit;
+    padding: 0.4rem;
+    border: 1px solid #64748b;
+    border-radius: 0.3rem;
+    max-width: 100%;
+}
+.provider-bar details {
+    flex: 1;
+    min-width: 12rem;
+}
+.provider-bar summary {
+    cursor: pointer;
+    padding: 0.4rem;
+}
+.provider-connection {
+    padding: 0.75rem 0;
+    border-top: 1px solid #dbe3ed;
+}
+.provider-connection p {
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+.provider-connection button {
+    margin: 0.3rem;
+}

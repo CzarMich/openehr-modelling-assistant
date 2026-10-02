@@ -296,3 +296,57 @@ test("saved compilation confirms exact template and dependency revisions", async
     await page.getByRole("button", { name: "Confirm save", exact: true }).click();
     await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
 });
+
+test("provider choice is retained per conversation and connection controls explain personal accounts", async ({
+    page,
+}) => {
+    await page.goto("/chat/");
+    await page.getByRole("link", { name: /Sign in to start/ }).click();
+    await page.locator("#chat-provider").selectOption("claude");
+    await page.locator("#message").fill("List sources");
+    await page.locator("#send").click();
+    await expect(page.locator("#thread")).toContainText("configured source");
+    await expect(page.locator("#chat-provider")).toBeDisabled();
+    await expect(page.locator("#chat-provider")).toHaveValue("claude");
+    await page.getByText("My AI connections", { exact: true }).click();
+    await expect(page.locator("#claude-connection")).toContainText("billed separately from a Claude subscription");
+    await page.locator("#new-chat").click();
+    await expect(page.locator("#chat-provider")).toBeEnabled();
+    await page.locator("#chat-provider").selectOption("codex");
+    await page.locator("#conversations button", { hasText: "List sources" }).click();
+    await expect(page.locator("#chat-provider")).toHaveValue("claude");
+});
+
+test("disconnected users connect a personal Claude key before chatting", async ({ page }) => {
+    let connected = false;
+    await page.route("**/chat/api/session", async (route) => {
+        const response = await route.fetch();
+        const data = await response.json();
+        data.providers = [
+            { id: "codex", name: "Codex", connected: false },
+            { id: "claude", name: "Claude", connected },
+        ];
+        await route.fulfill({ response, json: data });
+    });
+    await page.route("**/chat/api/providers/claude", async (route) => {
+        if (route.request().method() === "POST") {
+            expect(route.request().postDataJSON().apiKey).toBe("sk-ant-browser-fixture");
+            connected = true;
+        } else connected = false;
+        await route.fulfill({ json: { success: true } });
+    });
+    await page.goto("/chat/");
+    await page.getByRole("link", { name: /Sign in to start/ }).click();
+    await page.locator("#chat-provider").selectOption("claude");
+    await page.locator("#message").fill("List sources");
+    await expect(page.locator("#send")).toBeDisabled();
+    await page.getByText("My AI connections", { exact: true }).click();
+    await page.locator("#claude-key").fill("sk-ant-browser-fixture");
+    await page.locator("#connect-claude").click();
+    await expect(page.locator("#claude-key")).toHaveValue("");
+    await expect(page.locator("#claude-status")).toHaveText("Connected");
+    await expect(page.locator("#send")).toBeEnabled();
+    await page.locator("#disconnect-claude").click();
+    await expect(page.locator("#claude-status")).toHaveText("Not connected");
+    await expect(page.locator("#send")).toBeDisabled();
+});

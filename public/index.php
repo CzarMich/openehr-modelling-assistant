@@ -184,6 +184,8 @@ try {
     $builder = Server::builder()
         ->setServerInfo(APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_ICON === '' ? null : [new Icon(APP_ICON)], $settings->get('PRODUCT_URL') ?: null)
         ->setCapabilities(ProtocolProfile::capabilities())
+        // Keep the catalogue in one page for clients that stop after the first tools/list.
+        ->setPaginationLimit(100)
         ->addRequestHandler(new \OpenEHR\Assistant\Mcp\InitializeHandler(
             new Implementation(APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_ICON === '' ? null : [new Icon(APP_ICON)], $settings->get('PRODUCT_URL') ?: null),
             APP_TITLE . "\n" . $instructions))

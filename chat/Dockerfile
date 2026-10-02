@@ -7,7 +7,7 @@ RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY chat/src ./src
 COPY chat/entrypoint.mjs ./entrypoint.mjs
 COPY public/chat /app/public/chat
-RUN mkdir -p /data/chat /workspace /home/node/.codex && chown -R node:node /data/chat /workspace /home/node/.codex
+RUN mkdir -p /data/chat /workspace && chown -R node:node /data/chat /workspace
 USER node
 ENV CHAT_PORT=8350
 EXPOSE 8350

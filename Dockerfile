@@ -51,10 +51,12 @@ USER www-data
 FROM base AS vendor-builder
 COPY composer.json ./composer.json
 COPY composer.lock ./composer.lock
+COPY --from=composer:2@sha256:9715c7f69044da2a212a5fbde29ee7da24e364d426560ae6367b060236f847d7 /usr/bin/composer /usr/bin/composer
+RUN --mount=type=cache,target=/tmp/composer-cache,sharing=locked \
+    COMPOSER_CACHE_DIR=/tmp/composer-cache composer install --no-interaction --no-progress --no-ansi --no-scripts --no-dev --no-autoloader
 COPY public ./public
 COPY src ./src
-COPY --from=composer:2@sha256:9715c7f69044da2a212a5fbde29ee7da24e364d426560ae6367b060236f847d7 /usr/bin/composer /usr/bin/composer
-RUN composer install --no-interaction --no-progress --no-ansi --no-scripts --no-dev --classmap-authoritative --optimize-autoloader
+RUN composer dump-autoload --no-dev --no-scripts --classmap-authoritative
 
 
 #

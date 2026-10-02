@@ -46,3 +46,20 @@ test("cancellation terminates an active Codex turn", async () => {
         { name: "AbortError" },
     );
 });
+
+test("Codex device sign-in uses an isolated credential directory and completes without inference", async (t) => {
+    const { mkdtempSync, readFileSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const directory = mkdtempSync(join(tmpdir(), "codex-login-test-"));
+    t.after(() => rmSync(directory, { recursive: true, force: true }));
+    let login;
+    await new CodexProvider({ ...config, codexHome: directory }).run({
+        signal: AbortSignal.timeout(5000),
+        onLogin: (result) => {
+            login = result;
+        },
+    });
+    assert.equal(login.userCode, "TEST-CODE");
+    assert.equal(JSON.parse(readFileSync(join(directory, "auth.json"))).token, "personal-fixture");
+});

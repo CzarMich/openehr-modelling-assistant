@@ -10,7 +10,7 @@ Official documentation reviewed 2026-09-26:
 
 | Platform | Documented connection | Verification boundary |
 |---|---|---|
-| Copilot Studio | MCP onboarding wizard or Power Apps custom connector; Streamable HTTP | Primary path below; no EY tenant supplied |
+| Copilot Studio | MCP onboarding wizard or Power Apps custom connector; Streamable HTTP | Primary path below; tenant acceptance not yet performed |
 | Microsoft Agent Framework | `MCPStreamableHTTPTool`, with `static_headers` or a `header_provider` | Client integration option, not a server dependency |
 | Microsoft Foundry agents | Remote MCP endpoint and project connection for authentication | Azure project/identity configuration belongs to the consumer |
 | Microsoft 365 Copilot | Organisation-managed agent extension/distribution path | No generic ChatGPT-style config file is asserted |
@@ -95,6 +95,6 @@ and authentication. Do not assume a tenant can reach a workstation's localhost.
 | Microsoft discovery and execution | NOT TESTED | Requires the target tenant |
 | HTTPS gateway deployment | NOT TESTED | Local verification uses loopback HTTP |
 | Native OIDC verifier | IMPLEMENTED | Live identity-provider acceptance and Entra-style signed fixture tests; live Entra tenant acceptance still required |
-| CKM/template/AQL through EY Copilot | NOT TESTED | Exact acceptance steps above |
+| CKM/template/AQL through Copilot | NOT TESTED | Exact acceptance steps above |
 
 Final enterprise deployment requires the organisation's architecture and security review.

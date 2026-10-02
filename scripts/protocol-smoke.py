@@ -95,6 +95,8 @@ def surface(client, record):
     initialize(client, '2025-11-25')
     record('initialize, advertised capabilities and ping')
     tools = client.listing('tools/list', 'tools')
+    first_page = client.rpc('tools/list', {})
+    assert not first_page.get('nextCursor') and len(first_page['tools']) == len(tools), 'Keep every tool discoverable by single-page clients'
     assert len(tools) == len({t['name'] for t in tools}) and len(tools) >= 63
     assert all(t['inputSchema'].get('additionalProperties') is False for t in tools)
     assert all('annotations' in t for t in tools), 'Tool side-effect annotations missing'

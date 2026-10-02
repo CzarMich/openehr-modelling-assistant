@@ -152,6 +152,49 @@
                 </header>
                 <section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
                     <div id="notice" role="alert" class="notice" hidden></div>
+                    <div id="provider-bar" class="provider-bar" hidden>
+                        <label for="chat-provider">Assistant</label>
+                        <select id="chat-provider">
+                            <option value="codex">Codex</option>
+                            <option value="claude">Claude</option>
+                        </select>
+                        <details id="provider-settings">
+                            <summary>My AI connections</summary>
+                            <p>
+                                Your account supplies the replies. Conversations stay with the provider selected when
+                                they were created.
+                            </p>
+                            <div class="provider-connection">
+                                <strong>Codex</strong> <span id="codex-status" role="status"></span>
+                                <button id="connect-codex" type="button">Connect Codex</button>
+                                <button id="disconnect-codex" type="button" hidden>Disconnect Codex</button>
+                                <p id="codex-device" hidden>
+                                    Open
+                                    <a id="codex-verification" target="_blank" rel="noopener noreferrer"
+                                        >Codex sign-in</a
+                                    >
+                                    and enter <strong id="codex-code"></strong>. Complete sign-in in that window.
+                                </p>
+                            </div>
+                            <form id="claude-connection" class="provider-connection">
+                                <strong>Claude</strong> <span id="claude-status" role="status"></span>
+                                <p>
+                                    Use your Anthropic API key. API usage is billed separately from a Claude
+                                    subscription.
+                                </p>
+                                <label for="claude-key">Anthropic API key</label>
+                                <input
+                                    id="claude-key"
+                                    type="password"
+                                    autocomplete="off"
+                                    maxlength="512"
+                                    spellcheck="false"
+                                />
+                                <button id="connect-claude" type="submit">Connect Claude</button>
+                                <button id="disconnect-claude" type="button" hidden>Disconnect Claude</button>
+                            </form>
+                        </details>
+                    </div>
                     <section id="welcome" class="welcome">
                         <div class="eyebrow"><span class="status-dot"></span> OPENEHR MODELLING ASSISTANT</div>
                         <h1>Your clinical modelling workspace</h1>

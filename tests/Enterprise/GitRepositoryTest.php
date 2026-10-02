@@ -115,6 +115,23 @@ final class GitRepositoryTest extends TestCase
         self::assertFalse($a->capabilities()['offline']);
     }
 
+    public function test_unchanged_remote_skips_fetch_but_new_remote_revisions_are_loaded(): void
+    {
+        $remote = $this->remote();
+        $writer = new GitModelRepository($this->settings('writer', $remote));
+        $writer->createProject('default', 'Shared', '');
+        $first = $writer->saveArtifact('default', 'templates/check.oet', '<first/>', [], null);
+        $reader = new GitModelRepository($this->settings('reader', $remote));
+        self::assertSame('<first/>', $reader->getArtifact('default', 'templates/check.oet')['content']);
+        $fetchHead = $this->root . '/reader/git/objects.git/FETCH_HEAD';
+        file_put_contents($fetchHead, 'unchanged-fetch-marker');
+        self::assertSame('<first/>', $reader->getArtifact('default', 'templates/check.oet')['content']);
+        self::assertSame('unchanged-fetch-marker', file_get_contents($fetchHead));
+        $writer->saveArtifact('default', 'templates/check.oet', '<second/>', [], $first['revision']);
+        self::assertSame('<second/>', $reader->getArtifact('default', 'templates/check.oet')['content']);
+        self::assertNotSame('unchanged-fetch-marker', file_get_contents($fetchHead));
+    }
+
     public function test_external_native_files_are_discovered_and_round_trip_without_wrapping(): void
     {
         $remote = $this->remote();
