@@ -195,10 +195,14 @@ test("CKM discovery errors stay inside source settings and can be retried", asyn
             },
         }),
     );
+    const initialConnections = page.waitForResponse("**/api/connections");
     await login(page);
+    await initialConnections;
     await expect(page.locator("#enterprise-ckm-status")).toBeHidden();
     await expect(page.getByRole("alert")).toBeHidden();
+    const settingsConnections = page.waitForResponse("**/api/connections");
     await page.locator("#personal-settings > summary").click();
+    await settingsConnections;
     await expect(page.locator("#enterprise-ckm-status")).toBeVisible();
     unavailable = false;
     await page.getByRole("button", { name: "Retry CKM sources", exact: true }).click();
