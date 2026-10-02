@@ -1,8 +1,12 @@
 # Browser modelling workspace
 
-Open the deployment's main URL to use a single workspace with **Chat**, **Models** and **Governance** tabs. No additional browser window, embedded iframe or model-provider account is required for navigation and review. Conversational chat uses the configured optional provider adapter. All tabs share the verified browser identity and one sign-out action.
+Open the deployment's main URL to use a single workspace with **Chat**, **Models**, **Governance** and **Help** tabs. No additional browser window, embedded iframe or model-provider account is required for navigation and review. Conversational chat uses the configured optional provider adapter. All tabs share the verified browser identity and one sign-out action.
 
-The interface uses an openEHR blue, white and slate palette with system sans-serif typography, responsive layouts, visible keyboard focus, labelled forms and status messages. Tabs support arrow keys, Home and End; the skip link goes directly to the workspace. Mobile navigation keeps all three tabs visible. Motion respects the browser's reduced-motion preference.
+The interface uses an openEHR blue, white and slate palette with system sans-serif typography, responsive layouts, visible keyboard focus, labelled forms and status messages. Tabs support arrow keys, Home and End, skipping unavailable tabs; the skip link goes directly to the workspace. Mobile navigation keeps the tabs accessible. Motion respects the browser's reduced-motion preference.
+
+## Built-in user guide
+
+**Help** and **User guide** open the same guide inside the workspace, including before sign-in. Plain-language steps cover getting started, document uploads and extraction limits, personal CKMs and Git repositories, confirmed saves, model review, sharing and common problems. Contextual links beside connections, uploads and sharing open the relevant topic. Topic links such as `/chat/#help-files` can be bookmarked; switching to Help preserves the current conversation and unsent message. Users do not need GitHub to read the guide.
 
 ## Work with models
 

@@ -50,7 +50,7 @@ async function send(page, message) {
 
 test("personal CKMs and repository destinations persist, while enterprise duplicates are ignored", async ({ page }) => {
     await login(page);
-    await page.getByText("My sources and repositories", { exact: true }).click();
+    await page.locator("#personal-settings > summary").click();
     await page.getByLabel("Connection name", { exact: true }).fill("Already provided");
     await page.getByLabel("HTTPS URL", { exact: true }).fill("https://ckm.example.org/ckm/rest/");
     await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
@@ -62,7 +62,7 @@ test("personal CKMs and repository destinations persist, while enterprise duplic
     await page.getByLabel("Target branch", { exact: true }).fill("drafts");
     await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
     await expect(page.getByRole("button", { name: "Remove Personal models" })).toBeVisible();
-    await page.getByText("My sources and repositories", { exact: true }).click();
+    await page.locator("#personal-settings > summary").click();
     await page.getByLabel("Save artifacts to").selectOption({ label: "Personal models · drafts" });
     await send(page, "Use my personal repository");
     await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
@@ -317,10 +317,38 @@ test("repository outage has a recoverable error and keeps navigation available",
     await expect(page.getByRole("textbox", { name: "Message the modelling assistant" })).toBeEnabled();
 });
 
+test("help is available before sign-in and topic links survive reload on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/chat/#help-files");
+    await expect(page.getByRole("tab", { name: "Help", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "2. Upload documents" })).toBeFocused();
+    await expect(page.locator("#panel-help")).toContainText("10 files");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "2. Upload documents" })).toBeFocused();
+    await page.getByRole("tab", { name: "Help", exact: true }).click();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByRole("tab", { name: "Governance", exact: true })).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(page.getByRole("tab", { name: "Help", exact: true })).toBeFocused();
+});
+
+test("contextual help stays in the workspace and preserves a draft message", async ({ page }) => {
+    await login(page);
+    await page.locator("#message").fill("Review the requirements in my publication");
+    await page.getByRole("link", { name: "Help with uploads", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "2. Upload documents" })).toBeFocused();
+    await page.getByRole("link", { name: "Add sources and repositories", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "3. Add sources and repositories" })).toBeFocused();
+    await page.getByRole("link", { name: "Return to Chat", exact: true }).click();
+    await expect(page.locator("#message")).toHaveValue("Review the requirements in my publication");
+    await expect(page.getByRole("link", { name: "User guide", exact: true })).toHaveAttribute("href", "#help");
+});
+
 test("workspace has no detected WCAG AA accessibility violations in its primary views", async ({ page }) => {
     const { default: AxeBuilder } = await import("@axe-core/playwright");
     await login(page);
-    for (const name of ["Chat", "Models", "Governance"]) {
+    for (const name of ["Chat", "Models", "Governance", "Help"]) {
         await page.getByRole("tab", { name, exact: true }).click();
         if (name === "Models") await page.getByRole("button", { name: /admission.oet/ }).click();
         if (name === "Governance")
@@ -359,7 +387,7 @@ test("provider choice is retained per conversation and connection controls expla
     await expect(page.locator("#thread")).toContainText("configured source");
     await expect(page.locator("#chat-provider")).toBeDisabled();
     await expect(page.locator("#chat-provider")).toHaveValue("claude");
-    await page.getByText("My AI connections", { exact: true }).click();
+    await page.locator("#provider-settings > summary").click();
     await expect(page.locator("#claude-connection")).toContainText("billed separately from a Claude subscription");
     await page.locator("#new-chat").click();
     await expect(page.locator("#chat-provider")).toBeEnabled();
@@ -391,7 +419,7 @@ test("disconnected users connect a personal Claude key before chatting", async (
     await page.locator("#chat-provider").selectOption("claude");
     await page.locator("#message").fill("List sources");
     await expect(page.locator("#send")).toBeDisabled();
-    await page.getByText("My AI connections", { exact: true }).click();
+    await page.locator("#provider-settings > summary").click();
     await page.locator("#claude-key").fill("sk-ant-browser-fixture");
     await page.locator("#connect-claude").click();
     await expect(page.locator("#claude-key")).toHaveValue("");

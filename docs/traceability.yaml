@@ -242,7 +242,7 @@ requirements:
     adr: ["0008"]
 
   - id: REQ-F15
-    title: Authenticated browser modelling chat
+    title: Authenticated browser modelling chat and built-in user help
     canonical: docs/requirements.md
     status: draft
     implementation: landed
