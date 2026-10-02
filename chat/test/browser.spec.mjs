@@ -44,7 +44,16 @@ async function login(page) {
     await page.getByRole("link", { name: "Sign in", exact: true }).click();
     await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
 }
+async function settings(page, open = true) {
+    const dialog = page.locator("#chat-settings-dialog");
+    if (open && !(await dialog.isVisible()))
+        await page.getByRole("button", { name: "Chat settings", exact: true }).click();
+    if (!open && (await dialog.isVisible()))
+        await page.getByRole("button", { name: "Close settings", exact: true }).click();
+}
 async function send(page, message) {
+    await settings(page, false);
+    await settings(page, false);
     await page.getByRole("textbox", { name: "Message the modelling assistant" }).fill(message);
     const response = page.waitForResponse(
         (response) => response.request().method() === "POST" && response.url().endsWith("/messages"),
@@ -53,12 +62,14 @@ async function send(page, message) {
     expect((await response).status()).toBe(200);
 }
 async function addRepository(page) {
+    await settings(page);
     await page.locator("#personal-settings > summary").click();
     await page.getByLabel("Connection type").selectOption("github");
     await page.getByLabel("Connection name", { exact: true }).fill("My models");
     await page.getByLabel("HTTPS URL", { exact: true }).fill("https://github.com/example/personal-models");
     await page.getByRole("button", { name: "Save connection", exact: true }).click();
     await expect(page.getByRole("button", { name: "Remove My models" })).toBeVisible();
+    await settings(page);
     await page.locator("#personal-settings > summary").click();
 }
 
@@ -73,8 +84,11 @@ test("repository selection must finish saving before the assistant can receive a
         await waiting;
         await route.continue();
     });
+    await settings(page);
     await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await settings(page, false);
     await page.getByRole("textbox", { name: "Message the modelling assistant" }).fill("inspect repository");
+    await settings(page);
     await expect(page.locator("#save-destination-status")).toContainText("Not active yet");
     await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
     try {
@@ -94,6 +108,7 @@ test("repository selection must finish saving before the assistant can receive a
 test("a new chat saves its repository with creation before uploading or sending", async ({ page }) => {
     await login(page);
     await addRepository(page);
+    await settings(page);
     await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
     const repository = await page.getByLabel("Save artifacts to").inputValue();
     const created = page.waitForRequest(
@@ -123,6 +138,7 @@ test("a repository changed in another tab preserves the unsent instructions and 
 }) => {
     await login(page);
     await addRepository(page);
+    await settings(page);
     await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
     await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
     await expect(page.locator("#save-destination-status")).toContainText("Active:");
@@ -135,6 +151,7 @@ test("a repository changed in another tab preserves the unsent instructions and 
         data: { repository: null },
     });
     expect(changed.status()).toBe(200);
+    await settings(page, false);
     await page.getByRole("textbox", { name: "Message the modelling assistant" }).fill("Save my reviewed AKI drafts");
     const response = page.waitForResponse(
         (response) => response.request().method() === "POST" && response.url().endsWith("/messages"),
@@ -151,6 +168,7 @@ test("a repository changed in another tab preserves the unsent instructions and 
 
 test("personal CKMs and repository destinations persist, while enterprise duplicates are ignored", async ({ page }) => {
     await login(page);
+    await settings(page);
     await page.locator("#personal-settings > summary").click();
     await page.getByLabel("Connection name", { exact: true }).fill("Already provided");
     await page.getByLabel("HTTPS URL", { exact: true }).fill("https://ckm.example.org/ckm/rest/");
@@ -163,7 +181,9 @@ test("personal CKMs and repository destinations persist, while enterprise duplic
     await page.getByLabel("Target branch", { exact: true }).fill("drafts");
     await page.getByRole("button", { name: "Save connection", exact: true }).click();
     await expect(page.getByRole("button", { name: "Remove Personal models" })).toBeVisible();
+    await settings(page);
     await page.locator("#personal-settings > summary").click();
+    await settings(page);
     await page.getByLabel("Save artifacts to").selectOption({ label: "Personal models · drafts" });
     await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
     await expect(page.locator("#save-destination-status")).toContainText("Active:");
@@ -201,6 +221,7 @@ test("CKM discovery errors stay inside source settings and can be retried", asyn
     await expect(page.locator("#enterprise-ckm-status")).toBeHidden();
     await expect(page.getByRole("alert")).toBeHidden();
     const settingsConnections = page.waitForResponse("**/api/connections");
+    await settings(page);
     await page.locator("#personal-settings > summary").click();
     await settingsConnections;
     await expect(page.locator("#enterprise-ckm-status")).toBeVisible();
@@ -213,11 +234,13 @@ test("CKM discovery errors stay inside source settings and can be retried", asyn
 test("an existing repository can gain a token without losing its selected identity", async ({ page }) => {
     await login(page);
     await addRepository(page);
+    await settings(page);
     await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
     await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
     await expect(page.locator("#save-destination-status")).toContainText("Active:");
     const repository = await page.getByLabel("Save artifacts to").inputValue();
     await expect(page.locator("#repository-token-status")).toContainText("Read-only");
+    await settings(page);
     await page.locator("#personal-settings > summary").click();
     await page.getByRole("button", { name: "Update access for My models", exact: true }).click();
     await page.getByLabel("Personal access token (optional for public reads)").fill("synthetic-browser-token");
@@ -500,6 +523,7 @@ test("help is available before sign-in and topic links survive reload on mobile"
 
 test("contextual help stays in the workspace and preserves a draft message", async ({ page }) => {
     await login(page);
+    await settings(page, false);
     await page.locator("#message").fill("Review the requirements in my publication");
     await page.getByRole("link", { name: "Help with uploads", exact: true }).click();
     await expect(page.getByRole("heading", { name: "2. Upload documents" })).toBeFocused();
@@ -546,17 +570,24 @@ test("provider choice is retained per conversation and connection controls expla
 }) => {
     await page.goto("/chat/");
     await page.getByRole("link", { name: "Sign in", exact: true }).click();
+    await settings(page);
     await page.locator("#chat-provider").selectOption("claude");
+    await settings(page, false);
     await page.locator("#message").fill("List sources");
+    await settings(page, false);
     await page.locator("#send").click();
     await expect(page.locator("#thread")).toContainText("configured source");
     await expect(page.locator("#chat-provider")).toBeDisabled();
     await expect(page.locator("#chat-provider")).toHaveValue("claude");
+    await settings(page);
     await page.locator("#provider-settings > summary").click();
     await expect(page.locator("#claude-connection")).toContainText("billed separately from a Claude subscription");
+    await settings(page, false);
     await page.locator("#new-chat").click();
     await expect(page.locator("#chat-provider")).toBeEnabled();
+    await settings(page);
     await page.locator("#chat-provider").selectOption("codex");
+    await settings(page, false);
     await page.locator("#conversations button", { hasText: "List sources" }).click();
     await expect(page.locator("#chat-provider")).toHaveValue("claude");
 });
@@ -581,9 +612,12 @@ test("disconnected users connect a personal Claude key before chatting", async (
     });
     await page.goto("/chat/");
     await page.getByRole("link", { name: "Sign in", exact: true }).click();
+    await settings(page);
     await page.locator("#chat-provider").selectOption("claude");
+    await settings(page, false);
     await page.locator("#message").fill("List sources");
     await expect(page.locator("#send")).toBeDisabled();
+    await settings(page);
     await page.locator("#provider-settings > summary").click();
     await page.locator("#claude-key").fill("sk-ant-browser-fixture");
     await page.locator("#connect-claude").click();
@@ -597,6 +631,7 @@ test("disconnected users connect a personal Claude key before chatting", async (
 
 test("composer attachment icon opens the picker and keeps the draft editable during upload", async ({ page }) => {
     await login(page);
+    await settings(page, false);
     await page.locator("#message").fill("Start my instructions");
     let releaseUpload;
     const gate = new Promise((resolve) => {
@@ -611,6 +646,7 @@ test("composer attachment icon opens the picker and keeps the draft editable dur
     await (await picker).setFiles({ name: "notes.png", mimeType: "image/png", buffer: imagePng });
     await expect(page.locator("#attachment-list")).toContainText("Uploading");
     await expect(page.locator("#message")).toBeEnabled();
+    await settings(page, false);
     await page.locator("#message").fill("Finish my instructions while the file uploads");
     await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
     releaseUpload();
@@ -652,6 +688,7 @@ test("image cards follow sent messages, survive reload and remain available to l
 test("files can be dropped and images pasted into the composer without losing typed instructions", async ({ page }) => {
     await login(page);
     await page.setViewportSize({ width: 390, height: 844 });
+    await settings(page, false);
     await page.locator("#message").fill("Keep my clinical modelling instructions");
     await page.locator("#chat-form").evaluate((form) => {
         const dataTransfer = new DataTransfer();
@@ -698,7 +735,7 @@ test("single-click decisions pause the assistant and persist the selected answer
     expect(await page.locator("#thread").evaluate((node) => node.clientHeight)).toBeGreaterThan(180);
     await page.getByRole("button", { name: "Chat settings", exact: true }).click();
     await expect(page.getByLabel("Save artifacts to")).toBeVisible();
-    await page.getByRole("button", { name: "Chat settings", exact: true }).click();
+    await page.getByRole("button", { name: "Close settings", exact: true }).click();
     await expect(page.getByLabel("Save artifacts to")).toBeHidden();
     await expect(page.locator("#activity")).toHaveAttribute("data-waiting", "true");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -791,6 +828,7 @@ test("signed-out users have a visible header sign-in on every workspace view and
 
 test("expired sessions reveal header sign-in and preserve unsent instructions", async ({ page }) => {
     await login(page);
+    await settings(page, false);
     await page.locator("#message").fill("Keep this modelling request");
     await page.route("**/chat/api/session", (route) =>
         route.fulfill({
@@ -837,6 +875,7 @@ test("chat projects group new and existing conversations and removal preserves t
     await login(page);
     await send(page, "Existing renal conversation");
     await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await settings(page, false);
     await page.getByRole("button", { name: "Create project", exact: true }).click();
     let dialog = page.getByRole("dialog", { name: "Create chat project" });
     await dialog.getByLabel("Project name").fill("Kidney care");
@@ -883,6 +922,7 @@ test("chat projects are usable with keyboard navigation on phones", async ({ pag
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
     await page.getByRole("button", { name: "Toggle conversations", exact: true }).click();
+    await settings(page, false);
     await page.getByRole("button", { name: "Create project", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Create chat project" });
     await expect(dialog.getByLabel("Project name")).toBeFocused();
@@ -943,11 +983,14 @@ test("Copilot setup stays in Help and only administrators can reveal the connect
 test("project repository folders and saved destinations survive new chats and reloads", async ({ page }) => {
     await login(page);
     await addRepository(page);
+    await settings(page);
     await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await settings(page);
     await page.getByLabel("Repository folder", { exact: true }).fill("AKI");
     await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
     await expect(page.locator("#save-destination-status")).toContainText("AKI/");
     const repository = await page.getByLabel("Save artifacts to").inputValue();
+    await settings(page, false);
     await page.locator("#new-chat").click();
     await expect(page.getByLabel("Save artifacts to")).toHaveValue(repository);
     await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("AKI");
@@ -956,6 +999,7 @@ test("project repository folders and saved destinations survive new chats and re
     await page.reload();
     await expect(page.getByLabel("Save artifacts to")).toHaveValue(repository);
     await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("AKI");
+    await settings(page, false);
     await page.getByRole("button", { name: "Create project", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Create chat project" });
     await dialog.getByLabel("Project name", { exact: true }).fill("Renal care");
@@ -963,14 +1007,18 @@ test("project repository folders and saved destinations survive new chats and re
     await dialog.getByRole("button", { name: "Create project", exact: true }).click();
     await expect(dialog).toBeHidden();
     await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("Renal-care");
+    await settings(page);
     await page.getByLabel("Repository folder", { exact: true }).fill("Renal/Reviewed");
     await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
     await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    await settings(page, false);
     await page.locator("#new-chat").click();
     await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("Renal/Reviewed");
+    await settings(page);
     await page.getByLabel("Repository folder", { exact: true }).fill("Temporary");
     await page.getByRole("button", { name: "Use project folder", exact: true }).click();
     await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("Renal/Reviewed");
+    await settings(page, false);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole("button", { name: "Chat settings", exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -988,4 +1036,86 @@ test("chat waits for saved destination metadata before allowing a new conversati
     await expect(page.getByRole("button", { name: "Add files and images", exact: true })).toBeDisabled();
     release();
     await expect(page.locator("#new-chat")).toBeEnabled();
+});
+
+test("settings gear opens an accessible overlay and leaves the composer unobstructed when closed", async ({ page }) => {
+    await login(page);
+    for (const viewport of [
+        { width: 1440, height: 900 },
+        { width: 390, height: 844 },
+    ]) {
+        await page.setViewportSize(viewport);
+        const gear = page.getByRole("button", { name: "Chat settings", exact: true });
+        await expect(gear).toBeInViewport();
+        await expect(page.getByLabel("Save artifacts to")).toBeHidden();
+        const before = await page.locator("#message").boundingBox();
+        await gear.click();
+        const overlay = page.getByRole("dialog", { name: "Chat settings", exact: true });
+        await expect(overlay).toBeVisible();
+        await expect(overlay.getByLabel("Save artifacts to")).toBeVisible();
+        await expect(overlay.locator("#provider-settings > summary")).toBeVisible();
+        await expect(overlay.locator("#personal-settings > summary")).toBeVisible();
+        expect(await overlay.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+        await page.keyboard.press("Escape");
+        await expect(overlay).toBeHidden();
+        await expect(gear).toBeFocused();
+        expect(await page.locator("#message").boundingBox()).toEqual(before);
+    }
+});
+
+test("moving a chat previews artefact paths, requires confirmation and adopts the project destination", async ({
+    page,
+}) => {
+    await login(page);
+    await addRepository(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await page.getByLabel("Repository folder", { exact: true }).fill("Old");
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    await expect(page.locator("#save-destination-status")).toContainText("Old/");
+    await send(page, "Move my renal models");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await page.getByRole("button", { name: "Create project", exact: true }).click();
+    let dialog = page.getByRole("dialog", { name: "Create chat project" });
+    await dialog.getByLabel("Project name").fill("AKI");
+    await dialog.getByRole("button", { name: "Create project", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    let commits = 0;
+    await page.route("**/move-preview", async (route) => {
+        const response = await route.fetch(),
+            data = await response.json();
+        // The service's remote transaction is covered separately. Exercise the
+        // actual confirmation UI with a synthetic file list and real chat storage.
+        await route.fulfill({
+            response,
+            json: {
+                ...data,
+                moves: [
+                    { from: "Old/model.adl", to: "AKI/archetypes/model.adl" },
+                    { from: "Old/model.oet", to: "AKI/templates/oet/model.oet" },
+                ],
+            },
+        });
+    });
+    await page.route("**/move", async (route) => {
+        commits++;
+        await route.continue();
+    });
+    await page.getByRole("button", { name: "Move Move my renal models to a project", exact: true }).click();
+    dialog = page.getByRole("dialog", { name: "Move conversation" });
+    await dialog.getByLabel("Chat project").selectOption({ label: "AKI" });
+    await dialog.getByRole("button", { name: "Move chat", exact: true }).click();
+    await expect(dialog.locator("#move-chat-preview")).toContainText("AKI/templates/oet/model.oet");
+    expect(commits).toBe(0);
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(commits).toBe(0);
+    await page.getByRole("button", { name: "Move Move my renal models to a project", exact: true }).click();
+    await dialog.getByLabel("Chat project").selectOption({ label: "AKI" });
+    await dialog.getByRole("button", { name: "Move chat", exact: true }).click();
+    await dialog.getByRole("button", { name: "Move chat and artefacts", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    expect(commits).toBe(1);
+    await page.getByRole("button", { name: "Move my renal models", exact: true }).click();
+    await settings(page);
+    await expect(page.getByLabel("Repository folder", { exact: true })).toHaveValue("AKI");
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(/^[a-f0-9-]{36}$/);
 });

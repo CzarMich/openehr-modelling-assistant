@@ -403,7 +403,7 @@ test("personal commits wait for owner confirmation of the destination and cannot
         async ({ callTool }) => {
             await callTool("personal_repository_save", {
                 repository,
-                path: "AKI/templates/renal.oet",
+                path: "AKI/templates/oet/renal.oet",
                 content: "<draft/>",
                 message: "Draft renal model",
                 expectedRevision: null,
@@ -461,6 +461,9 @@ test("personal commits wait for owner confirmation of the destination and cannot
             /* Drain the turn so persistence and cleanup finish. */
         }
         assert.equal(writes.length, approved ? 1 : 0);
+        const saved = f.store.get("alice", conversation.id);
+        assert.equal(saved.artifacts?.length || 0, approved ? 1 : 0);
+        if (approved) assert.equal(saved.artifacts[0].path, "AKI/templates/oet/renal.oet");
     }
 });
 
@@ -807,7 +810,7 @@ test("personal save discovery explains readiness and enforces the folder before 
     );
     const args = {
         repository,
-        path: "AKI/templates/AKI_clinical_documentation.oet",
+        path: "AKI/templates/oet/AKI_clinical_documentation.oet",
         content: "<template/>",
         expectedRevision: null,
         message: "Synthetic draft",
@@ -826,7 +829,7 @@ test("personal save discovery explains readiness and enforces the folder before 
     assert.equal(saved.saved, true);
     assert.equal(saved.path, args.path);
     assert.equal(remote.filter((call) => call.method).length, 1);
-    assert.match(remote.at(-1).url, /\/contents\/AKI\/templates\/AKI_clinical_documentation.oet$/);
+    assert.match(remote.at(-1).url, /\/contents\/AKI\/templates\/oet\/AKI_clinical_documentation.oet$/);
     conversation.repository = f.connections.add("alice", {
         ...github,
         url: "https://github.com/alice/public",
