@@ -1,4 +1,4 @@
-export function sourcePdf() {
+export function sourcePdf(padding = 0) {
     // Minimal independent PDF fixture, with a text page and standard font.
     const stream = "BT /F1 12 Tf 20 100 Td (Renal publication evidence) Tj ET";
     const objects = [
@@ -8,7 +8,7 @@ export function sourcePdf() {
         "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
         `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
     ];
-    let pdf = "%PDF-1.4\n",
+    let pdf = "%PDF-1.4\n" + (padding ? "%" + "x".repeat(padding) + "\n" : ""),
         offsets = [0];
     objects.forEach((object, i) => {
         offsets.push(Buffer.byteLength(pdf));

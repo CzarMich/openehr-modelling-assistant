@@ -939,7 +939,9 @@ export function createApplication(
             });
         }
     });
-    server.requestTimeout = 30000;
+    // Receiving a 10 MiB source file can take longer than a small JSON request.
+    // Keep uploads bounded, but allow slower connections two minutes to finish.
+    server.requestTimeout = 120000;
     server.headersTimeout = 10000;
     server.maxHeadersCount = 40;
     server.on("close", () => {

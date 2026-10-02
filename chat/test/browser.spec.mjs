@@ -810,6 +810,41 @@ test("two PDFs and an Excel workbook upload together and reach the modelling too
     await expect(page.locator(".message.assistant")).toContainText("Urine volume");
 });
 
+test("empty and non-JSON upload failures show actionable messages and preserve the draft", async ({ page }) => {
+    await login(page);
+    await page.locator("#message").fill("Keep these clinical modelling instructions");
+    const cases = [
+        { status: 408, body: "", expected: "The upload timed out" },
+        { status: 413, body: "<html>Too large</html>", expected: "The server rejected the file size" },
+        { status: 502, body: "", expected: "The server connection was interrupted" },
+        { status: 504, body: "Gateway Timeout", expected: "The server took too long" },
+        { status: 201, body: "", expected: "The upload response was incomplete" },
+    ];
+    let currentCase;
+    await page.route("**/api/conversations/*/attachments", (route) => route.fulfill(currentCase));
+    for (const { expected, ...response } of cases) {
+        currentCase = response;
+        await page.getByLabel("Attach files", { exact: true }).setInputFiles({
+            name: "publication.pdf",
+            mimeType: "application/pdf",
+            buffer: Buffer.alloc(Math.floor(5.8 * 1024 * 1024)),
+        });
+        await expect(page.locator("#upload-status")).toContainText("Some files need attention");
+        await expect(page.locator("#attachment-list")).toContainText(expected);
+        await expect(page.locator("#attachment-list")).not.toContainText("JSON");
+        await expect(page.locator("#message")).toHaveValue("Keep these clinical modelling instructions");
+    }
+    await page.unroute("**/api/conversations/*/attachments");
+    const { sourcePdf } = await import("./fixtures/pdf.mjs");
+    await page.getByLabel("Attach files", { exact: true }).setInputFiles({
+        name: "publication.pdf",
+        mimeType: "application/pdf",
+        buffer: sourcePdf(Math.floor(5.8 * 1024 * 1024)),
+    });
+    await expect(page.locator("#upload-status")).toContainText("1 file added");
+    await expect(page.locator("#attachment-list")).toContainText("Text ready");
+});
+
 test("signed-out users have a visible header sign-in on every workspace view and after logout", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/chat/#help-files");
