@@ -63,3 +63,31 @@ test("Codex device sign-in uses an isolated credential directory and completes w
     assert.equal(login.userCode, "TEST-CODE");
     assert.equal(JSON.parse(readFileSync(join(directory, "auth.json"))).token, "personal-fixture");
 });
+
+test("Codex receives explicit source images and removes temporary copies on success and cancellation", async (t) => {
+    const { mkdtempSync, readFileSync, rmSync, existsSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    for (const wait of [false, true]) {
+        const directory = mkdtempSync("/tmp/codex-image-test-");
+        t.after(() => rmSync(directory, { recursive: true, force: true }));
+        const run = new CodexProvider({ ...config, codexHome: directory }).run({
+            messages: [{ role: "user", content: "VERIFY_IMAGES" + (wait ? " WAIT" : "") }],
+            images: [
+                {
+                    id: "source-id",
+                    name: "source.png",
+                    mimeType: "image/jpeg",
+                    data: Buffer.from("prepared-image-fixture").toString("base64"),
+                },
+            ],
+            tools,
+            signal: AbortSignal.timeout(wait ? 1000 : 5000),
+            onEvent() {},
+            callTool: async () => ({ text: "fixture-result" }),
+        });
+        if (wait) await assert.rejects(run, { name: "AbortError" });
+        else assert.equal(await run, "Verified response");
+        const path = JSON.parse(readFileSync(join(directory, "image-path.json")));
+        assert.equal(existsSync(path), false);
+    }
+});

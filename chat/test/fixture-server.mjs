@@ -75,8 +75,17 @@ auth.login = async (req, res) => {
     res.end();
 };
 const provider = {
-    run: async ({ messages, callTool, onEvent, signal }) => {
+    run: async ({ messages, images, callTool, onEvent, signal }) => {
         const text = messages.at(-1).content.split("\n\nWorkspace context")[0];
+        if (text === "inspect images") {
+            const result =
+                "Image inputs: " +
+                images.length +
+                ". " +
+                images.map((image) => image.name + " (" + image.mimeType + ")").join(", ");
+            onEvent({ type: "delta", text: result });
+            return result;
+        }
         if (text === "wait")
             return new Promise((resolve, reject) =>
                 signal.addEventListener("abort", () => reject(new Error("Stopped")), { once: true }),

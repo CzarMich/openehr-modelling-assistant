@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { once } from "node:events";
 import { fileURLToPath } from "node:url";
 import * as XLSX from "xlsx";
+import sharp from "sharp";
 import { Store } from "../src/store.mjs";
 import { PersonalConnections } from "../src/personal-connections.mjs";
 import { publicAddress, personalRequest } from "../src/personal-http.mjs";
@@ -312,7 +313,7 @@ async function httpFixture(t, run, requestRemote) {
         server.closeAllConnections();
         await new Promise((resolve) => server.close(resolve));
     });
-    const request = (path, { method = "GET", user = "alice", data, bytes, csrf = true } = {}) =>
+    const request = (path, { method = "GET", user = "alice", data, bytes, csrf = true, name = "evidence.csv" } = {}) =>
         fetch(f.config.origin + "/chat/api/" + path, {
             method,
             headers: {
@@ -320,7 +321,7 @@ async function httpFixture(t, run, requestRemote) {
                 Origin: f.config.origin,
                 ...(csrf ? { "X-CSRF-Token": user } : {}),
                 "Content-Type": bytes ? "application/octet-stream" : "application/json",
-                "X-File-Name": "evidence.csv",
+                "X-File-Name": encodeURIComponent(name),
             },
             body: bytes || (data === undefined ? undefined : JSON.stringify(data)),
         });
@@ -448,4 +449,90 @@ test("an in-flight extraction blocks conflicting conversation mutations", async 
     finish({ text: "source", status: "ready", note: "Extracted" });
     assert.equal((await upload).status, 201);
     assert.equal(f.store.get("alice", conversation.id).attachments.length, 1);
+});
+
+test("PNG and JPEG are prepared for vision while originals, limits and metadata remain protected", async (t) => {
+    const { attachments, store, directory } = setup(t);
+    const conversation = store.create("alice");
+    for (const format of ["png", "jpeg"]) {
+        const bytes = await sharp({ create: { width: 2600, height: 100, channels: 3, background: "#f0f4ff" } })
+            .withExif({ IFD0: { Artist: "Private source metadata" } })
+            [format]()
+            .toBuffer();
+        const item = await attachments.add("alice", conversation, "source." + format, bytes);
+        assert.equal(item.status, "image");
+        assert.equal(item.image.width, 2048);
+        assert.equal(item.image.mimeType, "image/jpeg");
+        assert.deepEqual(attachments.bytes("alice", conversation, item.id), bytes);
+        const preview = attachments.preview("alice", conversation, item.id);
+        const metadata = await sharp(preview).metadata();
+        assert.equal(metadata.exif, undefined);
+        assert.equal(metadata.format, "jpeg");
+        assert.equal(attachments.images("alice", conversation).at(-1).data, preview.toString("base64"));
+        assert.doesNotMatch(JSON.stringify(store.get("alice", conversation.id)), /Private source metadata|"data":/);
+        assert.ok(existsSync(join(attachments.directory("alice", conversation.id), item.id + ".image.jpg")));
+    }
+    const invalid = await attachments.add("alice", conversation, "fake.png", Buffer.from("<svg>not a PNG</svg>"));
+    assert.equal(invalid.status, "failed");
+    assert.throws(() => attachments.preview("alice", conversation, invalid.id), /not found/);
+    const oversized = await sharp({ create: { width: 5000, height: 4001, channels: 3, background: "white" } })
+        .png()
+        .toBuffer();
+    const limited = await attachments.add("alice", conversation, "too-many-pixels.png", oversized);
+    assert.equal(limited.status, "failed");
+    assert.equal(attachments.images("alice", conversation).length, 2);
+    const first = conversation.attachments[0];
+    attachments.remove("alice", conversation, first.id);
+    assert.equal(existsSync(join(attachments.directory("alice", conversation.id), first.id + ".image.jpg")), false);
+    assert.equal(attachments.images("alice", conversation).length, 1);
+    store.delete("alice", conversation.id);
+    assert.equal(existsSync(join(directory, "conversations", store.owner("alice"), conversation.id)), false);
+});
+
+test("HTTP image previews and vision inputs remain owner-bound, follow later turns and exclude shared originals", async (t) => {
+    let calls = 0;
+    const f = await httpFixture(t, async ({ images, messages }) => {
+        calls++;
+        assert.equal(images.length, calls < 3 ? 1 : 0);
+        if (images.length) {
+            assert.equal(images[0].name, "clinical-note.png");
+            assert.equal(images[0].mimeType, "image/jpeg");
+            assert.equal((await sharp(Buffer.from(images[0].data, "base64")).metadata()).format, "jpeg");
+            assert.match(messages.at(-1).content, /clinical-note.png/);
+        }
+        return "Synthetic image source checked";
+    });
+    const conversation = f.store.create("alice"),
+        base = "conversations/" + conversation.id;
+    const bytes = await sharp({ create: { width: 40, height: 20, channels: 3, background: "white" } })
+        .png()
+        .toBuffer();
+    const upload = await f.request(base + "/attachments", { method: "POST", name: "clinical-note.png", bytes });
+    assert.equal(upload.status, 201);
+    const item = await upload.json();
+    const path = base + "/attachments/" + item.id;
+    const preview = await f.request(path + "/preview");
+    assert.equal(preview.headers.get("content-type"), "image/jpeg");
+    assert.equal(preview.headers.get("cache-control"), "no-store");
+    assert.equal(preview.headers.get("x-content-type-options"), "nosniff");
+    assert.equal((await f.request(path + "/preview", { user: "bob" })).status, 404);
+    assert.equal((await f.request(path + "/preview", { user: "" })).status, 401);
+    assert.equal((await f.request(path + "/preview", { method: "DELETE" })).status, 404);
+    for (const content of ["Read the image", "Use it for a draft"]) {
+        const response = await f.request(base + "/messages", { method: "POST", data: { content } });
+        assert.match(await response.text(), /"type":"done"/);
+    }
+    const saved = f.store.get("alice", conversation.id);
+    assert.equal(saved.messages[0].attachments[0].id, item.id);
+    assert.equal(saved.messages[2].attachments, undefined);
+    assert.doesNotMatch(JSON.stringify(saved), /"data":/);
+    const link = await (await f.request(base + "/share", { method: "POST", data: {} })).json();
+    const snapshot = await (await f.request("shares/" + link.token, { user: "bob" })).json();
+    assert.equal(snapshot.messages[0].attachments, undefined);
+    assert.equal((await f.request(path, { method: "DELETE" })).status, 200);
+    assert.equal((await f.request(path + "/preview")).status, 404);
+    await (
+        await f.request(base + "/messages", { method: "POST", data: { content: "Continue without the image" } })
+    ).text();
+    assert.equal(calls, 3);
 });

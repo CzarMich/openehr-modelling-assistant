@@ -401,10 +401,10 @@ export function createApplication(
                 }
             }
             const route = path.match(
-                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|settings|share|attachments)(?:\/([a-f0-9-]{36}))?)?$/,
+                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|settings|share|attachments)(?:\/([a-f0-9-]{36}))?(?:\/(preview))?)?$/,
             );
             if (!route) throw Object.assign(new Error("Not found"), { status: 404 });
-            const [, id, action, attachmentId] = route,
+            const [, id, action, attachmentId, preview] = route,
                 key = store.owner(identity) + ":" + id;
             let conversation = store.get(identity, id);
             const freshConversation = () => {
@@ -415,6 +415,8 @@ export function createApplication(
                 return store.get(identity, id);
             };
             if (attachmentId && action !== "attachments") throw Object.assign(new Error("Not found"), { status: 404 });
+            if (preview && (!attachmentId || action !== "attachments" || req.method !== "GET"))
+                throw Object.assign(new Error("Not found"), { status: 404 });
             if (mutation && uploading.has(key))
                 throw Object.assign(new Error("Wait for the file upload to finish."), { status: 409 });
             if (["settings", "share", "attachments"].includes(action) && mutation && active.has(key))
@@ -444,6 +446,11 @@ export function createApplication(
             }
             if (action === "attachments") {
                 if (attachmentId && req.method === "GET") {
+                    if (preview) {
+                        const bytes = attachments.preview(identity, conversation, attachmentId);
+                        res.writeHead(200, { "Content-Type": "image/jpeg", "Content-Length": bytes.length });
+                        return res.end(bytes);
+                    }
                     const item = attachments.get(conversation, attachmentId);
                     res.writeHead(200, {
                         "Content-Type": "application/octet-stream",
@@ -530,7 +537,15 @@ export function createApplication(
             recent.push(Date.now());
             rate.set(identity, recent);
             for (const [user, times] of rate) if (Date.now() - times.at(-1) > 60000) rate.delete(user);
-            conversation.messages.push({ role: "user", content: input.content.trim() });
+            const usedAttachments = new Set(
+                conversation.messages.flatMap((message) => (message.attachments || []).map((item) => item.id)),
+            );
+            const newAttachments = (conversation.attachments || []).filter((item) => !usedAttachments.has(item.id));
+            conversation.messages.push({
+                role: "user",
+                content: input.content.trim(),
+                ...(newAttachments.length ? { attachments: newAttachments } : {}),
+            });
             if (conversation.messages.length === 1) conversation.title = input.content.trim().slice(0, 70);
             store.save(identity, conversation);
             const controller = new AbortController(),
@@ -577,6 +592,7 @@ export function createApplication(
                     identity,
                     provider: turn.provider,
                     messages: workspace.context(conversation.messages),
+                    images: attachments.images(identity, conversation),
                     tools,
                     signal: controller.signal,
                     onEvent: (event) => {

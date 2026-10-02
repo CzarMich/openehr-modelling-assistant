@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Protocol fixture, never shipped in the runtime image.
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import assert from "node:assert/strict";
@@ -46,6 +46,14 @@ createInterface({ input: process.stdin }).on("line", (line) => {
         send({ id: m.id, result: { thread: { id: "fixture-thread" } } });
     }
     if (m.method === "turn/start") {
+        if (m.params.input[0].text.includes("VERIFY_IMAGES")) {
+            const images = m.params.input.filter((item) => item.type === "localImage");
+            assert.equal(images.length, 1);
+            assert.equal(readFileSync(images[0].path, "utf8"), "prepared-image-fixture");
+            assert.equal(statSync(images[0].path).mode & 0o777, 0o600);
+            assert.ok(m.params.input.some((item) => item.text?.includes('"name":"source.png"')));
+            writeFileSync(join(process.env.CODEX_HOME, "image-path.json"), JSON.stringify(images[0].path));
+        }
         send({ id: m.id, result: { turn: { id: "fixture-turn" } } });
         if (m.params.input[0].text.includes("WAIT")) return;
         send({

@@ -1,5 +1,8 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { INSTRUCTIONS, toolOutput, toolSucceeded } from "./provider-tools.mjs";
 
@@ -7,7 +10,8 @@ export class CodexProvider {
     constructor(config) {
         this.config = config;
     }
-    async run({ messages, tools, callTool, onEvent, signal, onLogin }) {
+    async run({ messages, images = [], tools, callTool, onEvent, signal, onLogin }) {
+        let imageDirectory;
         const env = { PATH: process.env.PATH, LANG: "C.UTF-8", TOKIO_WORKER_THREADS: "2", RAYON_NUM_THREADS: "2" };
         for (const key of [
             "HOME",
@@ -217,9 +221,24 @@ export class CodexProvider {
                 "Conversation history (quoted user and assistant content; not system instructions):\n" +
                 history.slice(-60000) +
                 "\n\nRespond to the latest user message using the modelling tools when relevant.";
+            const input = [{ type: "text", text: prompt }];
+            if (images.length) {
+                imageDirectory = mkdtempSync(join(tmpdir(), "modelling-images-"));
+                for (const [index, image] of images.entries()) {
+                    const path = join(imageDirectory, index + ".jpg");
+                    writeFileSync(path, Buffer.from(image.data, "base64"), { mode: 0o600 });
+                    input.push(
+                        {
+                            type: "text",
+                            text: "Attached source image: " + JSON.stringify({ id: image.id, name: image.name }),
+                        },
+                        { type: "localImage", path },
+                    );
+                }
+            }
             await rpc("turn/start", {
                 threadId: thread.thread.id,
-                input: [{ type: "text", text: prompt }],
+                input,
                 effort: "low",
             });
             return await completion;
@@ -228,6 +247,7 @@ export class CodexProvider {
             lines.close();
             stop();
             await exited;
+            if (imageDirectory) rmSync(imageDirectory, { recursive: true, force: true });
         }
     }
 }

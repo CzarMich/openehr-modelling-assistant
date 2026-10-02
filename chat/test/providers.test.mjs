@@ -181,6 +181,14 @@ test("Claude streams replies and sends real MCP results back through its tool lo
     };
     const result = await new ClaudeProvider({ claudeModel: "fixture-model" }, "fixture", client).run({
         messages: [{ role: "user", content: "List sources" }],
+        images: [
+            {
+                id: "image-source",
+                name: "source.png",
+                mimeType: "image/jpeg",
+                data: Buffer.from("prepared-image").toString("base64"),
+            },
+        ],
         tools: [{ name: "ckm_sources", inputSchema: { type: "object" } }],
         signal: new AbortController().signal,
         callTool: async (name, args) => {
@@ -192,6 +200,10 @@ test("Claude streams replies and sends real MCP results back through its tool lo
     assert.equal(result, "Verified reply");
     assert.deepEqual(calls, [{ name: "ckm_sources", args: {} }]);
     assert.equal(requests[0].model, "fixture-model");
+    assert.equal(requests[0].messages[0].content[1].type, "image");
+    assert.equal(requests[0].messages[0].content[1].source.media_type, "image/jpeg");
+    assert.equal(Buffer.from(requests[0].messages[0].content[1].source.data, "base64").toString(), "prepared-image");
+    assert.equal(requests[1].messages[0].content[1].source.data, requests[0].messages[0].content[1].source.data);
     assert.match(requests[1].messages.at(-1).content[0].content, /source/);
     assert.equal(requests[1].messages.at(-1).content[0].is_error, false);
     assert.equal(events.length, 2);

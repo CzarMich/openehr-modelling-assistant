@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+import sharp from "sharp";
+const imagePng = await sharp({ create: { width: 200, height: 120, channels: 3, background: "#005eb8" } })
+    .png()
+    .toBuffer();
+const imageJpeg = await sharp(imagePng).jpeg().toBuffer();
 let browserErrors;
 test.beforeEach(async ({ page }) => {
     browserErrors = [];
@@ -428,4 +433,98 @@ test("disconnected users connect a personal Claude key before chatting", async (
     await page.locator("#disconnect-claude").click();
     await expect(page.locator("#claude-status")).toHaveText("Not connected");
     await expect(page.locator("#send")).toBeDisabled();
+});
+
+test("composer attachment icon opens the picker and keeps the draft editable during upload", async ({ page }) => {
+    await login(page);
+    await page.locator("#message").fill("Start my instructions");
+    let releaseUpload;
+    const gate = new Promise((resolve) => {
+        releaseUpload = resolve;
+    });
+    await page.route("**/attachments", async (route) => {
+        await gate;
+        await route.continue();
+    });
+    const picker = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Add files and images", exact: true }).click();
+    await (await picker).setFiles({ name: "notes.png", mimeType: "image/png", buffer: imagePng });
+    await expect(page.locator("#attachment-list")).toContainText("Uploading");
+    await expect(page.locator("#message")).toBeEnabled();
+    await page.locator("#message").fill("Finish my instructions while the file uploads");
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
+    releaseUpload();
+    await expect(page.locator("#attachment-list")).toContainText("Image ready");
+    await expect(page.locator("#message")).toHaveValue("Finish my instructions while the file uploads");
+    await page.getByRole("button", { name: "Preview notes.png", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "notes.png", exact: true })).toBeVisible();
+    await expect(page.getByRole("img", { name: "Preview of notes.png", exact: true })).toBeVisible();
+    await expect
+        .poll(() => page.locator("#attachment-preview-image").evaluate((image) => image.naturalWidth))
+        .toBe(200);
+    await page.getByRole("button", { name: "Close preview", exact: true }).click();
+    await page.getByRole("button", { name: "Remove notes.png", exact: true }).click();
+    await expect(page.locator("#attachment-list .attachment-card")).toHaveCount(0);
+});
+
+test("image cards follow sent messages, survive reload and remain available to later turns", async ({ page }) => {
+    await login(page);
+    await page.getByLabel("Attach files", { exact: true }).setInputFiles([
+        { name: "note.png", mimeType: "image/png", buffer: imagePng },
+        { name: "chart.jpg", mimeType: "image/jpeg", buffer: imageJpeg },
+    ]);
+    await expect(page.locator("#upload-status")).toContainText("2 files added");
+    await send(page, "inspect images");
+    await expect(page.locator(".message.assistant")).toContainText("Image inputs: 2");
+    await expect(page.locator("#attachment-list .attachment-card")).toHaveCount(0);
+    await expect(page.locator(".message.user .attachment-card")).toHaveCount(2);
+    await page.reload();
+    await page.getByRole("button", { name: "inspect images", exact: true }).click();
+    await expect(page.locator(".message.user .attachment-card")).toHaveCount(2);
+    await page.locator("#conversation-files-title").click();
+    await page.getByRole("button", { name: "Remove chart.jpg", exact: true }).click();
+    await expect(page.locator("#conversation-file-list .attachment-card")).toHaveCount(1);
+    await send(page, "inspect images");
+    await expect(page.locator(".message.assistant").last()).toContainText("Image inputs: 1");
+    await expect(page.locator(".message.user").last().locator(".attachment-card")).toHaveCount(0);
+});
+
+test("files can be dropped and images pasted into the composer without losing typed instructions", async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator("#message").fill("Keep my clinical modelling instructions");
+    await page.locator("#chat-form").evaluate((form) => {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(new File(["concept,unit\nvolume,mL"], "evidence.csv", { type: "text/csv" }));
+        form.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
+    });
+    await expect(page.locator("#attachment-list")).toContainText("Text ready");
+    await page.locator("#message").evaluate((textarea, base64) => {
+        const clipboardData = new DataTransfer();
+        const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+        clipboardData.items.add(new File([bytes], "pasted-note.png", { type: "image/png" }));
+        textarea.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+    }, imagePng.toString("base64"));
+    await expect(page.locator("#attachment-list")).toContainText("Image ready");
+    await expect(page.locator("#message")).toHaveValue("Keep my clinical modelling instructions");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(page.getByRole("button", { name: "Add files and images", exact: true })).toBeInViewport();
+    const { default: AxeBuilder } = await import("@axe-core/playwright");
+    expect(
+        (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze()).violations,
+    ).toEqual([]);
+});
+
+test("a malformed image reports its limitation and a later valid file still uploads", async ({ page }) => {
+    await login(page);
+    await page.getByLabel("Attach files", { exact: true }).setInputFiles([
+        { name: "broken.png", mimeType: "image/png", buffer: Buffer.from("not an image") },
+        { name: "valid.jpg", mimeType: "image/jpeg", buffer: imageJpeg },
+    ]);
+    await expect(page.locator("#upload-status")).toContainText("2 files added");
+    await expect(page.locator("#attachment-list")).toContainText("Needs attention");
+    await expect(page.locator("#attachment-list")).toContainText("Image ready");
+    await expect(page.getByRole("button", { name: "Preview broken.png" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Remove broken.png", exact: true }).click();
+    await expect(page.locator("#attachment-list .attachment-card")).toHaveCount(1);
 });

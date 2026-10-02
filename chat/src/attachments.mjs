@@ -60,6 +60,11 @@ export class Attachments {
         try {
             const extracted = await this.extractor(join(directory, id + ".bin"), name);
             writeFileSync(join(directory, id + ".txt"), extracted.text, { mode: 0o600, flag: "wx" });
+            if (extracted.image)
+                writeFileSync(join(directory, id + ".image.jpg"), Buffer.from(extracted.image.data, "base64"), {
+                    mode: 0o600,
+                    flag: "wx",
+                });
             const item = {
                 id,
                 name,
@@ -68,13 +73,22 @@ export class Attachments {
                 status: extracted.status,
                 note: extracted.note,
                 characters: extracted.text.length,
+                ...(extracted.image
+                    ? {
+                          image: {
+                              mimeType: "image/jpeg",
+                              width: extracted.image.width,
+                              height: extracted.image.height,
+                          },
+                      }
+                    : {}),
             };
             conversation.attachments = [...items, item];
             this.store.save(identity, conversation);
             return item;
         } catch (error) {
             conversation.attachments = items;
-            for (const extension of [".bin", ".txt"]) {
+            for (const extension of [".bin", ".txt", ".image.jpg"]) {
                 try {
                     unlinkSync(join(directory, id + extension));
                 } catch (cleanup) {
@@ -93,6 +107,21 @@ export class Attachments {
         this.get(conversation, id);
         return readFileSync(join(this.directory(identity, conversation.id), id + ".bin"));
     }
+    preview(identity, conversation, id) {
+        const item = this.get(conversation, id);
+        if (!item.image || item.status !== "image") throw problem("Image preview not found.", 404);
+        return readFileSync(join(this.directory(identity, conversation.id), id + ".image.jpg"));
+    }
+    images(identity, conversation) {
+        return (conversation.attachments || [])
+            .filter((item) => item.image && item.status === "image")
+            .map((item) => ({
+                id: item.id,
+                name: item.name,
+                ...item.image,
+                data: this.preview(identity, conversation, item.id).toString("base64"),
+            }));
+    }
     read(identity, conversation, args) {
         const item = this.get(conversation, args.attachment),
             offset = args.offset ?? 0;
@@ -107,8 +136,8 @@ export class Attachments {
         };
     }
     remove(identity, conversation, id) {
-        this.get(conversation, id);
-        for (const extension of [".bin", ".txt"])
+        const item = this.get(conversation, id);
+        for (const extension of [".bin", ".txt", ...(item.image ? [".image.jpg"] : [])])
             unlinkSync(join(this.directory(identity, conversation.id), id + extension));
         conversation.attachments = conversation.attachments.filter((item) => item.id !== id);
         this.store.save(identity, conversation);
