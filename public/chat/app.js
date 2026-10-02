@@ -5,6 +5,7 @@ let session = null,
     running = false,
     controller = null;
 let uploading = false,
+    repositorySaving = false,
     uploadQueue = [],
     sharedView = false,
     personalConnections = [];
@@ -78,24 +79,23 @@ async function api(path, { method = "GET", data } = {}) {
 }
 function controls() {
     const ready = !!session?.authenticated && session.enabled && !sharedView;
+    const busy = running || uploading || repositorySaving;
     const connected = session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected);
-    $("chat-provider").disabled =
-        running || uploading || sharedView || !!current?.messages?.length || !!current?.attachments?.length;
-    $("sign-out").disabled = uploading;
-    document.querySelectorAll(".conversation-row button").forEach((button) => (button.disabled = running || uploading));
+    $("chat-provider").disabled = busy || sharedView || !!current?.messages?.length || !!current?.attachments?.length;
+    $("sign-out").disabled = uploading || repositorySaving;
+    document.querySelectorAll(".conversation-row button").forEach((button) => (button.disabled = busy));
     $("message").disabled = !ready || running;
-    $("send").disabled = !ready || !connected || running || uploading || !$("message").value.trim();
-    $("new-chat").disabled = !ready || running || uploading;
+    $("send").disabled = !ready || !connected || busy || !$("message").value.trim();
+    $("new-chat").disabled = !ready || busy;
     if (sharedView) $("new-chat").disabled = false;
-    $("upload-files").disabled = !ready || running || uploading;
-    $("attach-files").disabled = !ready || running || uploading;
-    $("save-destination").disabled = !ready || running || uploading;
-    $("share-chat").disabled = !ready || running || uploading || !current?.messages?.length;
-    document.querySelectorAll(".attachment-remove").forEach((button) => (button.disabled = running || uploading));
+    $("upload-files").disabled = !ready || busy;
+    $("attach-files").disabled = !ready || busy;
+    $("save-destination").disabled = !ready || busy;
+    $("share-chat").disabled = !ready || busy || !current?.messages?.length;
+    document.querySelectorAll(".attachment-remove").forEach((button) => (button.disabled = busy));
     $("stop").hidden = !running;
-    document
-        .querySelectorAll(".suggestion")
-        .forEach((button) => (button.disabled = !ready || !connected || running || uploading));
+    document.querySelectorAll(".suggestion").forEach((button) => (button.disabled = !ready || !connected || busy));
+    renderDestinationStatus();
     $("composer-hint").textContent = running
         ? "Working with your modelling tools…"
         : ready
@@ -257,7 +257,7 @@ function toolChip(container, tool) {
         (toolLabels[tool.name] || tool.name.replaceAll("_", " "));
 }
 async function open(id) {
-    if (running || uploading) return;
+    if (running || uploading || repositorySaving) return;
     current = await api("api/conversations/" + id);
     sharedView = false;
     renderAttachments();
@@ -317,7 +317,7 @@ function approval(event, target) {
     card.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 async function send(text) {
-    if (running || uploading || sharedView || !text.trim()) return;
+    if (running || uploading || repositorySaving || sharedView || !text.trim()) return;
     notice("");
     if (!session?.providers?.some((p) => p.id === $("chat-provider").value && p.connected)) {
         $("provider-settings").open = true;
@@ -338,15 +338,17 @@ async function send(text) {
     controls();
     await list();
     controller = new AbortController();
+    let sendError;
     try {
         const response = await fetch("/chat/api/conversations/" + current.id + "/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrf },
-            body: JSON.stringify({ content: text }),
+            body: JSON.stringify({ content: text, repository: current.repository || null }),
             signal: controller.signal,
         });
         if (!response.ok) {
             const data = await response.json();
+            $("message").value = text;
             throw new Error(data.error || "The message could not be sent.");
         }
         const reader = response.body.getReader(),
@@ -386,13 +388,14 @@ async function send(text) {
             }
         }
     } catch (error) {
-        if (error.name !== "AbortError") notice(error.message);
+        if (error.name !== "AbortError") sendError = error.message;
     } finally {
         running = false;
         controller = null;
         $("activity").textContent = "";
         controls();
         await open(current.id);
+        if (sendError) notice(sendError);
         $("message").focus();
     }
 }
@@ -521,24 +524,34 @@ document.addEventListener("workspace:discuss", (event) => {
 
 async function ensureConversation() {
     if (!current) {
-        const repository = $("save-destination").value;
-        current = await api("api/conversations", { method: "POST", data: { provider: $("chat-provider").value } });
-        if (repository)
-            current = await api("api/conversations/" + current.id + "/settings", {
-                method: "PUT",
-                data: { repository },
-            });
+        current = await api("api/conversations", {
+            method: "POST",
+            data: { provider: $("chat-provider").value, repository: $("save-destination").value || null },
+        });
+        renderDestinations();
     }
     return current;
 }
 function renderDestinations() {
-    const selected = current ? current.repository || "" : $("save-destination").value;
+    const selected = current && !repositorySaving ? current.repository || "" : $("save-destination").value;
     $("save-destination").replaceChildren(new Option("Enterprise repository", ""));
     for (const connection of personalConnections.filter((c) => c.kind !== "ckm"))
         $("save-destination").add(new Option(connection.label + " · " + connection.branch, connection.id));
     if (selected && !personalConnections.some((c) => c.id === selected))
         $("save-destination").add(new Option("Saved personal repository (load My sources to view)", selected));
     $("save-destination").value = selected || "";
+    renderDestinationStatus();
+}
+function renderDestinationStatus() {
+    const selected = $("save-destination").value;
+    const repository = personalConnections.find((item) => item.id === selected);
+    $("save-destination-status").textContent = repositorySaving
+        ? "Saving repository choice…"
+        : repository
+          ? repository.url + " · " + repository.branch
+          : selected
+            ? "Repository unavailable. Choose another destination."
+            : "Your organisation's configured repository";
 }
 async function loadConnections() {
     const data = await api("api/connections");
@@ -611,15 +624,21 @@ $("personal-connection").onsubmit = async (event) => {
     }
 };
 $("save-destination").onchange = async () => {
+    renderDestinationStatus();
     if (!current) return;
+    repositorySaving = true;
+    controls();
     try {
         current = await api("api/conversations/" + current.id + "/settings", {
             method: "PUT",
             data: { repository: $("save-destination").value || null },
         });
     } catch (e) {
-        $("save-destination").value = current.repository || "";
         notice(e.message);
+    } finally {
+        repositorySaving = false;
+        renderDestinations();
+        controls();
     }
 };
 function pendingAttachments() {
@@ -742,7 +761,16 @@ function renderAttachments() {
     for (const item of sent) $("conversation-file-list").append(attachmentCard(item));
 }
 async function uploadFiles(files) {
-    if (!files.length || running || uploading || sharedView || !session?.authenticated || !session.enabled) return;
+    if (
+        !files.length ||
+        running ||
+        uploading ||
+        repositorySaving ||
+        sharedView ||
+        !session?.authenticated ||
+        !session.enabled
+    )
+        return;
     uploading = true;
     uploadQueue = files.map((file) => ({ file, name: file.name, size: file.size, status: "queued" }));
     controls();
@@ -877,7 +905,8 @@ $("revoke-share").onclick = async () => {
     }
 };
 async function showShared() {
-    if (running || uploading || !session?.authenticated || !location.hash.startsWith("#share=")) return;
+    if (running || uploading || repositorySaving || !session?.authenticated || !location.hash.startsWith("#share="))
+        return;
     try {
         const snapshot = await api("api/shares/" + encodeURIComponent(location.hash.slice(7)));
         reset();

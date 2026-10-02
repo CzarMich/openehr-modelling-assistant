@@ -783,7 +783,14 @@ textarea::placeholder {
 .destination-control {
     display: grid;
     gap: 0.2rem;
-    max-width: 100%;
+    width: min(20rem, 100%);
+    min-width: 0;
+}
+#save-destination-status {
+    margin: 0.2rem 0 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
 }
 .composer-actions {
     flex-wrap: wrap;

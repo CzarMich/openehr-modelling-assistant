@@ -54,7 +54,10 @@ assistant to search your personal CKMs or to browse/read a connected repository.
 Searches return a bounded candidate window and preserve the source URL and CID.
 
 Choose **Save artifacts to** before requesting a save. The selected repository and
-branch are saved with the conversation. **Enterprise repository** retains the existing
+branch are saved with the conversation, including when it is first created. The URL
+and branch appear below the selector. Sending waits while a changed choice is saved;
+if another tab changes the destination, the next message is rejected with its draft
+text preserved and the current selection refreshed. **Enterprise repository** retains the existing
 modelling workflow. A personal destination offers confirmed commits through
 `personal_repository_save`, while enterprise write tools are omitted for that turn.
 Confirmations display the destination, branch, path, full content and prior revision.

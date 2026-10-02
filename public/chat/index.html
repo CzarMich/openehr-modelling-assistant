@@ -254,6 +254,7 @@
                             ><select id="save-destination">
                                 <option value="">Enterprise repository</option>
                             </select>
+                            <p id="save-destination-status" role="status" aria-live="polite"></p>
                         </div>
                         <button id="share-chat" type="button" disabled>Share chat</button>
                     </div>
@@ -833,7 +834,8 @@
                         <ol>
                             <li>
                                 Check <strong>Save artifacts to</strong>. Keep <strong>Enterprise repository</strong> to
-                                use your organisation's destination, or select your personal repository.
+                                use your organisation's destination, or select your personal repository. Check the URL
+                                and branch shown below it, and wait for the choice to finish saving.
                             </li>
                             <li>
                                 Ask the assistant to prepare and save the draft. For a personal repository, include a
@@ -848,6 +850,11 @@
                             A save only happens after confirmation. If someone has changed the file, ask the assistant
                             to read the latest version and prepare the change again. Saving a model keeps it as a draft;
                             it does not approve it for clinical use.
+                        </p>
+                        <p>
+                            If the assistant reports no personal repository, select your connection in this conversation
+                            and retry. If another tab changed the destination, your unsent instructions are kept so you
+                            can check the current choice before sending again.
                         </p>
                     </section>
                     <section class="help-topic" aria-labelledby="help-review">

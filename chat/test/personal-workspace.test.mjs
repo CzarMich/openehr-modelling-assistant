@@ -328,6 +328,40 @@ async function httpFixture(t, run, requestRemote) {
     return { ...f, request };
 }
 
+test("repository creation is owner-scoped and stale message destinations never reach the provider", async (t) => {
+    let calls = 0;
+    const f = await httpFixture(t, async ({ messages, callTool }) => {
+        calls++;
+        const { structuredContent: context } = await callTool("personal_connections", {});
+        assert.equal(context.selectedRepository, repo.id);
+        assert.match(messages.at(-1).content, /github.com\/alice\/models/);
+        return "Selected repository confirmed";
+    });
+    const repo = f.connections.add("alice", github).connection;
+    assert.equal(
+        (await f.request("conversations", { method: "POST", user: "bob", data: { repository: repo.id } })).status,
+        404,
+    );
+    assert.equal(f.store.list("bob").length, 0);
+    const created = await f.request("conversations", { method: "POST", data: { repository: repo.id } });
+    assert.equal(created.status, 201);
+    const conversation = await created.json();
+    assert.equal(f.store.get("alice", conversation.id).repository, repo.id);
+    const path = "conversations/" + conversation.id + "/messages";
+    const stale = await f.request(path, { method: "POST", data: { content: "Save these drafts", repository: null } });
+    assert.equal(stale.status, 409);
+    assert.equal(calls, 0);
+    assert.equal(f.store.get("alice", conversation.id).messages.length, 0);
+    const response = await f.request(path, {
+        method: "POST",
+        data: { content: "Save these drafts", repository: repo.id },
+    });
+    assert.equal(response.status, 200);
+    await response.text();
+    assert.equal(f.store.get("alice", conversation.id).messages.at(-1).content, "Selected repository confirmed");
+    assert.equal(calls, 1);
+});
+
 test("HTTP uploads feed the provider through tools, enforce ownership/CSRF, and sharing remains read-only", async (t) => {
     let attachmentId;
     const f = await httpFixture(t, async ({ messages, callTool }) => {

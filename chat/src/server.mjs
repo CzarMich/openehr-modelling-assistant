@@ -392,12 +392,15 @@ export function createApplication(
                     const input =
                         (req.headers["content-length"] && req.headers["content-length"] !== "0") ||
                         req.headers["transfer-encoding"]
-                            ? await body(req, ["provider"])
+                            ? await body(req, ["provider", "repository"])
                             : {};
                     const selected = input.provider || "codex";
                     if (!["codex", "claude"].includes(selected))
                         throw Object.assign(new Error("Choose a provider."), { status: 400 });
-                    return json(res, 201, store.create(identity, selected));
+                    const repository = input.repository ?? null;
+                    if (repository !== null && connections.get(identity, repository).kind === "ckm")
+                        throw Object.assign(new Error("Choose a repository."), { status: 400 });
+                    return json(res, 201, store.create(identity, selected, repository));
                 }
             }
             const route = path.match(
@@ -521,10 +524,18 @@ export function createApplication(
                 typeof input.content !== "string" ||
                 !input.content.trim() ||
                 input.content.length > 8000 ||
-                Object.keys(input).some((k) => k !== "content")
+                Object.keys(input).some((k) => !["content", "repository"].includes(k)) ||
+                (Object.hasOwn(input, "repository") &&
+                    input.repository !== null &&
+                    typeof input.repository !== "string")
             )
                 throw Object.assign(new Error("Enter a message of up to 8,000 characters."), { status: 400 });
             conversation = freshConversation();
+            if (Object.hasOwn(input, "repository") && input.repository !== (conversation.repository || null))
+                throw Object.assign(
+                    new Error("The repository choice changed. Check Save artifacts to, then send your message again."),
+                    { status: 409 },
+                );
             provider.assertConnected?.(identity, conversation.provider || "codex");
             if (active.has(key)) throw Object.assign(new Error("A response is already running."), { status: 409 });
             if (active.size >= config.maxConcurrentTurns)

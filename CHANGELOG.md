@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Chat keeps repository selections consistent when creating conversations and sending messages.
+
 - Chat adds composer attachment cards, image previews and PNG/JPG interpretation.
 
 - Browser workspace includes a simple user guide with contextual help.

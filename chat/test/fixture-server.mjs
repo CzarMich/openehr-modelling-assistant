@@ -75,8 +75,17 @@ auth.login = async (req, res) => {
     res.end();
 };
 const provider = {
-    run: async ({ messages, images, callTool, onEvent, signal }) => {
+    run: async ({ messages, images, tools, callTool, onEvent, signal }) => {
         const text = messages.at(-1).content.split("\n\nWorkspace context")[0];
+        if (text === "inspect repository") {
+            const { structuredContent: data } = await callTool("personal_connections", {});
+            const selected = data.connections.find((item) => item.id === data.selectedRepository);
+            const result = selected
+                ? `Save destination: ${selected.url} · ${selected.branch}. Personal save ${tools.some((tool) => tool.name === "personal_repository_save") ? "available" : "unavailable"}.`
+                : "Save destination: Enterprise repository.";
+            onEvent({ type: "delta", text: result });
+            return result;
+        }
         if (text === "inspect images") {
             const result =
                 "Image inputs: " +

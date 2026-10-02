@@ -52,6 +52,96 @@ async function send(page, message) {
     await page.getByRole("button", { name: "Send message", exact: true }).click();
     expect((await response).status()).toBe(200);
 }
+async function addRepository(page) {
+    await page.locator("#personal-settings > summary").click();
+    await page.getByLabel("Connection type").selectOption("github");
+    await page.getByLabel("Connection name", { exact: true }).fill("My models");
+    await page.getByLabel("HTTPS URL", { exact: true }).fill("https://github.com/example/personal-models");
+    await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Remove My models" })).toBeVisible();
+    await page.locator("#personal-settings > summary").click();
+}
+
+test("repository selection must finish saving before the assistant can receive a message", async ({ page }) => {
+    await login(page);
+    await send(page, "Start a modelling conversation");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await addRepository(page);
+    let releaseSelection;
+    const waiting = new Promise((resolve) => (releaseSelection = resolve));
+    await page.route("**/settings", async (route) => {
+        await waiting;
+        await route.continue();
+    });
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await page.getByRole("textbox", { name: "Message the modelling assistant" }).fill("inspect repository");
+    try {
+        await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
+        await expect(page.getByRole("button", { name: "New conversation", exact: true })).toBeDisabled();
+        await expect(page.locator("#save-destination-status")).toContainText("Saving repository choice");
+    } finally {
+        releaseSelection();
+    }
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
+    await send(page, "inspect repository");
+    await expect(page.locator(".message.assistant").last()).toContainText(
+        "Save destination: https://github.com/example/personal-models · main. Personal save available.",
+    );
+});
+
+test("a new chat saves its repository with creation before uploading or sending", async ({ page }) => {
+    await login(page);
+    await addRepository(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    const repository = await page.getByLabel("Save artifacts to").inputValue();
+    const created = page.waitForRequest(
+        (request) => request.method() === "POST" && request.url().endsWith("/conversations"),
+    );
+    await page.getByLabel("Attach files", { exact: true }).setInputFiles({
+        name: "requirements.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("concept\ncreatinine\n"),
+    });
+    expect((await created).postDataJSON().repository).toBe(repository);
+    await expect(page.locator("#attachment-list")).toContainText("Text ready");
+    await send(page, "inspect repository");
+    await expect(page.locator(".message.assistant").last()).toContainText(
+        "Save destination: https://github.com/example/personal-models · main. Personal save available.",
+    );
+    await page.reload();
+    await page.getByRole("button", { name: "inspect repository", exact: true }).click();
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(repository);
+    await expect(page.locator("#save-destination-status")).toContainText("https://github.com/example/personal-models");
+});
+
+test("a repository changed in another tab preserves the unsent instructions and refreshes the destination", async ({
+    page,
+}) => {
+    await login(page);
+    await addRepository(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await send(page, "inspect repository");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    const session = await (await page.request.get("/chat/api/session")).json();
+    const { conversations } = await (await page.request.get("/chat/api/conversations")).json();
+    const changed = await page.request.put("/chat/api/conversations/" + conversations[0].id + "/settings", {
+        headers: { Origin: "http://127.0.0.1:8359", "X-CSRF-Token": session.csrf },
+        data: { repository: null },
+    });
+    expect(changed.status()).toBe(200);
+    await page.getByRole("textbox", { name: "Message the modelling assistant" }).fill("Save my reviewed AKI drafts");
+    const response = page.waitForResponse(
+        (response) => response.request().method() === "POST" && response.url().endsWith("/messages"),
+    );
+    await page.getByRole("button", { name: "Send message", exact: true }).click();
+    expect((await response).status()).toBe(409);
+    await expect(page.getByRole("alert")).toContainText("repository choice changed");
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue("");
+    await expect(page.getByRole("textbox", { name: "Message the modelling assistant" })).toHaveValue(
+        "Save my reviewed AKI drafts",
+    );
+    await expect(page.locator(".message.user")).toHaveCount(1);
+});
 
 test("personal CKMs and repository destinations persist, while enterprise duplicates are ignored", async ({ page }) => {
     await login(page);
