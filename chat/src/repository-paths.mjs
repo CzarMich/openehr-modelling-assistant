@@ -34,20 +34,63 @@ export function requireFolderPath(path, folder) {
     return path;
 }
 
-// Keep generated model classes separate while retaining any user subfolders.
+export const ARTIFACT_FOLDERS = Object.freeze({
+    archetypes: "archetypes",
+    oet: "templates/oet",
+    opt: "templates/opt",
+    adlTemplates: "templates/adl",
+    aql: "queries",
+    json: "data/json",
+    xml: "data/xml",
+    csv: "data/csv",
+    markdown: "documents/markdown",
+    text: "documents/text",
+    yaml: "config/yaml",
+});
+const folderPrefixes = [
+    ...new Set([
+        ...Object.values(ARTIFACT_FOLDERS),
+        "templates",
+        "oet",
+        "oets",
+        "opt",
+        "opts",
+        "data",
+        "documents",
+        "config",
+    ]),
+].sort((a, b) => b.length - a.length);
+
+export function artifactKind(path) {
+    const extension =
+        /\.(oet|opt)\.xml$/i.exec(path)?.[1].toLowerCase() || /\.([a-z0-9]+)$/i.exec(path)?.[1].toLowerCase();
+    const kinds = {
+        adl: "archetypes",
+        adls: "archetypes",
+        adlf: "archetypes",
+        adlt: "adlTemplates",
+        oet: "oet",
+        opt: "opt",
+        aql: "aql",
+        json: "json",
+        xml: "xml",
+        csv: "csv",
+        md: "markdown",
+        txt: "text",
+        yaml: "yaml",
+        yml: "yaml",
+    };
+    return Object.hasOwn(kinds, extension) ? kinds[extension] : null;
+}
+
+// Keep every supported generated file type separate, retaining purpose subfolders
+// such as requirements, terminology, examples and validation inside its type.
 export function artifactPath(path, folder = "") {
     folder = repositoryFolder(folder);
     const relative = folder && path.startsWith(folder + "/") ? path.slice(folder.length + 1) : path;
-    const category = /\.oet(?:\.xml)?$/i.test(path)
-        ? "templates/oet"
-        : /\.opt(?:\.xml)?$/i.test(path)
-          ? "templates/opt"
-          : /\.adlt$/i.test(path)
-            ? "templates/adl"
-            : /\.(adl|adls|adlf)$/i.test(path)
-              ? "archetypes"
-              : null;
+    const category = ARTIFACT_FOLDERS[artifactKind(path)];
     if (!category) return (folder ? folder + "/" : "") + relative;
-    const name = relative.replace(/^(?:archetypes|templates\/(?:oet|opt|adl)|templates|oets?|opts?)\//i, "");
+    const prefix = folderPrefixes.find((value) => relative.toLowerCase().startsWith(value + "/"));
+    const name = prefix ? relative.slice(prefix.length + 1) : relative;
     return (folder ? folder + "/" : "") + category + "/" + name;
 }

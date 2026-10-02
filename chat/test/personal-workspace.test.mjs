@@ -171,7 +171,15 @@ for (const kind of ["github", "gitlab"])
                 ? /api.github.com\/repos\/alice\/models\/contents\/templates\/kidney.oet$/
                 : /api\/v4\/projects\/team%2Fsubgroup%2Fmodels\/repository\/files\/templates%2Fkidney.oet$/,
         );
-        for (const path of ["../bad.xml", ".github/workflows/test.yml", "a/../bad.xml", "a//b.xml", "script.js"])
+        for (const path of [
+            "../bad.xml",
+            ".github/workflows/test.yml",
+            "a/../bad.xml",
+            "a//b.xml",
+            "script.js",
+            "file.constructor",
+            "aql",
+        ])
             await assert.rejects(connections.publish("alice", { ...args, path }));
     });
 
@@ -463,7 +471,15 @@ test("personal commits wait for owner confirmation of the destination and cannot
         assert.equal(writes.length, approved ? 1 : 0);
         const saved = f.store.get("alice", conversation.id);
         assert.equal(saved.artifacts?.length || 0, approved ? 1 : 0);
-        if (approved) assert.equal(saved.artifacts[0].path, "AKI/templates/oet/renal.oet");
+        if (approved) {
+            assert.equal(saved.artifacts[0].path, "AKI/templates/oet/renal.oet");
+            assert.deepEqual(saved.artifacts[0].destination, {
+                kind: "github",
+                url: "https://github.com/alice/models",
+                branch: "draft/renal",
+            });
+            assert.doesNotMatch(JSON.stringify(saved.artifacts), /private-test-token/);
+        }
     }
 });
 

@@ -209,9 +209,45 @@ test("artefact types are separated without nesting an existing category twice", 
         ["AKI/templates/oet/renal/model.oet", "AKI/templates/oet/renal/model.oet"],
         ["AKI/model.opt", "AKI/templates/opt/model.opt"],
         ["AKI/model.adlt", "AKI/templates/adl/model.adlt"],
-        ["AKI/evidence/README.md", "AKI/evidence/README.md"],
+        ["AKI/evidence/README.md", "AKI/documents/markdown/evidence/README.md"],
+        ["AKI/queries/staging.aql", "AKI/queries/staging.aql"],
+        ["AKI/terminology/codes.json", "AKI/data/json/terminology/codes.json"],
+        ["AKI/data/json/terminology/codes.json", "AKI/data/json/terminology/codes.json"],
+        ["AKI/example.xml", "AKI/data/xml/example.xml"],
+        ["AKI/model.opt.xml", "AKI/templates/opt/model.opt.xml"],
+        ["AKI/model.oet.xml", "AKI/templates/oet/model.oet.xml"],
+        ["AKI/data/examples.csv", "AKI/data/csv/examples.csv"],
+        ["AKI/requirements.txt", "AKI/documents/text/requirements.txt"],
+        ["AKI/config/project.yaml", "AKI/config/yaml/project.yaml"],
+        ["AKI/config/yaml/project.yml", "AKI/config/yaml/project.yml"],
     ])
         assert.equal(artifactPath(path, "AKI"), expected);
+});
+
+test("supporting artefacts move into type folders and retain exact content revisions", async (t) => {
+    const f = fixture(t),
+        path = "Old/requirements/design.md";
+    f.state.files[path] = { sha: "f".repeat(40) };
+    f.snapshot();
+    recordArtifact(f.chat, { repository: f.repo.id, path });
+    const plan = await f.moves.preview("alice", f.chat, f.project.id);
+    const moved = await f.moves.apply("alice", f.chat, plan.id);
+    const target = "Clinical/AKI/documents/markdown/requirements/design.md";
+    assert.equal(f.state.files[target].sha, "f".repeat(40));
+    assert.equal(f.state.files[path], undefined);
+    assert.equal(moved.artifacts.find((item) => item.path === target).commit, moved.lastMove.commit);
+});
+
+test("saved version receipts are replaced only by the latest confirmed save receipt", (t) => {
+    const f = fixture(t),
+        args = { repository: f.repo.id, path: "Old/templates/oet/new.oet" };
+    recordArtifact(f.chat, args, { commit: "a".repeat(40) });
+    assert.equal(f.chat.artifacts.at(-1).commit, "a".repeat(40));
+    recordArtifact(f.chat, args, { commit: "b".repeat(40) });
+    assert.equal(f.chat.artifacts.filter((item) => item.path === args.path).length, 1);
+    assert.equal(f.chat.artifacts.at(-1).commit, "b".repeat(40));
+    recordArtifact(f.chat, args, {});
+    assert.equal(f.chat.artifacts.at(-1).commit, undefined);
 });
 
 test("GitLab moves use one batch with exact file revisions and no content rewrite", async (t) => {

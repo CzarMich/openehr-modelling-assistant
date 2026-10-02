@@ -129,7 +129,32 @@ existing conversations continue to use their original repository-root paths.
 Within the selected folder, model types have separate locations: `archetypes/` for ADL
 archetypes, `templates/oet/` for OETs, `templates/opt/` for OPTs, and `templates/adl/`
 for `.adlt` templates. Moving a chat applies this structure to its saved artefacts.
-Other file types retain their relative subfolders.
+Other supported outputs also have their own folders:
+
+| File type | Folder under the selected project folder |
+|---|---|
+| AQL query | `queries/` |
+| JSON (for example, web templates, terminology or example data) | `data/json/` |
+| XML other than named OET/OPT files | `data/xml/` |
+| CSV tables | `data/csv/` |
+| Markdown notes and reports | `documents/markdown/` |
+| Plain text | `documents/text/` |
+| YAML/YML configuration | `config/yaml/` |
+
+Purpose subfolders such as `requirements/`, `terminology/` and `validation/` are
+preserved inside the file-type folder. These are possible outputs, not files
+created for every task. Uploaded source documents keep their existing private
+storage; these rules organise generated personal-repository artefacts.
+
+**Saved artefacts** above the composer lists files from confirmed personal saves.
+Open a file or use **Copy path** and **Copy link** for references. **Saved version**
+and **Copy version link** appear when the provider returns a commit receipt; those
+links identify the exact saved version. Current paths and links refresh after a
+project move. Moving files preserves their contents: existing links embedded
+inside documents are not rewritten. Use the current saved-file paths when
+creating new supporting references. New save receipts retain the repository address and branch, so file links remain
+available after disconnecting a provider connection. Credentials are never stored
+in artefact references. Older entries without an address still show their saved path.
 
 Personal saves require a full repository-relative path inside the selected folder, checked
 before confirmation and again before writing. Traversal, hidden directories and writes to a

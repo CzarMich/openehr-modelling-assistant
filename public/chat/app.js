@@ -841,6 +841,14 @@ async function send(text) {
                         $("activity").textContent = "Continuing with your answer…";
                     } else if (event.type === "tool") {
                         toolChip(target.tools, event);
+                        if (event.artifact && event.status === "completed") {
+                            current.artifacts = (current.artifacts || []).filter(
+                                (item) =>
+                                    item.repository !== event.artifact.repository || item.path !== event.artifact.path,
+                            );
+                            current.artifacts.push(event.artifact);
+                            renderArtifacts();
+                        }
                         $("activity").dataset.waiting = "false";
                         $("activity").textContent =
                             event.status === "running"
@@ -1023,6 +1031,7 @@ function renderDestinations() {
     $("save-destination").value = selected || "";
     $("repository-folder").value = folderDraft;
     renderDestinationStatus();
+    renderArtifacts();
 }
 function renderDestinationStatus() {
     const selected = repositoryDraft;
@@ -1290,6 +1299,7 @@ function renderThread() {
     for (const message of current?.messages || []) bubble(message);
 }
 function renderAttachments() {
+    renderArtifacts();
     $("attachment-list").replaceChildren();
     const pending = pendingAttachments();
     for (const item of pending) $("attachment-list").append(attachmentCard(item));
@@ -1299,6 +1309,75 @@ function renderAttachments() {
     $("conversation-files-title").textContent = "Files in this chat (" + sent.length + ")";
     $("conversation-file-list").replaceChildren();
     for (const item of sent) $("conversation-file-list").append(attachmentCard(item));
+}
+function renderArtifacts() {
+    const artifacts = sharedView ? [] : current?.artifacts || [];
+    $("conversation-artifacts").hidden = !artifacts.length;
+    $("conversation-artifacts-title").textContent = "Saved artefacts (" + artifacts.length + ")";
+    const list = $("conversation-artifact-list");
+    list.replaceChildren();
+    const copyButton = (label, value) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = label;
+        button.onclick = async () => {
+            try {
+                await navigator.clipboard.writeText(value);
+                button.textContent = "Copied";
+            } catch {
+                notice(
+                    "Copy is unavailable in this browser. Select the file path or open the file to copy its address.",
+                );
+            }
+        };
+        return button;
+    };
+    for (const artifact of [...artifacts].sort((a, b) => a.path.localeCompare(b.path))) {
+        const item = document.createElement("li"),
+            path = document.createElement("code"),
+            actions = document.createElement("div");
+        const repo =
+            personalConnections.find(
+                (connection) => connection.id === artifact.repository && connection.kind !== "ckm",
+            ) || artifact.destination;
+        path.textContent = artifact.path;
+        item.append(path);
+        actions.className = "artifact-actions";
+        actions.append(copyButton("Copy path", artifact.path));
+        if (repo) {
+            const url = (ref) =>
+                repo.url +
+                (repo.kind === "github" ? "/blob/" : "/-/blob/") +
+                encodeURIComponent(ref) +
+                "/" +
+                artifact.path.split("/").map(encodeURIComponent).join("/");
+            const link = document.createElement("a");
+            link.textContent = "Open file";
+            link.href = url(repo.branch);
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            const destination = document.createElement("small");
+            destination.textContent = (repo.label || repo.url) + " · " + repo.branch;
+            item.append(destination);
+            actions.prepend(link);
+            actions.append(copyButton("Copy link", link.href));
+            if (/^[a-f0-9]{40,64}$/.test(artifact.commit || "")) {
+                const version = document.createElement("a");
+                version.textContent = "Saved version";
+                version.href = url(artifact.commit);
+                version.target = "_blank";
+                version.rel = "noopener noreferrer";
+                actions.append(version, copyButton("Copy version link", version.href));
+            }
+        } else {
+            const unavailable = document.createElement("small");
+            unavailable.textContent =
+                "The repository address is unavailable for this older entry. Its saved path is shown above.";
+            item.append(unavailable);
+        }
+        item.append(actions);
+        list.append(item);
+    }
 }
 async function uploadFiles(files) {
     if (

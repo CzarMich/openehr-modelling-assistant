@@ -591,6 +591,14 @@
                     <p id="chat-project-context" class="chat-project-context" hidden></p>
                     <div id="activity" class="activity" role="status" aria-live="polite"></div>
                     <div class="composer-wrap">
+                        <details id="conversation-artifacts" class="conversation-files" hidden>
+                            <summary id="conversation-artifacts-title">Saved artefacts</summary>
+                            <p>
+                                Open a saved file, copy its repository path or copy a link. Version links keep the exact
+                                saved revision.
+                            </p>
+                            <ul id="conversation-artifact-list" aria-label="Saved repository artefacts"></ul>
+                        </details>
                         <details id="conversation-files" class="conversation-files" hidden>
                             <summary id="conversation-files-title">Files in this chat</summary>
                             <div
@@ -1046,6 +1054,55 @@
                             <code>templates/oet/</code> and <code>templates/opt/</code>. For example, an AKI project can
                             contain <code>AKI/archetypes/</code> alongside <code>AKI/templates/oet/</code>. Moving a
                             chat organises its saved models into these folders.
+                        </p>
+                        <p>
+                            Depending on your task, the assistant can also prepare queries, example data, terminology
+                            tables, design notes and reports. Each supported file type has its own folder:
+                        </p>
+                        <table class="artifact-folder-guide">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Supporting files</th>
+                                    <th scope="col">Project subfolder</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>AQL queries</td>
+                                    <td><code>queries/</code></td>
+                                </tr>
+                                <tr>
+                                    <td>JSON data and metadata</td>
+                                    <td><code>data/json/</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Other XML</td>
+                                    <td><code>data/xml/</code></td>
+                                </tr>
+                                <tr>
+                                    <td>CSV tables</td>
+                                    <td><code>data/csv/</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Markdown notes and reports</td>
+                                    <td><code>documents/markdown/</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Plain text</td>
+                                    <td><code>documents/text/</code></td>
+                                </tr>
+                                <tr>
+                                    <td>YAML configuration</td>
+                                    <td><code>config/yaml/</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p>
+                            Open <strong>Saved artefacts</strong> above your message box to find committed files. Choose
+                            <strong>Open file</strong>, <strong>Copy path</strong> or <strong>Copy link</strong>. When
+                            available, <strong>Saved version</strong> and <strong>Copy version link</strong>
+                            reference the exact saved revision. The file list updates after a project move. Existing
+                            links inside documents are not rewritten when files move.
                         </p>
                         <p>
                             For older saved files, open <strong>Include older saved artefacts</strong> in the move

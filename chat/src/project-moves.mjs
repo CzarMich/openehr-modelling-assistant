@@ -10,8 +10,22 @@ const fingerprint = (chat) => {
 
 // Only server-recorded successful saves belong to a chat. Older files can be
 // explicitly included by their owner; assistant prose is never a file manifest.
-export function recordArtifact(chat, args) {
-    const artifact = { repository: args.repository, path: args.path, folder: chat.folder || "" };
+export function recordArtifact(chat, args, receipt = {}) {
+    const artifact = {
+        repository: args.repository,
+        path: args.path,
+        folder: chat.folder || "",
+        ...(sha(receipt.commit) ? { commit: receipt.commit } : {}),
+        ...(["github", "gitlab"].includes(receipt.repository?.kind)
+            ? {
+                  destination: {
+                      kind: receipt.repository.kind,
+                      url: receipt.repository.url,
+                      branch: receipt.repository.branch,
+                  },
+              }
+            : {}),
+    };
     chat.artifacts = (chat.artifacts || []).filter(
         (item) => item.repository !== artifact.repository || item.path !== artifact.path,
     );
@@ -176,7 +190,7 @@ export class ProjectMoves {
             project: projectId,
             repository: target.repository || null,
             folder: target.folder || "",
-            destination: repository ? { url: repository.url, branch: repository.branch } : null,
+            destination: repository ? { kind: repository.kind, url: repository.url, branch: repository.branch } : null,
             artifacts,
             moves,
             base,
@@ -203,6 +217,7 @@ export class ProjectMoves {
         if (plan.moves.length) {
             if (!this.allowWrites) throw problem("Repository writes are disabled.", 403);
             const repo = this.connections.get(identity, plan.repository);
+            plan.destination.kind = repo.kind;
             if (!repo.token || repo.url !== plan.destination.url || repo.branch !== plan.destination.branch)
                 throw problem("Repository access changed. Check Settings and preview the move again.", 409);
             const head = await this.head(repo);
@@ -281,7 +296,15 @@ export class ProjectMoves {
             const move = plan.moves.find(
                 (item) => item.repository === artifact.repository && item.from === artifact.path,
             );
-            return move ? { repository: plan.repository, path: move.to, folder: plan.folder } : artifact;
+            return move
+                ? {
+                      repository: plan.repository,
+                      path: move.to,
+                      folder: plan.folder,
+                      destination: plan.destination,
+                      ...(plan.commit ? { commit: plan.commit } : {}),
+                  }
+                : artifact;
         });
         chat.lastMove = { id: plan.id, count: plan.moves.length, ...(plan.commit ? { commit: plan.commit } : {}) };
         if (plan.legacyArtifactsIncluded) chat.legacyArtifactsIncluded = true;

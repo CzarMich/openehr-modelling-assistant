@@ -862,7 +862,7 @@ export function createApplication(
                                 trace.status === "completed" &&
                                 result.structuredContent?.saved
                             ) {
-                                trace.artifact = recordArtifact(conversation, args);
+                                trace.artifact = recordArtifact(conversation, args, result.structuredContent);
                                 store.save(identity, conversation);
                             }
                             emit({ type: "tool", ...trace });

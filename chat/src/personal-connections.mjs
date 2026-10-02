@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { ProviderStore } from "./provider-store.mjs";
 import { httpsUrl, personalRequest, problem } from "./personal-http.mjs";
+import { artifactKind } from "./repository-paths.mjs";
 
 const canonical = (value) => {
     const url = httpsUrl(value);
@@ -194,8 +195,7 @@ export class PersonalConnections {
             path.split("/").some((p) => !p || p === "." || p === ".." || p.startsWith("."))
         )
             throw problem("Use a relative artifact path without hidden directories or traversal.");
-        if (!/\.(adl|adls|adlf|adlt|oet|opt|xml|json|aql|csv|md|txt|yaml|yml)$/i.test(path))
-            throw problem("Choose a modelling artifact file extension.");
+        if (!artifactKind(path)) throw problem("Choose a modelling artifact file extension.");
         return path;
     }
     async listRepository(identity, args, signal) {
