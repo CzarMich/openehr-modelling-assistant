@@ -64,6 +64,7 @@ function status(message) {
 async function get(path) {
     const response = await fetch("/chat/api/models/" + path, { signal: AbortSignal.timeout(22000) });
     const data = await response.json();
+    if (response.status === 401) document.dispatchEvent(new Event("workspace:session-expired"));
     if (!response.ok) throw new Error(data.error || "The repository is unavailable. Please retry.");
     return data;
 }

@@ -164,7 +164,9 @@
                         ><span class="workspace-name" id="section-title">Modelling workspace</span>
                     </div>
                     <div class="account">
-                        <span id="user-name"></span><button id="sign-out" class="text-button" hidden>Sign out</button>
+                        <span id="user-name"></span>
+                        <a id="sign-in" class="sign-in" href="/chat/auth/login">Sign in</a>
+                        <button id="sign-out" class="text-button" hidden>Sign out</button>
                     </div>
                 </header>
                 <section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
@@ -175,6 +177,15 @@
                             <option value="codex">Codex</option>
                             <option value="claude">Claude</option>
                         </select>
+                        <button
+                            id="toggle-chat-settings"
+                            class="mobile-only text-button"
+                            type="button"
+                            aria-expanded="false"
+                            aria-controls="provider-settings personal-settings save-destination-settings share-chat"
+                        >
+                            Chat settings
+                        </button>
                         <details id="provider-settings">
                             <summary>My AI connections</summary>
                             <p>
@@ -219,6 +230,13 @@
                                 to everyone.
                             </p>
                             <p><a href="#help-connections">Help with sources and repositories</a></p>
+                            <div id="enterprise-ckm-status" hidden>
+                                <p>
+                                    Enterprise CKMs are temporarily unavailable. Your personal connections are still
+                                    available.
+                                </p>
+                                <button id="retry-enterprise-ckms" type="button">Retry CKM sources</button>
+                            </div>
                             <div id="connection-list" role="list" aria-label="Available connections"></div>
                             <form id="personal-connection" class="personal-form">
                                 <label for="connection-kind">Connection type</label>
@@ -244,16 +262,23 @@
                                 ><input id="connection-token" type="password" autocomplete="off" maxlength="2000" />
                                 <p>
                                     CKMs use an optional bearer token. Repository saves need a token with access to the
-                                    chosen repository and branch.
+                                    chosen repository and branch. For GitHub, use a fine-grained token for your chosen
+                                    repository with
+                                    <strong>Contents: Read and write</strong>. Public reads need no token.
                                 </p>
-                                <button type="submit">Add personal connection</button>
+                                <button type="submit">Save connection</button>
                             </form>
                         </details>
-                        <div class="destination-control">
+                        <div id="save-destination-settings" class="destination-control">
                             <label for="save-destination">Save artifacts to</label
                             ><select id="save-destination">
                                 <option value="">Enterprise repository</option>
                             </select>
+                            <button id="save-repository-selection" type="button" disabled>
+                                Save repository selection
+                            </button>
+                            <p id="save-destination-status" role="status" aria-live="polite"></p>
+                            <p id="repository-token-status" hidden></p>
                         </div>
                         <button id="share-chat" type="button" disabled>Share chat</button>
                     </div>
@@ -713,7 +738,9 @@
                         <ol>
                             <li>
                                 Open <a href="#chat">Chat</a> and sign in with your workspace account. If you need an
-                                account or a password reset, contact your workspace administrator.
+                                account or a password reset, contact your workspace administrator. The
+                                <strong>Sign in</strong> button at the top right is available whenever you are signed
+                                out.
                             </li>
                             <li>
                                 Open <strong>My AI connections</strong>. Choose <strong>Connect Codex</strong> and
@@ -735,6 +762,13 @@
                             need, find reusable archetypes, and list any unanswered questions.”
                         </p>
                         <p>
+                            When the assistant offers choices, click one answer, or tick several boxes and press
+                            <strong>Use selected options</strong>. Choose <strong>Write another answer</strong> for your
+                            own wording, or <strong>Skip question</strong> to continue without choosing. A moving
+                            progress ring shows when work is in progress; it pauses when your answer is needed. On
+                            phones, use <strong>Chat settings</strong> to open connections, repositories and sharing.
+                        </p>
+                        <p>
                             Connections and conversations belong to your profile. Repository files follow the access
                             rules of the repository where you save them.
                         </p>
@@ -745,7 +779,7 @@
                             <li>
                                 In Chat, select the <strong>+</strong> button (<strong>Add files and images</strong>)
                                 inside the message box. You can also drop files onto the box or paste a PNG/JPG image
-                                while writing.
+                                while writing. You can select several PDFs and spreadsheets together.
                             </li>
                             <li>
                                 Each file appears as a card. <strong>Text ready</strong> means text was extracted;
@@ -800,8 +834,8 @@
                         <h3>Add a CKM</h3>
                         <p>
                             A CKM is a library of reusable archetypes and templates. Choose <strong>CKM</strong>, enter
-                            its HTTPS service address, and select <strong>Add personal connection</strong>. Ask the CKM
-                            owner for the service address and an access token if required. If your organisation already
+                            its HTTPS service address, and select <strong>Save connection</strong>. Ask the CKM owner
+                            for the service address and an access token if required. If your organisation already
                             provides the same CKM, it stays available and no duplicate is added.
                         </p>
                         <h3>Add your Git repository</h3>
@@ -818,8 +852,10 @@
                                 access.
                             </li>
                             <li>
-                                Select <strong>Add personal connection</strong>, then choose it under
-                                <strong>Save artifacts to</strong> for this conversation.
+                                Select <strong>Save connection</strong>, then choose it under
+                                <strong>Save artifacts to</strong> and press
+                                <strong>Save repository selection</strong> for this conversation. Wait for
+                                <strong>Active</strong> and check its URL and branch.
                             </li>
                         </ol>
                         <p>
@@ -827,13 +863,21 @@
                             branch that already exists. Removing a personal connection does not delete files from the
                             repository.
                         </p>
+                        <p>
+                            For GitHub saves, create a fine-grained personal access token limited to your repository
+                            with <strong>Contents: Read and write</strong>. Paste it only in the connection form. To add
+                            or replace a token later, select <strong>Update access</strong> beside the connection, enter
+                            the token and select <strong>Save connection</strong>. Your active selection is kept.
+                        </p>
                     </section>
                     <section class="help-topic" aria-labelledby="help-save">
                         <h2 id="help-save" tabindex="-1">4. Save your work</h2>
                         <ol>
                             <li>
                                 Check <strong>Save artifacts to</strong>. Keep <strong>Enterprise repository</strong> to
-                                use your organisation's destination, or select your personal repository.
+                                use your organisation's destination, or select your personal repository. Press
+                                <strong>Save repository selection</strong> after changing it, then check the active URL
+                                and branch shown below it.
                             </li>
                             <li>
                                 Ask the assistant to prepare and save the draft. For a personal repository, include a
@@ -848,6 +892,12 @@
                             A save only happens after confirmation. If someone has changed the file, ask the assistant
                             to read the latest version and prepare the change again. Saving a model keeps it as a draft;
                             it does not approve it for clinical use.
+                        </p>
+                        <p>
+                            If the assistant reports no personal repository, select your connection in this
+                            conversation, press <strong>Save repository selection</strong> and retry. If another tab
+                            changed the destination, your unsent instructions are kept so you can check the current
+                            choice before sending again.
                         </p>
                     </section>
                     <section class="help-topic" aria-labelledby="help-review">

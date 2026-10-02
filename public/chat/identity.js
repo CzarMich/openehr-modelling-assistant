@@ -30,6 +30,7 @@ async function adminRequest(path, method = "GET", data = undefined) {
         body: data === undefined ? undefined : JSON.stringify(data),
     });
     const result = await response.json();
+    if (response.status === 401) document.dispatchEvent(new Event("workspace:session-expired"));
     if (!response.ok) throw new Error(result.error || "The request could not be completed.");
     return result;
 }

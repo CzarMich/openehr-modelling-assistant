@@ -52,28 +52,177 @@ async function send(page, message) {
     await page.getByRole("button", { name: "Send message", exact: true }).click();
     expect((await response).status()).toBe(200);
 }
+async function addRepository(page) {
+    await page.locator("#personal-settings > summary").click();
+    await page.getByLabel("Connection type").selectOption("github");
+    await page.getByLabel("Connection name", { exact: true }).fill("My models");
+    await page.getByLabel("HTTPS URL", { exact: true }).fill("https://github.com/example/personal-models");
+    await page.getByRole("button", { name: "Save connection", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Remove My models" })).toBeVisible();
+    await page.locator("#personal-settings > summary").click();
+}
+
+test("repository selection must finish saving before the assistant can receive a message", async ({ page }) => {
+    await login(page);
+    await send(page, "Start a modelling conversation");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await addRepository(page);
+    let releaseSelection;
+    const waiting = new Promise((resolve) => (releaseSelection = resolve));
+    await page.route("**/settings", async (route) => {
+        await waiting;
+        await route.continue();
+    });
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await page.getByRole("textbox", { name: "Message the modelling assistant" }).fill("inspect repository");
+    await expect(page.locator("#save-destination-status")).toContainText("Not active yet");
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    try {
+        await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
+        await expect(page.getByRole("button", { name: "New conversation", exact: true })).toBeDisabled();
+        await expect(page.locator("#save-destination-status")).toContainText("Saving repository choice");
+    } finally {
+        releaseSelection();
+    }
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
+    await send(page, "inspect repository");
+    await expect(page.locator(".message.assistant").last()).toContainText(
+        "Save destination: https://github.com/example/personal-models · main. Personal save available.",
+    );
+});
+
+test("a new chat saves its repository with creation before uploading or sending", async ({ page }) => {
+    await login(page);
+    await addRepository(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    const repository = await page.getByLabel("Save artifacts to").inputValue();
+    const created = page.waitForRequest(
+        (request) => request.method() === "POST" && request.url().endsWith("/conversations"),
+    );
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    expect((await created).postDataJSON().repository).toBe(repository);
+    await expect(page.locator("#save-destination-status")).toContainText("Active:");
+    await page.getByLabel("Attach files", { exact: true }).setInputFiles({
+        name: "requirements.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("concept\ncreatinine\n"),
+    });
+    await expect(page.locator("#attachment-list")).toContainText("Text ready");
+    await send(page, "inspect repository");
+    await expect(page.locator(".message.assistant").last()).toContainText(
+        "Save destination: https://github.com/example/personal-models · main. Personal save available.",
+    );
+    await page.reload();
+    await page.getByRole("button", { name: "inspect repository", exact: true }).click();
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(repository);
+    await expect(page.locator("#save-destination-status")).toContainText("https://github.com/example/personal-models");
+});
+
+test("a repository changed in another tab preserves the unsent instructions and refreshes the destination", async ({
+    page,
+}) => {
+    await login(page);
+    await addRepository(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    await expect(page.locator("#save-destination-status")).toContainText("Active:");
+    await send(page, "inspect repository");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    const session = await (await page.request.get("/chat/api/session")).json();
+    const { conversations } = await (await page.request.get("/chat/api/conversations")).json();
+    const changed = await page.request.put("/chat/api/conversations/" + conversations[0].id + "/settings", {
+        headers: { Origin: "http://127.0.0.1:8359", "X-CSRF-Token": session.csrf },
+        data: { repository: null },
+    });
+    expect(changed.status()).toBe(200);
+    await page.getByRole("textbox", { name: "Message the modelling assistant" }).fill("Save my reviewed AKI drafts");
+    const response = page.waitForResponse(
+        (response) => response.request().method() === "POST" && response.url().endsWith("/messages"),
+    );
+    await page.getByRole("button", { name: "Send message", exact: true }).click();
+    expect((await response).status()).toBe(409);
+    await expect(page.getByRole("alert")).toContainText("repository choice changed");
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue("");
+    await expect(page.getByRole("textbox", { name: "Message the modelling assistant" })).toHaveValue(
+        "Save my reviewed AKI drafts",
+    );
+    await expect(page.locator(".message.user")).toHaveCount(1);
+});
 
 test("personal CKMs and repository destinations persist, while enterprise duplicates are ignored", async ({ page }) => {
     await login(page);
     await page.locator("#personal-settings > summary").click();
     await page.getByLabel("Connection name", { exact: true }).fill("Already provided");
     await page.getByLabel("HTTPS URL", { exact: true }).fill("https://ckm.example.org/ckm/rest/");
-    await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
+    await page.getByRole("button", { name: "Save connection", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("No duplicate was added");
     await expect(page.getByRole("button", { name: "Remove Already provided" })).toHaveCount(0);
     await page.getByLabel("Connection type").selectOption("github");
     await page.getByLabel("Connection name", { exact: true }).fill("Personal models");
     await page.getByLabel("HTTPS URL", { exact: true }).fill("https://github.com/example/personal-models");
     await page.getByLabel("Target branch", { exact: true }).fill("drafts");
-    await page.getByRole("button", { name: "Add personal connection", exact: true }).click();
+    await page.getByRole("button", { name: "Save connection", exact: true }).click();
     await expect(page.getByRole("button", { name: "Remove Personal models" })).toBeVisible();
     await page.locator("#personal-settings > summary").click();
     await page.getByLabel("Save artifacts to").selectOption({ label: "Personal models · drafts" });
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    await expect(page.locator("#save-destination-status")).toContainText("Active:");
     await send(page, "Use my personal repository");
     await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
     await page.reload();
     await page.getByRole("button", { name: "Use my personal repository", exact: true }).click();
     await expect(page.getByLabel("Save artifacts to")).toHaveValue(/^[a-f0-9-]{36}$/);
+});
+
+test("CKM discovery errors stay inside source settings and can be retried", async ({ page }) => {
+    let unavailable = true;
+    await page.route("**/api/connections", (route) =>
+        route.fulfill({
+            json: {
+                enterprise: unavailable
+                    ? []
+                    : [
+                          {
+                              id: "default",
+                              label: "Default CKM",
+                              kind: "ckm",
+                              scope: "enterprise",
+                              url: "https://ckm.example/rest/",
+                          },
+                      ],
+                personal: [],
+                enterpriseUnavailable: unavailable,
+            },
+        }),
+    );
+    await login(page);
+    await expect(page.locator("#enterprise-ckm-status")).toBeHidden();
+    await expect(page.getByRole("alert")).toBeHidden();
+    await page.locator("#personal-settings > summary").click();
+    await expect(page.locator("#enterprise-ckm-status")).toBeVisible();
+    unavailable = false;
+    await page.getByRole("button", { name: "Retry CKM sources", exact: true }).click();
+    await expect(page.locator("#enterprise-ckm-status")).toBeHidden();
+    await expect(page.locator("#connection-list")).toContainText("Default CKM");
+});
+
+test("an existing repository can gain a token without losing its selected identity", async ({ page }) => {
+    await login(page);
+    await addRepository(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    await expect(page.locator("#save-destination-status")).toContainText("Active:");
+    const repository = await page.getByLabel("Save artifacts to").inputValue();
+    await expect(page.locator("#repository-token-status")).toContainText("Read-only");
+    await page.locator("#personal-settings > summary").click();
+    await page.getByRole("button", { name: "Update access for My models", exact: true }).click();
+    await page.getByLabel("Personal access token (optional for public reads)").fill("synthetic-browser-token");
+    await page.getByRole("button", { name: "Save connection", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("Repository access updated");
+    await expect(page.getByLabel("Personal access token (optional for public reads)")).toHaveValue("");
+    await expect(page.locator("#repository-token-status")).toBeHidden();
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(repository);
+    await expect(page.locator("#connection-list")).not.toContainText("synthetic-browser-token");
 });
 
 test("upload source files, create a read-only snapshot and revoke its link", async ({ page, context }) => {
@@ -136,10 +285,17 @@ test("model writes wait for an explicit browser confirmation", async ({ page }) 
 test("stopping a turn allows another message", async ({ page }) => {
     await login(page);
     await send(page, "wait");
+    await expect(page.locator("#chat-form")).toHaveAttribute("aria-busy", "true");
+    await expect(page.locator("#activity")).toHaveAttribute("data-working", "true");
+    expect(await page.locator("#activity").evaluate((node) => getComputedStyle(node, "::before").animationName)).toBe(
+        "working-ring",
+    );
     await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Stop response", exact: true }).click();
     await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
     await expect(page.locator(".message.assistant")).toContainText("Response stopped");
+    await expect(page.locator("#chat-form")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator("#activity")).toBeEmpty();
     await send(page, "Which sources?");
     await expect(page.locator(".message.assistant").last()).toContainText("default");
 });
@@ -527,4 +683,145 @@ test("a malformed image reports its limitation and a later valid file still uplo
     await expect(page.getByRole("button", { name: "Preview broken.png" })).toHaveCount(0);
     await page.getByRole("button", { name: "Remove broken.png", exact: true }).click();
     await expect(page.locator("#attachment-list .attachment-card")).toHaveCount(1);
+});
+
+test("single-click decisions pause the assistant and persist the selected answer", async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await send(page, "choose intended use");
+    const card = page.getByRole("group", { name: "What is the intended use?" });
+    await expect(card).toBeVisible();
+    expect(await page.locator("#thread").evaluate((node) => node.clientHeight)).toBeGreaterThan(180);
+    await page.getByRole("button", { name: "Chat settings", exact: true }).click();
+    await expect(page.getByLabel("Save artifacts to")).toBeVisible();
+    await page.getByRole("button", { name: "Chat settings", exact: true }).click();
+    await expect(page.getByLabel("Save artifacts to")).toBeHidden();
+    await expect(page.locator("#activity")).toHaveAttribute("data-waiting", "true");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const { default: AxeBuilder } = await import("@axe-core/playwright");
+    expect(
+        (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze()).violations,
+    ).toEqual([]);
+    await card.getByRole("button", { name: "Clinical documentation", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await expect(page.locator(".message.assistant")).toContainText("Modelling for: Clinical documentation");
+    await expect(page.locator(".message.user").last()).toContainText("My choice");
+    await page.reload();
+    await page.getByRole("button", { name: "Toggle conversations" }).click();
+    await page.getByRole("button", { name: "choose intended use", exact: true }).click();
+    await expect(page.locator(".message.user").last()).toContainText("Clinical documentation");
+});
+
+test("multiple decisions support checkboxes, custom answers and skipping", async ({ page }) => {
+    await login(page);
+    await send(page, "choose multiple");
+    let card = page.getByRole("group", { name: "What is the intended use?" });
+    await card.getByRole("checkbox", { name: "Clinical documentation" }).check();
+    await card.getByRole("checkbox", { name: "AKI detection/staging" }).check();
+    await card.getByText("Write another answer", { exact: true }).click();
+    await card.getByRole("textbox", { name: "Your own answer" }).fill("For adults only");
+    await card.getByRole("button", { name: "Use selected options" }).click();
+    await expect(page.locator(".message.assistant").last()).toContainText(
+        "Clinical documentation; AKI detection/staging; For adults only",
+    );
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await send(page, "choose intended use");
+    card = page.getByRole("group", { name: "What is the intended use?" });
+    await card.getByRole("button", { name: "Skip question" }).click();
+    await expect(page.locator(".message.assistant").last()).toContainText("The question was skipped");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await send(page, "choose intended use");
+    card = page.getByRole("group", { name: "What is the intended use?" });
+    await card.getByText("Write another answer", { exact: true }).click();
+    await card.getByRole("textbox", { name: "Your own answer" }).fill("Education");
+    await card.getByRole("button", { name: "Use my answer" }).click();
+    await expect(page.locator(".message.assistant").last()).toContainText("Modelling for: Education");
+});
+
+test("two PDFs and an Excel workbook upload together and reach the modelling tools", async ({ page }) => {
+    const { sourcePdf } = await import("./fixtures/pdf.mjs");
+    const XLSX = await import("xlsx");
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([["Requirement"], ["Urine volume"]]), "Evidence");
+    await login(page);
+    await page.getByLabel("Attach files", { exact: true }).setInputFiles([
+        { name: "publication.pdf", mimeType: "application/pdf", buffer: sourcePdf() },
+        {
+            name: "guidance.PDF",
+            mimeType: "application/pdf",
+            buffer: Buffer.concat([Buffer.from("\ufeff"), sourcePdf()]),
+        },
+        {
+            name: "requirements.xlsx",
+            mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            buffer: XLSX.write(book, { type: "buffer", bookType: "xlsx" }),
+        },
+    ]);
+    await expect(page.locator("#upload-status")).toContainText("3 files added");
+    await expect(page.locator("#attachment-list .attachment-card")).toHaveCount(3);
+    await expect(page.locator("#attachment-list")).not.toContainText("Needs attention");
+    await send(page, "inspect sources");
+    await expect(page.locator(".message.assistant")).toContainText(
+        "publication.pdf: [Page 1] Renal publication evidence",
+    );
+    await expect(page.locator(".message.assistant")).toContainText("guidance.PDF: [Page 1] Renal publication evidence");
+    await expect(page.locator(".message.assistant")).toContainText("Urine volume");
+});
+
+test("signed-out users have a visible header sign-in on every workspace view and after logout", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/chat/#help-files");
+    const signIn = page.getByRole("link", { name: "Sign in", exact: true });
+    for (const name of ["Help", "Models", "Governance", "Chat"]) {
+        await page.getByRole("tab", { name, exact: true }).click();
+        await expect(signIn).toBeInViewport();
+    }
+    await signIn.click();
+    await expect(signIn).toBeHidden();
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(signIn).toBeInViewport();
+});
+
+test("expired sessions reveal header sign-in and preserve unsent instructions", async ({ page }) => {
+    await login(page);
+    await page.locator("#message").fill("Keep this modelling request");
+    await page.route("**/chat/api/session", (route) =>
+        route.fulfill({
+            json: {
+                enabled: true,
+                authenticated: false,
+                reviewEnabled: true,
+                identityEnabled: false,
+                oidcEnabled: true,
+                providers: [],
+            },
+        }),
+    );
+    await page.route("**/chat/api/conversations", (route) =>
+        route.fulfill({ status: 401, json: { error: "Sign in to continue." } }),
+    );
+    await page.getByRole("button", { name: "Send message", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeHidden();
+    await expect(page.locator("#message")).toHaveValue("Keep this modelling request");
+    await expect(page.locator("#message")).toBeDisabled();
+});
+
+test("header sign-in reveals native sign-in from another workspace tab", async ({ page }) => {
+    await page.route("**/chat/api/session", (route) =>
+        route.fulfill({
+            json: {
+                enabled: true,
+                authenticated: false,
+                identityEnabled: true,
+                identitySetupRequired: false,
+                oidcEnabled: false,
+                providers: [],
+            },
+        }),
+    );
+    await page.goto("/chat/#help");
+    await page.getByRole("link", { name: "Sign in", exact: true }).click();
+    await expect(page.locator("#local-login")).toBeVisible();
+    await expect(page.locator("#local-username")).toBeFocused();
 });

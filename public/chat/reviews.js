@@ -26,6 +26,7 @@ async function api(path, input) {
         body: input === undefined ? undefined : JSON.stringify(input),
     });
     const data = await response.json();
+    if (response.status === 401) document.dispatchEvent(new Event("workspace:session-expired"));
     if (!response.ok) throw new Error(data.error || "The review request failed.");
     return data;
 }

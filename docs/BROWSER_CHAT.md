@@ -4,6 +4,10 @@ Open `/chat/`, sign in to the modelling workspace, and open **My AI connections*
 Each user connects their own provider account. Choose **Codex** or **Claude** before
 starting a conversation; a conversation keeps that provider when reopened.
 
+**Sign in** stays at the top right while signed out, including in Help, Models and
+Governance. It reappears when a session expires; returning to the page and periodic
+checks refresh the session state without reloading your unsent message.
+
 - **Codex:** select **Connect Codex**, open the displayed sign-in link and enter the
   one-time code. Complete sign-in with your ChatGPT account. Device-code access must
   be enabled for that account or organisation.
@@ -25,6 +29,18 @@ uses API credentials. External Claude and Codex clients can independently use th
 Ask to find an archetype, inspect a project, explain guidance, review a draft or plan
 a template. For example: “List the CKM sources and find a blood pressure archetype.”
 Replies stream into the conversation; activity badges show modelling-tool calls.
+An animated progress ring shows when files are being read, a repository selection
+is being saved, or the assistant is working. It pauses when your answer is needed.
+
+Modelling questions can appear as clickable choices. Select one answer, or tick
+several boxes and press **Use selected options** when multiple answers apply.
+**Write another answer** lets you add your own wording; **Skip question** continues
+without a selection. Submitted answers are saved in your conversation. Choosing an
+option does not approve a repository write or a model for clinical use.
+Questions expire after two minutes or when the response is stopped/disconnected;
+the assistant receives a skipped answer, never an assumed selection.
+On phones, **Chat settings** opens AI connections, sources, the repository destination
+and sharing controls. These fold away while the assistant replies.
 
 Enter sends a message; Shift+Enter adds a line. **New conversation** starts another
 topic or lets you select a different provider. Conversations are private to the
@@ -53,8 +69,12 @@ access; enterprise CKMs retain their configured authentication methods. Ask the
 assistant to search your personal CKMs or to browse/read a connected repository.
 Searches return a bounded candidate window and preserve the source URL and CID.
 
-Choose **Save artifacts to** before requesting a save. The selected repository and
-branch are saved with the conversation. **Enterprise repository** retains the existing
+Choose **Save artifacts to**, then press **Save repository selection** before requesting a save.
+The choice remains inactive until confirmed by that button. The selected repository and
+branch are saved with the conversation, including when it is first created. The URL
+and branch appear below the selector. Sending waits while a changed choice is saved;
+if another tab changes the destination, the next message is rejected with its draft
+text preserved and the current selection refreshed. **Enterprise repository** retains the existing
 modelling workflow. A personal destination offers confirmed commits through
 `personal_repository_save`, while enterprise write tools are omitted for that turn.
 Confirmations display the destination, branch, path, full content and prior revision.
@@ -66,8 +86,12 @@ GitHub.com and GitLab (including self-hosted HTTPS installations) are supported;
 arbitrary SSH remotes and other Git hosting APIs are not personal connectors. Create
 the target repository and branch first. Use a repository-scoped token with GitHub
 Contents write permission or GitLab API write access; SSO and branch protections
-still apply. Public repositories can be read without a token. Remove and re-add a
-connection to rotate its token or change its branch. API contracts:
+still apply. Public repositories can be read without a token. **Update access** fills
+the connection form without revealing its token; **Save connection** replaces a supplied
+repository token while retaining the connection ID and conversation selections.
+Leaving the token empty preserves existing access. Add a separate connection for a different branch.
+Enterprise CKM requests initialize MCP before calling tools; a discovery outage appears
+only inside source settings, with a retry button. API contracts:
 [GitHub contents](https://docs.github.com/en/rest/repos/contents),
 [GitLab repository files](https://docs.gitlab.com/api/repository_files/).
 
@@ -78,6 +102,10 @@ Select **+ (Add files and images)** inside the composer, drop files onto it, or 
 The assistant receives source names, hashes and extraction status. It reads extracted text in bounded chunks through `attachment_read`. PNG/JPG images are supplied as actual image inputs to the selected Codex or Claude connection on each subsequent turn while attached, including after reload. Images are not persisted as base64 in messages or shared snapshots. Cite/check the original publication, page, sheet or image when reviewing derived requirements; extraction and visual interpretation do not establish clinical validity.
 
 PDF with selectable text, Excel XLS/XLSX/XLSB, ODS, DOCX, UTF-8/UTF-16 text, CSV, XML, JSON and other text formats are supported. Every format can be attached and downloaded as its original bytes. Unsupported binaries, scanned PDFs and damaged/password-protected documents report missing extraction. For a scanned publication, provide a text version or attach the relevant pages as PNG/JPG images. Images uploaded before vision support must be reattached. Formulas, macros, scripts and external document references are not executed.
+
+Select several PDFs and spreadsheets together in the file picker. Each file is read
+separately; check each card's status. Password-protected PDFs need an unlocked copy.
+If a PDF cannot be read, export it again or attach the relevant pages as images.
 
 Limits: 10 MiB per file, 10 files and 30 MiB per conversation. Extraction has a 20-second deadline and a 192 MiB JavaScript heap, with up to 240,000 text characters, 200 PDF pages, 30 sheets and 5,001 rows per sheet. A reached text limit reports partial extraction. Tool reads return 12,000 characters plus the next offset. The larger proxy limit applies only to upload endpoints.
 

@@ -63,13 +63,14 @@ export class Store {
         }
         return items.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     }
-    create(identity, provider = "codex") {
+    create(identity, provider = "codex", repository = null) {
         if (this.list(identity).length >= 100)
             throw Object.assign(new Error("Conversation limit reached. Delete an older chat."), { status: 429 });
         const conversation = {
             id: randomUUID(),
             title: "New conversation",
             provider,
+            ...(repository ? { repository } : {}),
             messages: [],
             updatedAt: new Date().toISOString(),
         };

@@ -36,7 +36,7 @@ export async function extract(path, name) {
             note: "Image ready for the assistant. A prepared copy (up to 2048 pixels per side) is used; crop small or unclear text for better results. The original is kept.",
             image: { data: data.toString("base64"), mimeType: "image/jpeg", width: info.width, height: info.height },
         };
-    } else if (bytes.subarray(0, 5).toString() === "%PDF-") {
+    } else if (extension === ".pdf" || bytes.subarray(0, 5).toString() === "%PDF-") {
         const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
         const task = getDocument({
             data: new Uint8Array(bytes),
@@ -114,12 +114,17 @@ if (process.send)
     process.once("message", async ({ path, name }) => {
         try {
             process.send(await extract(path, name), () => process.exit(0));
-        } catch {
+        } catch (error) {
             process.send(
                 {
                     text: "",
                     status: "failed",
-                    note: "Original saved, but it could not be prepared. It may be damaged, password protected, animated, or exceed the 20-megapixel image limit. Try a smaller image or another export.",
+                    note:
+                        extname(name).toLowerCase() === ".pdf"
+                            ? error?.name === "PasswordException"
+                                ? "Original saved. This PDF needs a password. Upload an unlocked copy to use its content."
+                                : "Original saved, but the PDF could not be read. Try exporting it again, or attach the relevant pages as PNG/JPG images."
+                            : "Original saved, but it could not be prepared. It may be damaged, password protected, animated, or exceed the 20-megapixel image limit. Try a smaller image or another export.",
                 },
                 () => process.exit(0),
             );

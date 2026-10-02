@@ -95,7 +95,15 @@ export class PersonalConnections {
         const duplicate = items.find(
             (item) => item.kind === input.kind && item.url === url && (item.branch || "") === (input.branch || ""),
         );
-        if (duplicate) return { connection: visible(duplicate), duplicate: true };
+        if (duplicate) {
+            if (input.kind !== "ckm" && input.token !== undefined) {
+                duplicate.token = input.token;
+                duplicate.label = input.label.trim();
+                this.store.set(identity, "workspace", items);
+                return { connection: visible(duplicate), duplicate: true, updated: true };
+            }
+            return { connection: visible(duplicate), duplicate: true };
+        }
         if (items.length >= 20) throw problem("Remove an unused connection before adding another (limit 20).", 429);
         const connection = {
             id: randomUUID(),
