@@ -1,5 +1,6 @@
 import { WRITE_TOOLS } from "./mcp.mjs";
 import { problem } from "./personal-http.mjs";
+import { CHOICE_TOOL } from "./choices.mjs";
 
 const string = { type: "string" };
 const tool = (name, description, properties, required = Object.keys(properties)) => ({
@@ -16,6 +17,7 @@ export class WorkspaceTools {
     async tools() {
         const core = await this.mcp.tools();
         const personal = [
+            CHOICE_TOOL,
             tool(
                 "personal_connections",
                 "List your private CKM connections and repositories. Enterprise CKMs are listed by ckm_sources. Credentials are never returned.",
@@ -83,6 +85,7 @@ export class WorkspaceTools {
         return copy;
     }
     async call(name, args) {
+        if (name === CHOICE_TOOL.name) throw problem("This question requires an active browser conversation.");
         const personal = this.personal.find((t) => t.name === name);
         if (!personal) return this.mcp.call(name, args);
         if (

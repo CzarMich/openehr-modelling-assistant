@@ -2,6 +2,29 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { McpClient } from "../src/mcp.mjs";
 
+test("direct tool calls initialize the MCP session before listing enterprise CKMs", async (t) => {
+    const original = globalThis.fetch;
+    t.after(() => (globalThis.fetch = original));
+    const methods = [];
+    globalThis.fetch = async (_url, options) => {
+        const request = JSON.parse(options.body);
+        methods.push(request.method);
+        if (request.method === "notifications/initialized") return new Response(null, { status: 202 });
+        if (request.method !== "initialize") assert.equal(options.headers["MCP-Protocol-Version"], "2025-11-25");
+        const result =
+            request.method === "initialize"
+                ? { protocolVersion: "2025-11-25" }
+                : request.method === "tools/list"
+                  ? { tools: [{ name: "ckm_sources" }] }
+                  : { structuredContent: { sources: { default: "https://ckm.example/rest/" } } };
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: request.id, result }));
+    };
+    const client = new McpClient({ mcpUrl: "https://modelling.example/mcp" }, new AbortController().signal);
+    assert.ok((await client.call("ckm_sources", {})).structuredContent.sources.default);
+    await client.call("ckm_sources", {});
+    assert.deepEqual(methods, ["initialize", "notifications/initialized", "tools/list", "tools/call", "tools/call"]);
+});
+
 test("bounded MCP responses can carry a terminology record and its structured/content representations", async (t) => {
     const original = globalThis.fetch;
     t.after(() => (globalThis.fetch = original));

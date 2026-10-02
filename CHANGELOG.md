@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 - Chat keeps repository selections consistent when creating conversations and sending messages.
+- Chat adds explicit repository activation and token updates, and restores enterprise CKM discovery.
+- Chat adds clickable modelling decisions, progress indicators and clearer PDF upload feedback.
+- Workspace keeps sign-in visible for signed-out and expired sessions.
 
 - Chat adds composer attachment cards, image previews and PNG/JPG interpretation.
 

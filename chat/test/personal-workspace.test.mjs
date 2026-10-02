@@ -16,6 +16,7 @@ import { WorkspaceTools } from "../src/workspace-tools.mjs";
 import { loadConfig } from "../src/config.mjs";
 import { Auth } from "../src/auth.mjs";
 import { createApplication } from "../src/server.mjs";
+import { sourcePdf } from "./fixtures/pdf.mjs";
 
 function setup(t, request) {
     const directory = mkdtempSync(join(tmpdir(), "personal-workspace-"));
@@ -63,6 +64,22 @@ test("personal CKMs deduplicate enterprise URLs and remain encrypted and owner-b
     assert.throws(() => connections.add("alice", { ...ckm, url: "https://user:password@models.example/" }));
     connections.remove("alice", added.id);
     assert.deepEqual(connections.list("alice"), []);
+});
+
+test("repository access updates keep the selected ID and never return or replace another owner's token", (t) => {
+    const { connections } = setup(t);
+    const saved = connections.add("alice", { ...github, token: undefined }).connection;
+    const other = connections.add("bob", { ...github, token: "bob-token" }).connection;
+    const result = connections.add("alice", { ...github, token: "alice-updated-token" });
+    assert.equal(result.updated, true);
+    assert.equal(result.connection.id, saved.id);
+    assert.equal(result.connection.authenticated, true);
+    assert.equal(connections.list("alice").length, 1);
+    assert.equal(connections.get("alice", saved.id).token, "alice-updated-token");
+    assert.equal(connections.get("bob", other.id).token, "bob-token");
+    assert.doesNotMatch(JSON.stringify(result), /alice-updated-token/);
+    connections.add("alice", { ...github, token: undefined });
+    assert.equal(connections.get("alice", saved.id).token, "alice-updated-token");
 });
 
 test("personal HTTP denies local, reserved, mapped IPv6 and non-HTTPS targets", async () => {
@@ -195,33 +212,19 @@ test("text, PDF and spreadsheets are extracted with exact originals and explicit
         assert.match(result.text, /Renal evidence[\s\S]*Urine volume/);
     }
     const pdfPath = join(directory, "publication.pdf");
-    // Minimal independent PDF fixture, with a text page and standard font.
-    const stream = "BT /F1 12 Tf 20 100 Td (Renal publication evidence) Tj ET";
-    const objects = [
-        "<< /Type /Catalog /Pages 2 0 R >>",
-        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
-    ];
-    let pdf = "%PDF-1.4\n",
-        offsets = [0];
-    objects.forEach((object, i) => {
-        offsets.push(Buffer.byteLength(pdf));
-        pdf += `${i + 1} 0 obj\n${object}\nendobj\n`;
-    });
-    const xref = Buffer.byteLength(pdf);
-    pdf +=
-        `xref\n0 6\n0000000000 65535 f \n` +
-        offsets
-            .slice(1)
-            .map((offset) => String(offset).padStart(10, "0") + " 00000 n \n")
-            .join("") +
-        `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    const pdf = sourcePdf();
     writeFileSync(pdfPath, pdf);
     const extractedPdf = await extractFile(pdfPath, "publication.pdf");
     assert.equal(extractedPdf.status, "ready", extractedPdf.note);
     assert.match(extractedPdf.text, /\[Page 1\][\s\S]*Renal publication evidence/);
+    writeFileSync(pdfPath, Buffer.concat([Buffer.from("\ufeff"), pdf]));
+    const prefixedPdf = await extractFile(pdfPath, "publication.PDF");
+    assert.equal(prefixedPdf.status, "ready", prefixedPdf.note);
+    assert.match(prefixedPdf.text, /Renal publication evidence/);
+    writeFileSync(pdfPath, "not a PDF");
+    const brokenPdf = await extractFile(pdfPath, "publication.pdf");
+    assert.equal(brokenPdf.status, "failed");
+    assert.match(brokenPdf.note, /PDF could not be read/);
     const docx = await extractFile(fileURLToPath(new URL("./fixtures/source.docx", import.meta.url)), "source.docx");
     assert.equal(docx.status, "ready", docx.note);
     assert.match(docx.text, /Synthetic renal care requirements/);
@@ -569,4 +572,57 @@ test("HTTP image previews and vision inputs remain owner-bound, follow later tur
         await f.request(base + "/messages", { method: "POST", data: { content: "Continue without the image" } })
     ).text();
     assert.equal(calls, 3);
+});
+
+test("interactive choices require the owner, valid options and CSRF, persist answers and reject replay", async (t) => {
+    const answers = [];
+    const f = await httpFixture(t, async ({ callTool }) => {
+        const result = await callTool("request_user_choice", {
+            question: "What is the intended use?",
+            options: ["Clinical documentation", "AKI detection/staging", "Prediction-model dataset"],
+        });
+        answers.push(result.structuredContent);
+        return "Decision received";
+    });
+    for (const stop of [false, true]) {
+        const conversation = f.store.create("alice"),
+            base = "conversations/" + conversation.id;
+        const response = await f.request(base + "/messages", { method: "POST", data: { content: "Plan a template" } });
+        const reader = response.body.getReader();
+        let buffer = "",
+            question;
+        while (!question) {
+            const part = await reader.read();
+            assert.equal(part.done, false);
+            buffer += new TextDecoder().decode(part.value);
+            let end;
+            while ((end = buffer.indexOf("\n\n")) >= 0) {
+                const frame = buffer.slice(0, end);
+                buffer = buffer.slice(end + 2);
+                if (frame.startsWith("data: ")) {
+                    const event = JSON.parse(frame.slice(6));
+                    if (event.type === "choice") question = event;
+                }
+            }
+        }
+        const data = { id: question.id, selected: ["Clinical documentation"] };
+        assert.equal((await f.request(base + "/choice", { method: "POST", user: "bob", data })).status, 404);
+        assert.equal((await f.request(base + "/choice", { method: "POST", csrf: false, data })).status, 403);
+        for (const selected of [[], ["unknown"], question.options.slice(0, 2)])
+            assert.equal(
+                (await f.request(base + "/choice", { method: "POST", data: { ...data, selected } })).status,
+                400,
+            );
+        assert.equal(answers.length, stop ? 1 : 0);
+        if (stop) await f.request(base + "/stop", { method: "POST" });
+        else assert.equal((await f.request(base + "/choice", { method: "POST", data })).status, 200);
+        while (!(await reader.read()).done) {
+            /* Wait for persistence and turn cleanup. */
+        }
+        assert.equal((await f.request(base + "/choice", { method: "POST", data })).status, 409);
+        assert.equal(answers.at(-1).cancelled, stop);
+        const messages = f.store.get("alice", conversation.id).messages;
+        assert.equal(messages.filter((message) => message.role === "user").length, stop ? 1 : 2);
+        if (!stop) assert.match(messages[1].content, /My choice.*Clinical documentation/);
+    }
 });

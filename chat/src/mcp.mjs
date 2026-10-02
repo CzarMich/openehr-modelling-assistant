@@ -180,6 +180,7 @@ export class McpClient {
     async call(name, args) {
         if (!READ_TOOLS.has(name) && !(this.config.allowWrites && WRITE_TOOLS.has(name)))
             throw new Error("Tool is not available");
+        await this.tools();
         return this.rpc("tools/call", { name, arguments: args });
     }
 }

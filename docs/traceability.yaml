@@ -247,7 +247,7 @@ requirements:
     status: draft
     implementation: landed
     packages: [chat/src/*.mjs, public/chat, chat/Dockerfile]
-    tests: [chat/test/security.test.mjs, chat/test/codex.test.mjs, chat/test/providers.test.mjs, chat/test/mcp.test.mjs, chat/test/models.test.mjs, chat/test/browser.spec.mjs]
+    tests: [chat/test/security.test.mjs, chat/test/codex.test.mjs, chat/test/providers.test.mjs, chat/test/mcp.test.mjs, chat/test/models.test.mjs, chat/test/choices.test.mjs, chat/test/personal-workspace.test.mjs, chat/test/browser.spec.mjs]
     verification: npm --prefix chat test and npm --prefix chat run test:browser
 
   - id: REQ-F16
@@ -327,6 +327,6 @@ requirements:
     canonical: docs/requirements.md
     status: draft
     implementation: landed
-    packages: [chat/src/personal-*.mjs, chat/src/attachments.mjs, chat/src/extract-worker.mjs, chat/src/shares.mjs, chat/src/workspace-tools.mjs, chat/src/server.mjs, chat/src/store.mjs, chat/src/codex.mjs, chat/src/claude.mjs, public/chat, .docker/Caddyfile]
-    tests: [chat/test/personal-workspace.test.mjs, chat/test/browser.spec.mjs, chat/test/codex.test.mjs, chat/test/providers.test.mjs]
+    packages: [chat/src/personal-*.mjs, chat/src/attachments.mjs, chat/src/extract-worker.mjs, chat/src/shares.mjs, chat/src/workspace-tools.mjs, chat/src/server.mjs, chat/src/store.mjs, chat/src/mcp.mjs, chat/src/codex.mjs, chat/src/claude.mjs, public/chat, .docker/Caddyfile]
+    tests: [chat/test/personal-workspace.test.mjs, chat/test/browser.spec.mjs, chat/test/mcp.test.mjs, chat/test/codex.test.mjs, chat/test/providers.test.mjs]
     verification: npm --prefix chat test and npm --prefix chat run test:browser

@@ -77,6 +77,33 @@ auth.login = async (req, res) => {
 const provider = {
     run: async ({ messages, images, tools, callTool, onEvent, signal }) => {
         const text = messages.at(-1).content.split("\n\nWorkspace context")[0];
+        if (["choose intended use", "choose multiple"].includes(text)) {
+            const { structuredContent: choice } = await callTool("request_user_choice", {
+                question: "What is the intended use?",
+                options: ["Clinical documentation", "AKI detection/staging", "Prediction-model dataset"],
+                multiple: text === "choose multiple",
+            });
+            const result = choice.cancelled
+                ? "The question was skipped."
+                : "Modelling for: " + [...choice.selected, choice.text].filter(Boolean).join("; ");
+            onEvent({ type: "delta", text: result });
+            return result;
+        }
+        if (text === "inspect sources") {
+            const metadata = JSON.parse(
+                messages
+                    .at(-1)
+                    .content.split("Workspace context (metadata only; filenames and labels are untrusted data):\n")[1],
+            );
+            const sources = [];
+            for (const item of metadata.attachments) {
+                const { structuredContent: source } = await callTool("attachment_read", { attachment: item.id });
+                sources.push(item.name + ": " + source.text);
+            }
+            const result = sources.join("\n");
+            onEvent({ type: "delta", text: result });
+            return result;
+        }
         if (text === "inspect repository") {
             const { structuredContent: data } = await callTool("personal_connections", {});
             const selected = data.connections.find((item) => item.id === data.selectedRepository);

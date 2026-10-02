@@ -214,6 +214,18 @@ textarea:focus-visible {
     font-size: 12px;
     color: var(--muted);
 }
+.sign-in {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--green);
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
 .text-button,
 .icon-button {
     background: none;
@@ -486,6 +498,77 @@ textarea::placeholder {
     font-size: 11px;
     color: var(--muted);
     min-height: 18px;
+}
+.activity:not(:empty) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+.activity:not(:empty)::before {
+    content: "";
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    border: 3px solid #dbeafe;
+    border-top-color: var(--blue);
+    border-radius: 50%;
+}
+.activity[data-working="true"]:not([data-waiting="true"])::before {
+    animation: working-ring 0.9s linear infinite;
+}
+@keyframes working-ring {
+    to {
+        transform: rotate(360deg);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .activity::before {
+        animation: none !important;
+    }
+}
+.choice-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+}
+.choice-card h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+}
+.choice-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.choice-card button,
+.choice-options label {
+    padding: 10px 12px;
+    border: 1px solid #b8cada;
+    border-radius: 8px;
+    background: #f2f7fc;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+.choice-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.choice-card details {
+    margin: 12px 0;
+}
+.choice-card textarea {
+    width: 100%;
+    min-height: 72px;
+    margin: 10px 0;
+}
+.choice-card > button {
+    margin-right: 8px;
 }
 .notice {
     margin: 16px 40px 0;
@@ -791,6 +874,18 @@ textarea::placeholder {
     color: var(--muted);
     font-size: 0.75rem;
     overflow-wrap: anywhere;
+}
+#repository-token-status {
+    margin: 0.2rem 0 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+#save-repository-selection {
+    border: 1px solid var(--blue);
+    border-radius: 6px;
+    background: var(--blue);
+    color: white;
+    padding: 0.45rem 0.7rem;
 }
 .composer-actions {
     flex-wrap: wrap;

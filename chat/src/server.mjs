@@ -12,6 +12,7 @@ import { PersonalConnections } from "./personal-connections.mjs";
 import { Attachments, UPLOAD_LIMIT } from "./attachments.mjs";
 import { Shares } from "./shares.mjs";
 import { WorkspaceTools, PERSONAL_WRITE } from "./workspace-tools.mjs";
+import { CHOICE_TOOL, choiceQuestion, choiceAnswer, choiceMessage } from "./choices.mjs";
 
 const publicDir = fileURLToPath(new URL("../../public/chat/", import.meta.url));
 const json = (res, status, data) => {
@@ -404,7 +405,7 @@ export function createApplication(
                 }
             }
             const route = path.match(
-                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|settings|share|attachments)(?:\/([a-f0-9-]{36}))?(?:\/(preview))?)?$/,
+                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|choice|settings|share|attachments)(?:\/([a-f0-9-]{36}))?(?:\/(preview))?)?$/,
             );
             if (!route) throw Object.assign(new Error("Not found"), { status: 404 });
             const [, id, action, attachmentId, preview] = route,
@@ -517,6 +518,14 @@ export function createApplication(
                 turn.approval = null;
                 return json(res, 200, { success: true });
             }
+            if (action === "choice" && req.method === "POST") {
+                const input = await body(req),
+                    pending = active.get(key)?.choice;
+                if (!pending || pending.id !== input.id)
+                    throw Object.assign(new Error("This question is no longer awaiting an answer."), { status: 409 });
+                pending.resolve(choiceAnswer(pending.question, input));
+                return json(res, 200, { success: true });
+            }
             if (action !== "messages" || req.method !== "POST")
                 throw Object.assign(new Error("Not found"), { status: 404 });
             const input = await body(req);
@@ -617,6 +626,49 @@ export function createApplication(
                         toolActivity.push(trace);
                         emit({ type: "tool", ...trace });
                         try {
+                            if (name === CHOICE_TOOL.name) {
+                                const question = choiceQuestion(args);
+                                if (conversation.messages.length >= 79)
+                                    throw new Error("Start a new conversation for more questions.");
+                                const answer = await new Promise((resolve, reject) => {
+                                    const choiceId = randomUUID();
+                                    let timer,
+                                        settled = false;
+                                    const finish = (value) => {
+                                        if (settled) return;
+                                        settled = true;
+                                        clearTimeout(timer);
+                                        controller.signal.removeEventListener("abort", cancel);
+                                        turn.choice = null;
+                                        try {
+                                            if (!value.cancelled) {
+                                                conversation.messages.push({
+                                                    role: "user",
+                                                    content: choiceMessage(value),
+                                                });
+                                                store.save(identity, conversation);
+                                            }
+                                            emit({ type: "choice_result", id: choiceId, answer: value });
+                                            resolve(value);
+                                        } catch (error) {
+                                            reject(error);
+                                        }
+                                    };
+                                    const cancel = () =>
+                                        finish({ ...question, selected: [], text: "", cancelled: true });
+                                    timer = setTimeout(cancel, 120000);
+                                    timer.unref();
+                                    controller.signal.addEventListener("abort", cancel, { once: true });
+                                    turn.choice = { id: choiceId, question, resolve: finish, cancel };
+                                    emit({ type: "choice", id: choiceId, ...question });
+                                });
+                                trace.status = "completed";
+                                emit({ type: "tool", ...trace });
+                                return {
+                                    structuredContent: answer,
+                                    content: [{ type: "text", text: JSON.stringify(answer) }],
+                                };
+                            }
                             if (WRITE_TOOLS.has(name) || name === PERSONAL_WRITE) {
                                 const approved = await new Promise((resolve) => {
                                     const approvalId = randomUUID();
@@ -684,6 +736,7 @@ export function createApplication(
                 await mcp?.close?.();
                 active.delete(key);
                 turn.approval?.resolve(false);
+                turn.choice?.cancel();
                 res.off("close", disconnected);
                 res.end();
             }
