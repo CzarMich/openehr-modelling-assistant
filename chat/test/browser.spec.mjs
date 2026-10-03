@@ -141,6 +141,10 @@ test("Copilot Studio can be connected, checked and selected from the browser wit
     await settings(page);
     await expect(page.locator("#copilot-connection")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await settings(page, false);
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(page.locator("#copilot-tenant")).toHaveValue("");
+    await expect(page.locator("#copilot-code")).toHaveText("");
 });
 
 test("repository selection must finish saving before the assistant can receive a message", async ({ page }) => {

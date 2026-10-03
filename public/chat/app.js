@@ -972,7 +972,15 @@ document
     .querySelectorAll(".suggestion")
     .forEach((button) => (button.onclick = () => send(button.dataset.prompt).catch((e) => notice(e.message))));
 let providerPoll;
+let providerSession;
 function renderProviders() {
+    const owner = session?.authenticated ? session.csrf : null;
+    if (providerSession !== owner) {
+        providerSession = owner;
+        for (const field of ["tenant", "client", "environment", "schema"]) $("copilot-" + field).value = "";
+        $("copilot-code").textContent = "";
+        $("copilot-test-status").textContent = "";
+    }
     $("provider-bar").hidden = !session?.authenticated || !session.enabled;
     $("toggle-chat-settings").hidden = !session?.authenticated || (!session.enabled && !session.cdrEnabled);
     $("share-chat").hidden = $("provider-bar").hidden;
