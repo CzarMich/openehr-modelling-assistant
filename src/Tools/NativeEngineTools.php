@@ -80,12 +80,15 @@ final readonly class NativeEngineTools
         return ToolResult::run(fn (): array => $this->models->inspect($content, $format, $dependencies));
     }
 
-    /** Parse AQL with the native ANTLR engine and return its typed syntax tree and normalized query. Model compatibility, path validation and execution remain separate; no CDR is required.
+    /** Parse AQL with the native engine. Optionally check containment and SELECT/WHERE/ORDER BY paths against exact supplied OPT 1.4 XML or OPT 2 ADL templates. Fetch the intended repository versions first; compile OET/ADL templates with explicit dependencies using template_compile before supplying its OPT output. Reports each template and unmatched or incomplete paths. Does not execute queries or validate predicate values, function signatures or clinical meaning; no CDR or provider account is required.
+     * @param list<array{identifier: string, content: string}> $templates
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'aql_validate', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
-    public function aql(#[Schema(minLength: 1, maxLength: 2097152)] string $content): array
-    {
-        return ToolResult::run(fn (): array => $this->models->validate($content, 'aql'));
+    public function aql(
+        #[Schema(minLength: 1, maxLength: 2097152)] string $content,
+        #[Schema(items: self::DEPENDENCY, maxItems: 8)] array $templates = []
+    ): array {
+        return ToolResult::run(fn (): array => $this->models->validate($content, 'aql', $templates));
     }
 }

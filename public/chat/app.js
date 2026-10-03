@@ -945,9 +945,9 @@ document
 let providerPoll;
 function renderProviders() {
     $("provider-bar").hidden = !session?.authenticated || !session.enabled;
-    $("toggle-chat-settings").hidden = $("provider-bar").hidden;
+    $("toggle-chat-settings").hidden = !session?.authenticated || (!session.enabled && !session.cdrEnabled);
     $("share-chat").hidden = $("provider-bar").hidden;
-    if ($("provider-bar").hidden) chatSettings(false);
+    if ($("toggle-chat-settings").hidden) chatSettings(false);
     for (const provider of session?.providers || []) {
         $(provider.id + "-status").textContent = provider.connected
             ? "Connected"

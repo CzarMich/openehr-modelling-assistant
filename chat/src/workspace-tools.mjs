@@ -2,6 +2,7 @@ import { WRITE_TOOLS } from "./mcp.mjs";
 import { problem } from "./personal-http.mjs";
 import { requireFolderPath, artifactPath, ARTIFACT_FOLDERS } from "./repository-paths.mjs";
 import { CHOICE_TOOL } from "./choices.mjs";
+import { CDR_TOOLS } from "./cdr.mjs";
 
 const string = { type: "string" };
 const tool = (name, description, properties, required = Object.keys(properties)) => ({
@@ -12,8 +13,8 @@ const tool = (name, description, properties, required = Object.keys(properties))
 export const PERSONAL_WRITE = "personal_repository_save";
 
 export class WorkspaceTools {
-    constructor(mcp, connections, attachments, identity, conversation, signal, allowWrites) {
-        Object.assign(this, { mcp, connections, attachments, identity, conversation, signal, allowWrites });
+    constructor(mcp, connections, attachments, identity, conversation, signal, allowWrites, cdr = null) {
+        Object.assign(this, { mcp, connections, attachments, identity, conversation, signal, allowWrites, cdr });
     }
     async tools() {
         const core = await this.mcp.tools();
@@ -66,7 +67,13 @@ export class WorkspaceTools {
                 ),
             );
         this.personal = personal;
-        return [...core.filter((t) => !this.conversation.repository || !WRITE_TOOLS.has(t.name)), ...personal];
+        return [
+            ...core.filter(
+                (t) =>
+                    (!CDR_TOOLS.has(t.name) || this.cdr) && (!this.conversation.repository || !WRITE_TOOLS.has(t.name)),
+            ),
+            ...personal,
+        ];
     }
     destination() {
         return this.connections.list(this.identity).find((item) => item.id === this.conversation.repository) || null;
@@ -127,6 +134,10 @@ export class WorkspaceTools {
         return copy;
     }
     async call(name, args) {
+        if (CDR_TOOLS.has(name)) {
+            if (!this.cdr) throw problem("CDR connections are unavailable.");
+            return this.cdr.client.tool(this.cdr.session, name, args, this.signal);
+        }
         if (name === CHOICE_TOOL.name) throw problem("This question requires an active browser conversation.");
         const personal = this.personal.find((t) => t.name === name);
         if (!personal) {

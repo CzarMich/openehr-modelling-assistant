@@ -45,8 +45,9 @@ the [deployment guide](docs/DEPLOYMENT.md).
 The optional [native engine](docs/OPT_COMPILATION.md) validates ADL 2, parses AQL
 and compiles ADL 2 templates to OPT 2. It also compiles the
 [supported OET/ADL 1.4 profile](docs/LEGACY_OPT_COMPILATION.md) to OPT 1.4 XML.
-Full OET coverage, model-aware AQL validation, CDR execution and visual editing
-remain incomplete. See the [capability matrix](CAPABILITIES.md) for the scope of each feature.
+The [AQL workspace](docs/CDR_WORKSPACE.md) checks paths against selected templates
+and runs read-only queries against private CDR connections. Full OET coverage and
+visual model editing remain incomplete. See the [capability matrix](CAPABILITIES.md) for the scope of each feature.
 
 - `guide_get` returns the **full** guide file.
 - Model writes require `MODEL_REPOSITORY_WRITE_ENABLED=true` and the configured write permissions.

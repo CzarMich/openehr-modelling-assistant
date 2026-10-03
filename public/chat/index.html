@@ -11,6 +11,8 @@
         <script src="/chat/reviews.js" type="module"></script>
         <script src="/chat/workspace.js" type="module"></script>
         <script src="/chat/identity.js" type="module"></script>
+        <script src="/chat/aql.js" type="module"></script>
+        <link rel="stylesheet" href="/chat/aql.css" />
     </head>
     <body data-section="chat">
         <a class="skip-link" href="#workspace-content">Skip to workspace</a>
@@ -69,6 +71,26 @@
                             <path d="M3 8V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2" />
                         </svg>
                         Models
+                    </button>
+                    <button
+                        id="tab-aql"
+                        role="tab"
+                        aria-controls="panel-aql"
+                        aria-selected="false"
+                        data-tab="aql"
+                        tabindex="-1"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            width="20"
+                            height="20"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            aria-hidden="true"
+                        >
+                            <path d="m8 5-6 7 6 7m8-14 6 7-6 7m-3-16-2 18" /></svg
+                        >AQL workspace
                     </button>
                     <button
                         id="tab-governance"
@@ -393,6 +415,131 @@
                             <p id="repository-token-status" hidden></p>
                         </div>
                     </div>
+                    <details id="cdr-settings">
+                        <summary>CDR Connections</summary>
+                        <p>
+                            Connect the servers you want to query. Connections are private to your account. Credentials
+                            are encrypted and are never sent to your assistant.
+                        </p>
+                        <p id="cdr-settings-status" role="status" aria-live="polite"></p>
+                        <div id="cdr-connection-list"></div>
+                        <button id="cdr-new" type="button">Add CDR connection</button>
+                        <form id="cdr-form" hidden>
+                            <h3 id="cdr-form-title">New connection</h3>
+                            <div class="cdr-fields">
+                                <label
+                                    >Display name<input
+                                        id="cdr-name"
+                                        required
+                                        maxlength="100"
+                                        placeholder="Development server"
+                                /></label>
+                                <label>Server type<input id="cdr-vendor" maxlength="100" value="openEHR REST" /></label>
+                                <label class="wide"
+                                    >Base URL<input
+                                        id="cdr-baseUrl"
+                                        type="url"
+                                        required
+                                        placeholder="https://cdr.example.org"
+                                /></label>
+                                <label
+                                    >Authentication<select id="cdr-auth">
+                                        <option value="none">No authentication</option>
+                                        <option value="basic">Username and password</option>
+                                        <option value="bearer">Bearer token</option>
+                                        <option value="api_key">API key</option>
+                                        <option value="oauth2">OAuth client credentials</option>
+                                    </select></label
+                                >
+                                <label
+                                    >Timeout (seconds)<input
+                                        id="cdr-timeout"
+                                        type="number"
+                                        min="1"
+                                        max="120"
+                                        value="60"
+                                        required
+                                /></label>
+                                <label data-cdr-auth="basic"
+                                    >Username<input id="cdr-username" autocomplete="off"
+                                /></label>
+                                <label data-cdr-auth="basic"
+                                    >Password<input id="cdr-password" type="password" autocomplete="new-password"
+                                /></label>
+                                <label data-cdr-auth="bearer"
+                                    >Bearer token<input id="cdr-token" type="password" autocomplete="new-password"
+                                /></label>
+                                <label data-cdr-auth="api_key"
+                                    >CDR API key header<input id="cdr-apiKeyHeader" placeholder="X-API-Key"
+                                /></label>
+                                <label data-cdr-auth="api_key"
+                                    >API key<input id="cdr-apiKey" type="password" autocomplete="new-password"
+                                /></label>
+                                <label data-cdr-auth="oauth2"
+                                    >Token endpoint<input id="cdr-tokenUrl" type="url"
+                                /></label>
+                                <label data-cdr-auth="oauth2"
+                                    >Client ID<input id="cdr-clientId" autocomplete="off"
+                                /></label>
+                                <label data-cdr-auth="oauth2"
+                                    >Client secret<input
+                                        id="cdr-clientSecret"
+                                        type="password"
+                                        autocomplete="new-password"
+                                /></label>
+                                <label data-cdr-auth="oauth2">Scopes<input id="cdr-scope" /></label>
+                            </div>
+                            <p>When editing a connection, leave secret fields blank to keep its saved credentials.</p>
+                            <details>
+                                <summary>Endpoints, tenant and TLS</summary>
+                                <div class="cdr-fields">
+                                    <label class="wide"
+                                        >openEHR API URL<input
+                                            id="cdr-apiUrl"
+                                            type="url"
+                                            placeholder="Base URL + /openehr/v1"
+                                    /></label>
+                                    <label class="wide"
+                                        >AQL endpoint<input
+                                            id="cdr-queryUrl"
+                                            type="url"
+                                            placeholder="openEHR API URL + /query/aql"
+                                    /></label>
+                                    <label>Tenant identifier<input id="cdr-tenant" /></label
+                                    ><label
+                                        >Tenant header<input id="cdr-tenantHeader" placeholder="X-Tenant-ID"
+                                    /></label>
+                                    <label class="wide"
+                                        >Additional headers (JSON)<textarea
+                                            id="cdr-headers"
+                                            rows="3"
+                                            placeholder='{"X-Environment": "sandbox"}'
+                                            spellcheck="false"
+                                        ></textarea>
+                                    </label>
+                                    <label class="wide"
+                                        >Trusted CA certificate (PEM)<textarea
+                                            id="cdr-caCertificate"
+                                            rows="3"
+                                            spellcheck="false"
+                                            placeholder="Leave blank to use the system trust store"
+                                        ></textarea>
+                                    </label>
+                                </div>
+                                <p>
+                                    TLS verification stays enabled. Leave additional headers and the certificate blank
+                                    to keep saved values when editing.
+                                </p>
+                            </details>
+                            <label class="aql-check"
+                                ><input id="cdr-enabled" type="checkbox" checked />Connection enabled</label
+                            >
+                            <div class="aql-actions">
+                                <button type="submit" id="cdr-save">Save connection</button
+                                ><button id="cdr-form-cancel" type="button">Cancel</button>
+                            </div>
+                        </form>
+                    </details>
                 </dialog>
                 <dialog id="share-dialog" aria-labelledby="share-title">
                     <h2 id="share-title">Share a conversation snapshot</h2>
@@ -726,6 +873,7 @@
                                 </button>
                                 <button id="discuss-model" class="primary-button">Discuss in chat</button
                                 ><button id="review-model" class="secondary-button">Open governance</button>
+                                <button id="query-model" class="secondary-button">Query this model</button>
                             </div>
                             <h3>Source</h3>
                             <pre id="model-source" tabindex="0"></pre>
@@ -737,6 +885,175 @@
                     </div>
                 </section>
 
+                <section
+                    id="panel-aql"
+                    role="tabpanel"
+                    aria-labelledby="tab-aql"
+                    class="content-panel aql-panel"
+                    hidden
+                >
+                    <div class="aql-heading">
+                        <div>
+                            <h1>AQL workspace</h1>
+                            <p>Inspect a model, check its paths, then query a connected CDR.</p>
+                        </div>
+                        <a href="#help-aql">How to use AQL</a>
+                    </div>
+                    <p id="aql-notice" role="status" aria-live="polite"></p>
+                    <div class="aql-environment">
+                        <label for="aql-connection">CDR environment</label
+                        ><select id="aql-connection">
+                            <option value="">Choose a connection</option></select
+                        ><button id="aql-refresh" type="button">Refresh</button
+                        ><button id="aql-settings" type="button">Manage connections</button>
+                    </div>
+                    <details id="aql-model-section" class="aql-card">
+                        <summary>Model paths and template validation</summary>
+                        <p>
+                            Choose an exact model from a repository, load model files, or inspect a remote CDR template.
+                            Remote models stay separate from your repository.
+                        </p>
+                        <div class="aql-actions">
+                            <label
+                                >Source<select id="aql-source">
+                                    <option value="local">Model files</option>
+                                    <option value="enterprise">Enterprise repository</option>
+                                    <option value="remote">Selected CDR</option>
+                                </select></label
+                            ><button id="aql-source-refresh" type="button">Load source</button
+                            ><label id="aql-project-label" hidden>Project<select id="aql-project"></select></label>
+                        </div>
+                        <label id="aql-files-label"
+                            >Load a model and its dependencies<input
+                                id="aql-files"
+                                type="file"
+                                multiple
+                                accept=".opt,.xml,.oet,.adlt,.adl,.adls,.adlf"
+                        /></label>
+                        <div class="aql-actions">
+                            <label
+                                >Model<select id="aql-model">
+                                    <option value="">Choose a model</option>
+                                </select></label
+                            ><button id="aql-inspect" type="button">Inspect paths</button>
+                        </div>
+                        <label id="aql-dependencies-label"
+                            >Exact dependencies for OET / ADL templates<select
+                                id="aql-dependencies"
+                                multiple
+                                size="4"
+                                aria-describedby="aql-dependency-help"
+                            ></select
+                        ></label>
+                        <p id="aql-dependency-help">
+                            Select the archetypes used by this template. For local files, load them together with the
+                            template. Compiled OPTs need no additional dependencies.
+                        </p>
+                        <p id="aql-model-status" role="status"></p>
+                        <label class="aql-check"
+                            ><input id="aql-use-template" type="checkbox" disabled />Validate query paths against this
+                            inspected template</label
+                        >
+                        <div id="aql-path-controls" hidden>
+                            <label>Filter paths<input id="aql-path-filter" type="search" /></label>
+                            <div class="aql-actions">
+                                <button id="aql-generate" type="button">Generate query from selected paths</button
+                                ><button id="aql-clear-paths" type="button">Clear selection</button>
+                            </div>
+                            <div id="aql-paths" class="aql-paths"></div>
+                        </div>
+                    </details>
+                    <div class="aql-card">
+                        <label for="aql-editor">AQL query</label>
+                        <div class="aql-editor-wrap">
+                            <pre id="aql-highlight" aria-hidden="true"></pre>
+                            <textarea
+                                id="aql-editor"
+                                spellcheck="false"
+                                autocapitalize="off"
+                                autocomplete="off"
+                                aria-describedby="aql-editor-help"
+                            >
+SELECT e/ehr_id/value
+FROM EHR e
+LIMIT 100</textarea
+                            >
+                        </div>
+                        <p id="aql-editor-help">
+                            Validate and format without an AI connection. Run sends the query only to your selected CDR.
+                        </p>
+                        <details>
+                            <summary>Parameters and pagination</summary>
+                            <label for="aql-parameters">Query parameters (JSON object)</label
+                            ><textarea id="aql-parameters" rows="3" spellcheck="false">{}</textarea>
+                            <p>
+                                Use parameters such as $ehr_id instead of patient identifiers in query text. History
+                                stores query text and parameter names, but no parameter values or results.
+                            </p>
+                            <div class="aql-actions">
+                                <label
+                                    >Page size<input
+                                        id="aql-fetch"
+                                        type="number"
+                                        min="1"
+                                        max="1000"
+                                        value="100" /></label
+                                ><label
+                                    >Offset<input id="aql-offset" type="number" min="0" max="1000000" value="0"
+                                /></label>
+                            </div>
+                            <p>Remove AQL LIMIT and OFFSET to use these page controls.</p>
+                        </details>
+                        <div class="aql-actions">
+                            <button id="aql-format" type="button">Format</button
+                            ><button id="aql-validate" type="button">Validate</button
+                            ><button id="aql-explain" type="button">Explain</button
+                            ><button id="aql-run" type="button" class="primary">Run query</button
+                            ><button id="aql-cancel" type="button" hidden>Cancel query</button
+                            ><span id="aql-progress" class="aql-progress" role="status" hidden
+                                ><span class="progress-ring" aria-hidden="true"></span
+                                ><span id="aql-progress-text">Working…</span></span
+                            >
+                        </div>
+                        <div id="aql-findings" aria-live="polite"></div>
+                    </div>
+                    <section id="aql-results" class="aql-card" aria-label="Query results" hidden>
+                        <h2>Results</h2>
+                        <p id="aql-result-summary"></p>
+                        <p>Results stay in this browser view. They are not saved in history or sent to an assistant.</p>
+                        <div class="aql-actions">
+                            <label
+                                >View<select id="aql-result-view">
+                                    <option value="table">Table</option>
+                                    <option value="json">JSON</option>
+                                    <option value="raw">Raw response</option>
+                                </select></label
+                            ><button id="aql-copy" type="button">Copy result</button
+                            ><button id="aql-export" type="button">Export JSON</button
+                            ><button id="aql-export-csv" type="button">Export CSV</button
+                            ><button id="aql-next" type="button" hidden>Next page</button
+                            ><button id="aql-clear-results" type="button">Clear results</button>
+                        </div>
+                        <div id="aql-result-body" tabindex="0"></div>
+                    </section>
+                    <div class="aql-library">
+                        <section class="aql-card">
+                            <h2>Saved queries</h2>
+                            <form id="aql-save-form" class="aql-actions">
+                                <label>Query name<input id="aql-save-name" maxlength="100" required /></label
+                                ><button id="aql-save" type="submit">Save query</button>
+                            </form>
+                            <div id="aql-saved-list"></div>
+                        </section>
+                        <section class="aql-card">
+                            <div class="aql-heading">
+                                <h2>History</h2>
+                                <button id="aql-history-clear" type="button">Clear history</button>
+                            </div>
+                            <div id="aql-history-list"></div>
+                        </section>
+                    </div>
+                </section>
                 <section
                     id="panel-governance"
                     role="tabpanel"
@@ -846,7 +1163,51 @@
                             You can return to Chat at any time without losing the message you are writing.
                         </p>
                     </div>
+                    <section id="help-aql" tabindex="-1">
+                        <h2>Check models and run AQL</h2>
+                        <ol>
+                            <li>
+                                Open the settings gear and expand <strong>CDR Connections</strong>. Add your server
+                                address and the authentication details supplied by your organisation. Press
+                                <strong>Save connection</strong>, then <strong>Test</strong>.
+                            </li>
+                            <li>Open <strong>AQL workspace</strong>. Choose the CDR environment you want to query.</li>
+                            <li>
+                                Expand <strong>Model paths and template validation</strong> to load a model from your
+                                repository, your computer or the selected CDR. OET and ADL templates need their exact
+                                archetype dependencies; an OPT is already compiled.
+                            </li>
+                            <li>
+                                Press <strong>Inspect paths</strong>. Select the fields you need and press
+                                <strong>Generate query</strong>, or write your own AQL. Use <strong>Validate</strong> to
+                                check syntax and the selected template's paths. An incomplete check tells you what still
+                                needs review.
+                            </li>
+                            <li>
+                                Press <strong>Run query</strong>. View the returned rows as a table, JSON or the raw
+                                response. Use <strong>Cancel query</strong> to stop waiting. The CDR may continue
+                                processing a request after cancellation.
+                            </li>
+                        </ol>
+                        <p>
+                            Formatting, inspection and validation do not need a Codex or Claude connection. Query
+                            execution needs a CDR connection with permission to read data. A valid path does not prove
+                            that a query is clinically appropriate or supported by every CDR.
+                        </p>
+                        <p>
+                            Saved queries and history contain query text, not results. Keep patient identifiers in
+                            parameters instead of query text. Results are cleared when you sign out or reload; use Copy
+                            or Export only when you want a local copy. Your assistant receives execution counts and
+                            timing, never the clinical result rows.
+                        </p>
+                        <p>
+                            Each request returns at most 1,000 rows and has a maximum two-minute CDR timeout. To page
+                            through results, remove LIMIT/OFFSET from the query and use Page size, Offset and Next page.
+                            Add ORDER BY when stable ordering matters.
+                        </p>
+                    </section>
                     <nav class="help-topics" aria-label="Guide topics">
+                        <a href="#help-aql">AQL and CDR connections</a>
                         <a href="#help-start">Get started</a>
                         <a href="#help-files">Upload documents</a>
                         <a href="#help-connections">Add sources and repositories</a>

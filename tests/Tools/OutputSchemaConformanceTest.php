@@ -35,6 +35,7 @@ final class OutputSchemaConformanceTest extends TestCase
     use TraceabilityOutputCases;
     use NativeEngineOutputCases;
     use ImportOutputCases;
+    use CdrOutputCases;
     private const string TOOLS_NAMESPACE = 'OpenEHR\\Assistant\\Tools\\';
 
     public function test_ckm_federated_search_result_matches_output_schema(): void

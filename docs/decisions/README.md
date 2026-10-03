@@ -60,3 +60,5 @@ referenced from [requirements.md](../requirements.md),
 - [ADR-0022 — Legacy template compilation compatibility profile](0022-legacy-template-compatibility.md)
 
 - [ADR-0023 — Immutable originals and protected import receipts](0023-immutable-originals-and-import-receipts.md)
+
+- [ADR-0024 — Private CDR client and model-aware AQL workspace](0024-cdr-client-and-aql-workspace.md)

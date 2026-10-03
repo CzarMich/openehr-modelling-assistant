@@ -99,16 +99,19 @@ final class NativeEngine {
 
     private Map<String, Object> aql(Request request, Map<String, Object> result, List<Map<String, Object>> findings) {
         result.put("profile", "AQL_SYNTAX");
+        org.ehrbase.openehr.sdk.aql.dto.AqlQuery query;
         try {
-            var query = AqlQueryParser.parse(request.content());
-            result.put("normalized_query", query.render());
-            result.put("ast", Json.MAPPER.valueToTree(query));
-            result.put("unexecuted", List.of("model_path_validation", "model_compatibility", "query_execution"));
-            return finish(result, true, "parse");
+            query = AqlQueryParser.parse(request.content());
         } catch (org.ehrbase.openehr.sdk.aql.parser.AqlParseException | IllegalArgumentException e) {
             findings.add(finding("error", "AQL_PARSE_ERROR", "/", safe(e.getMessage()), "source"));
             return finish(result, false, "parse");
         }
+        result.put("normalized_query", query.render());
+        result.put("ast", Json.MAPPER.valueToTree(query));
+        result.put("unexecuted", List.of("model_path_validation", "model_compatibility", "query_execution"));
+        finish(result, true, "parse");
+        if (!request.dependencies().isEmpty()) AqlTemplatePaths.validate(query, request.dependencies(), result);
+        return result;
     }
 
     private static Archetype parse(String content, List<Map<String, Object>> findings, String location) {
@@ -159,6 +162,8 @@ final class NativeEngine {
             var item = new LinkedHashMap<String, Object>();
             item.put("path", node.getPath()); item.put("node_id", node.getNodeId()); item.put("rm_type", node.getRmTypeName());
             item.put("constraint_kind", node.getClass().getSimpleName());
+            if (node == model.getDefinition()) item.put("archetype", model.getArchetypeId().getFullId());
+            else if (node instanceof CArchetypeRoot root) item.put("archetype", root.getArchetypeRef());
             item.put("occurrences", node.getOccurrences() == null ? null : node.getOccurrences().toString());
             item.put("terminology", node.getTerm());
             List<Map<String, Object>> attributes = new ArrayList<>();

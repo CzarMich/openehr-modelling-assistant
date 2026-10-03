@@ -109,7 +109,7 @@ export class Auth {
         )
             throw Object.assign(new Error("Access is not enabled for this account."), { status: 403 });
         let reviewIdentity;
-        if (this.config.reviewEnabled) {
+        if (this.config.reviewEnabled || this.config.cdrEnabled) {
             const claim = (path) =>
                 path
                     .split(".")

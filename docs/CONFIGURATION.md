@@ -133,3 +133,7 @@ Browser chat and model governance share one verified human session. Review brows
 The optional compiler overlay also reads `MODELLING_ENGINE_KEY_FILE` and `MODELLING_ENGINE_IMAGE`; the Java process reads `ENGINE_KEY_FILE`. See [complete engine configuration](OPT_COMPILATION.md).
 
 Manual imports use existing `MODEL_REPOSITORY_WRITE_ENABLED`, OIDC write permissions and `GOVERNANCE_ENABLED`/audit database settings. No import secret is added. The decoded limit is 2 MiB; base64 increases request size. Set `MAX_REQUEST_BYTES=4194304` consistently at ingress and application if a full 2 MiB source must pass HTTP; the default 2 MiB request limit admits a smaller source. Project snapshot/client limits still apply. Read-only inspection needs no audit backend. See [manual imports](MODEL_IMPORTS.md).
+
+## Optional CDR connections
+
+`CDR_ENABLED`, `CDR_DATA_DIR`, `CDR_ENCRYPTION_KEY_FILE`, `CDR_CONNECTIONS_FILE`, `CDR_ALLOWED_HOSTS`, `CDR_ALLOW_HTTP` and browser `CHAT_CDR_ENABLED` configure the separate CDR client. Defaults, encrypted storage, private network rules, credential resolution and deployment are documented in [CDR workspace](CDR_WORKSPACE.md#configuration).

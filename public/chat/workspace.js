@@ -9,6 +9,7 @@ let session,
 const headings = {
     chat: "Clinical modelling",
     models: "Model repository",
+    aql: "AQL workspace",
     governance: "Model governance",
     accounts: "Accounts and access",
     help: "Workspace help",
@@ -204,6 +205,11 @@ $("download-model").onclick = () => {
     setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
 $("review-model").onclick = () => activate("governance");
+$("query-model").onclick = () => {
+    if (!selected || typeof selected.content !== "string") return;
+    activate("aql");
+    document.dispatchEvent(new CustomEvent("workspace:query-model", { detail: selected }));
+};
 function updateSession(value) {
     session = value;
     $("refresh-models").disabled = !session.authenticated;

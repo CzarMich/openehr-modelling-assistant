@@ -37,6 +37,12 @@ final class ConfiguredAuditStore implements AuditStore
     }
     public function consumeNonce(string $nonce, int $expires): void
     {
+        if ($this->settings->get('GOVERNANCE_ENABLED') !== 'true' && $this->settings->get('CDR_ENABLED') === 'true') {
+            $directory = $this->settings->get('CDR_DATA_DIR');
+            if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) { throw new \RuntimeException('CDR_STORAGE_UNAVAILABLE'); }
+            (new SqliteAuditStore($directory . '/browser-nonces.sqlite'))->consumeNonce($nonce, $expires);
+            return;
+        }
         $this->store()->consumeNonce($nonce, $expires);
     }
 }

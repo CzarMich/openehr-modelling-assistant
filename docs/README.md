@@ -31,3 +31,5 @@
 [implementation history](IMPLEMENTATION_REPORT.md) record earlier checks. Their test
 counts and deployment observations apply to the revisions recorded there. Use the
 [testing guide](testing.md) to verify the current checkout.
+
+- [AQL workspace and private CDR connections](CDR_WORKSPACE.md) — setup, user workflow, privacy and execution limits.

@@ -40,6 +40,8 @@ final class Settings
         'TERMINOLOGY_CODESYSTEM_VALIDATE_PARAMETER' => 'url',
         'HTTP_TIMEOUT' => '15', 'HTTP_SSL_VERIFY' => 'true', 'HTTP_CA_BUNDLE' => '',
         'OPENEHR_ENGINE_URL' => '', 'OPENEHR_ENGINE_KEY_FILE' => '', 'OPENEHR_ENGINE_TIMEOUT' => '50',
+        'CDR_ENABLED' => 'false', 'CDR_DATA_DIR' => '/data/cdr', 'CDR_ENCRYPTION_KEY_FILE' => '',
+        'CDR_CONNECTIONS_FILE' => '', 'CDR_ALLOWED_HOSTS' => '', 'CDR_ALLOW_HTTP' => 'false',
         'MAX_REQUEST_BYTES' => '2097152', 'MAX_UPSTREAM_BYTES' => '8388608',
         'LOG_LEVEL' => 'info', 'MODEL_REPOSITORY_PROVIDER' => 'filesystem',
         'MODEL_REPOSITORY_PATH' => '/tmp/openehr-models', 'MODEL_REPOSITORY_WRITE_ENABLED' => 'false',
@@ -91,13 +93,18 @@ final class Settings
         if ((int) $this->get('MCP_PORT') > 65535) {
             throw new InvalidArgumentException('MCP_PORT must be <= 65535.');
         }
-        foreach (['HTTP_SSL_VERIFY', 'MODEL_REPOSITORY_WRITE_ENABLED', 'GOVERNANCE_ENABLED', 'PROJECT_RBAC_ENABLED'] as $key) {
+        foreach (['HTTP_SSL_VERIFY', 'MODEL_REPOSITORY_WRITE_ENABLED', 'GOVERNANCE_ENABLED', 'PROJECT_RBAC_ENABLED', 'CDR_ENABLED', 'CDR_ALLOW_HTTP'] as $key) {
             if (!in_array($this->get($key), ['true', 'false'], true)) {
                 throw new InvalidArgumentException("$key must be true or false.");
             }
         }
         if ($this->get('HTTP_SSL_VERIFY') !== 'true') {
             throw new InvalidArgumentException('TLS verification cannot be disabled. Configure HTTP_CA_BUNDLE.');
+        }
+        foreach (['CDR_DATA_DIR', 'CDR_ENCRYPTION_KEY_FILE', 'CDR_CONNECTIONS_FILE'] as $key) {
+            if ($this->get($key) !== '' && (!str_starts_with($this->get($key), '/') || str_contains($this->get($key), "\0"))) {
+                throw new InvalidArgumentException('Invalid CDR storage configuration.');
+            }
         }
         if ($this->get('AUTH_MODE') === 'api_key' && strlen($this->get('AUTH_API_KEY')) < 32) {
             throw new InvalidArgumentException('AUTH_API_KEY must contain at least 32 characters.');

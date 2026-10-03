@@ -18,9 +18,10 @@ final readonly class InteractiveReviewAuthenticator
     {
     }
 
-    public function authenticate(ServerRequestInterface $request): ?Actor
+    public function authenticate(ServerRequestInterface $request, string $purpose = 'review'): ?Actor
     {
-        if ($this->settings->get('GOVERNANCE_ENABLED') !== 'true') {
+        if (!in_array($purpose, ['review', 'cdr'], true)
+            || $this->settings->get($purpose === 'cdr' ? 'CDR_ENABLED' : 'GOVERNANCE_ENABLED') !== 'true') {
             return null;
         }
         try {
@@ -34,7 +35,7 @@ final readonly class InteractiveReviewAuthenticator
                 return null;
             }
             $header = json_decode(JWT::urlsafeB64Decode($parts[0]), true, 8, JSON_THROW_ON_ERROR);
-            if (!is_array($header) || ($header['alg'] ?? null) !== 'HS256' || ($header['typ'] ?? null) !== 'openehr-review+jwt'
+            if (!is_array($header) || ($header['alg'] ?? null) !== 'HS256' || ($header['typ'] ?? null) !== 'openehr-' . $purpose . '+jwt'
                 || !is_string($header['kid'] ?? null) || array_diff(array_keys($header), ['alg', 'typ', 'kid']) !== []) {
                 return null;
             }
@@ -51,10 +52,10 @@ final readonly class InteractiveReviewAuthenticator
                 JWT::$leeway = $oldLeeway;
             }
             $now = time();
-            $maxAge = (int) $this->settings->get($request->getMethod() === 'GET' ? 'GOVERNANCE_BROWSER_SESSION_MAX_AGE' : 'GOVERNANCE_SESSION_MAX_AGE');
+            $maxAge = (int) $this->settings->get($purpose === 'cdr' || $request->getMethod() === 'GET' ? 'GOVERNANCE_BROWSER_SESSION_MAX_AGE' : 'GOVERNANCE_SESSION_MAX_AGE');
             $identityMethod = $claims['identity_method'] ?? 'interactive_oidc';
             if (($claims['iss'] ?? null) !== $this->settings->get('GOVERNANCE_BROWSER_ORIGIN')
-                || ($claims['aud'] ?? null) !== 'openehr-modelling-review'
+                || ($claims['aud'] ?? null) !== 'openehr-modelling-' . $purpose
                 || !in_array($identityMethod, ['interactive_oidc', 'interactive_local'], true)
                 || !is_string($claims['identity_issuer'] ?? null) || $claims['identity_issuer'] === ''
                 || !is_string($claims['sub'] ?? null) || $claims['sub'] === '' || strlen($claims['sub']) > 300

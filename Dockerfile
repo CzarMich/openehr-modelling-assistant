@@ -69,7 +69,7 @@ COPY resources ./resources
 COPY scripts/governance-storage.php ./scripts/governance-storage.php
 COPY deploy/postgres/001-governance.sql ./deploy/postgres/001-governance.sql
 COPY LICENSE THIRD_PARTY_NOTICES.md ./
-RUN mkdir -p /data/models /data/governance && chown -R www-data:www-data /data
+RUN mkdir -p /data/models /data/governance /data/cdr && chown -R www-data:www-data /data
 ENV MODEL_REPOSITORY_PATH=/data/models
 STOPSIGNAL SIGQUIT
 USER www-data

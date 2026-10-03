@@ -1236,3 +1236,70 @@ test("saved artefacts expose current paths and exact-version links after reload 
     await page.locator("#new-chat").click();
     await expect(files).toBeHidden();
 });
+
+test("AQL workspace configures a private CDR, validates, runs and displays safe results", async ({ page }) => {
+    await page.goto("/chat/auth/login");
+    await page.getByRole("tab", { name: "AQL workspace" }).click();
+    await page.getByRole("button", { name: "Manage connections" }).click();
+    await page.getByRole("button", { name: "Add CDR connection" }).click();
+    await page.locator("#cdr-name").fill("Development CDR");
+    await page.locator("#cdr-baseUrl").fill("https://cdr.example");
+    await page.locator("#cdr-auth").selectOption("bearer");
+    await page.locator("#cdr-token").fill("fixture-private-token");
+    await page.getByRole("button", { name: "Save connection", exact: true }).click();
+    await expect(page.locator("#cdr-form")).toBeHidden();
+    await page.locator("#cdr-connection-list").getByRole("button", { name: "Test", exact: true }).click();
+    await expect(page.locator("#cdr-settings-status")).toContainText("Connection ready");
+    await expect(page.locator("#cdr-token")).toHaveValue("");
+    const { default: AxeBuilder } = await import("@axe-core/playwright");
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.getByRole("button", { name: "Close settings" }).click();
+    await page.locator("#aql-editor").fill("SELECT e/ehr_id/value FROM EHR e LIMIT 10");
+    await page.getByRole("button", { name: "Validate", exact: true }).click();
+    await expect(page.locator("#aql-findings")).toContainText("PASS");
+    await page.getByRole("button", { name: "Run query", exact: true }).click();
+    await expect(page.locator("#aql-result-summary")).toContainText("1 rows");
+    await expect(page.locator("#aql-result-body")).toContainText("<img src=x");
+    expect(await page.evaluate(() => window.__cdrInjected)).toBeUndefined();
+    await page.locator("#aql-result-view").selectOption("json");
+    await expect(page.locator("#aql-result-body pre")).toContainText('"columns"');
+    await page.locator("#aql-save-name").fill("Example query");
+    await page.getByRole("button", { name: "Save query", exact: true }).click();
+    await expect(page.locator("#aql-saved-list")).toContainText("Example query");
+    await expect(page.locator("#aql-history-list")).toContainText("SUCCEEDED");
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: "/tmp/aql-workspace-mobile.png", fullPage: true });
+});
+
+test("AQL cancellation and model paths remain separate from chat", async ({ page }) => {
+    await page.goto("/chat/auth/login");
+    await page.getByRole("tab", { name: "AQL workspace" }).click();
+    await page.getByRole("button", { name: "Manage connections" }).click();
+    await page.getByRole("button", { name: "Add CDR connection" }).click();
+    await page.locator("#cdr-name").fill("Sandbox");
+    await page.locator("#cdr-baseUrl").fill("https://cdr.example");
+    await page.getByRole("button", { name: "Save connection", exact: true }).click();
+    await expect(page.locator("#cdr-form")).toBeHidden();
+    await page.getByRole("button", { name: "Close settings" }).click();
+    await page.locator("#aql-editor").fill("SELECT e FROM EHR e WHERE e/name/value = 'slow'");
+    await page.getByRole("button", { name: "Run query", exact: true }).click();
+    await expect(page.locator("#aql-progress")).toBeVisible();
+    await page.getByRole("button", { name: "Cancel query", exact: true }).click();
+    await expect(page.locator("#aql-notice")).toContainText("Query cancelled");
+    await expect(page.locator("#aql-results")).toBeHidden();
+    await page.locator("#aql-model-section summary").click();
+    await page
+        .locator("#aql-files")
+        .setInputFiles({ name: "fixture.opt.xml", mimeType: "application/xml", buffer: Buffer.from("<template/>") });
+    await page.getByRole("button", { name: "Inspect paths", exact: true }).click();
+    await expect(page.locator("#aql-use-template")).toBeChecked();
+    await page.locator("#aql-paths").getByRole("checkbox").nth(1).check();
+    await page.getByRole("button", { name: "Generate query from selected paths" }).click();
+    await expect(page.locator("#aql-editor")).toContainText("SELECT");
+    await expect(page.locator("#aql-editor")).toHaveValue(/content\[at0001\]/);
+    await page.getByRole("button", { name: "Validate", exact: true }).click();
+    await expect(page.locator("#aql-findings")).toContainText("selected-template paths");
+    await page.screenshot({ path: "/tmp/aql-workspace-desktop.png", fullPage: true });
+});

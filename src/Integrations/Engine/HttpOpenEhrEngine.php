@@ -106,9 +106,12 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
             throw new \RuntimeException(is_string($code) && preg_match('/^ENGINE_[A-Z0-9_]{1,70}$/D', $code) ? $code : 'ENGINE_RESPONSE_INVALID');
         }
         $data = $decoded['data'] ?? null;
+        $aqlTemplates = $operation === 'validate/aql' && $dependencies !== []
+            && is_array($data) && ($data['completed_stage'] ?? null) === 'template_paths';
         if (!is_array($data) || ($data['schema_version'] ?? null) !== 1 || ($data['operation'] ?? null) !== $operation
             || ($data['content_sha256'] ?? null) !== hash('sha256', $content) || !is_bool($data['valid'] ?? null)
-            || ($data['status'] ?? null) !== ($data['valid'] ? 'PASS' : 'FAIL') || ($data['clinical_approval'] ?? null) !== false
+            || (!($aqlTemplates && !$data['valid'] && ($data['status'] ?? null) === 'INCOMPLETE')
+                && ($data['status'] ?? null) !== ($data['valid'] ? 'PASS' : 'FAIL')) || ($data['clinical_approval'] ?? null) !== false
             || !is_array($data['engine'] ?? null) || !is_array($data['findings'] ?? null)) {
             throw new \RuntimeException('ENGINE_RESPONSE_INVALID');
         }
@@ -136,6 +139,30 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
             }
         }
         $profile = $operation === 'validate/aql' ? 'AQL_SYNTAX' : (str_ends_with($operation, '/opt') ? 'OPT2_FLAT_AOM_BMM' : 'ADL2_AOM2_BMM');
+        if ($aqlTemplates) {
+            $profile = 'AQL_TEMPLATE_PATHS';
+            if (($data['checks']['aql_syntax'] ?? null) !== 'PASS'
+                || ($data['checks']['model_paths'] ?? null) !== $data['status']
+                || ($data['checks']['query_execution'] ?? null) !== 'NOT_EXECUTED'
+                || !is_array($data['templates'] ?? null) || !array_is_list($data['templates'])
+                || count($data['templates']) !== count($dependencies)) {
+                throw new \RuntimeException('ENGINE_RESPONSE_INVALID');
+            }
+            $expectedTemplates = array_column($dependencies, 'sha256', 'identifier');
+            foreach ($data['templates'] as $template) {
+                if (!is_array($template) || !is_string($template['identifier'] ?? null)
+                    || !isset($expectedTemplates[$template['identifier']])
+                    || ($template['sha256'] ?? null) !== $expectedTemplates[$template['identifier']]
+                    || !in_array($template['status'] ?? null, ['PASS', 'FAIL', 'INCOMPLETE'], true)
+                    || !is_array($template['paths'] ?? null)
+                    || ($data['valid'] && $template['status'] !== 'PASS')) {
+                    throw new \RuntimeException('ENGINE_RESPONSE_INVALID');
+                }
+                unset($expectedTemplates[$template['identifier']]);
+            }
+        } elseif ($operation === 'validate/aql' && $dependencies !== [] && $data['valid']) {
+            throw new \RuntimeException('ENGINE_RESPONSE_INVALID');
+        }
         if ($legacy) {
             $profile = str_ends_with($operation, '/opt') ? 'OPT14_XML_RM_STRUCTURE' : 'OET14_COMPILATION_RM_STRUCTURE';
             if (($data['checks']['full_aom_semantics'] ?? null) !== 'NOT_EXECUTED'
@@ -148,7 +175,7 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
         if (($data['profile'] ?? null) !== $profile || !is_string($data['completed_stage'] ?? null)) {
             throw new \RuntimeException('ENGINE_RESPONSE_INVALID');
         }
-        if ($data['valid'] && $operation !== 'validate/aql') {
+        if (($data['valid'] && $operation !== 'validate/aql') || $aqlTemplates) {
             $manifest = $data['dependencies'] ?? null;
             if (!is_array($manifest) || !array_is_list($manifest) || count($manifest) !== count($dependencies)) {
                 throw new \RuntimeException('ENGINE_DEPENDENCY_MANIFEST_INVALID');

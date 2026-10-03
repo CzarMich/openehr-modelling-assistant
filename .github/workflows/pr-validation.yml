@@ -98,6 +98,9 @@ jobs:
       - name: Verify native openEHR engine, compilation and persisted build evidence
         run: scripts/test-engine-container.sh
 
+      - name: Verify CDR query transport, privacy, TLS and cancellation
+        run: scripts/test-cdr-container.sh
+
       - name: Audit native engine runtime dependency SBOM
         run: python3 scripts/audit-engine-dependencies.py
 

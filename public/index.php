@@ -69,7 +69,7 @@ try {
             ->withHeader('Host', (string) ($_SERVER['HTTP_HOST'] ?? ''));
         $path = $request->getUri()->getPath();
         $modelApiPath = str_starts_with($path, '/api/v1/projects') || in_array($path, ['/api/v1/artifacts', '/api/v1/artifact-history'], true);
-        if (!in_array($path, ['/mcp', '/health', '/ready'], true) && !str_starts_with($path, '/api/v1/reviews') && !$modelApiPath) {
+        if (!in_array($path, ['/mcp', '/health', '/ready'], true) && !str_starts_with($path, '/api/v1/reviews') && !str_starts_with($path, '/api/v1/cdr/') && !$modelApiPath) {
             http_response_code(404);
             exit;
         }
@@ -82,6 +82,15 @@ try {
             $audit = new \OpenEHR\Assistant\Integrations\Governance\ConfiguredAuditStore($settings);
             $validator = new \OpenEHR\Assistant\Integrations\Governance\PreflightValidation(new \OpenEHR\Assistant\Domain\Modelling\QualityPipeline(new \OpenEHR\Assistant\Validation\ModelValidator()));
             $response = (new \OpenEHR\Assistant\Rest\ReviewApi($settings, $audit, $validator))->handle($request);
+            http_response_code($response->getStatusCode());
+            foreach ($response->getHeaders() as $name => $values) { foreach ($values as $value) { header($name . ': ' . $value, false); } }
+            echo $response->getBody();
+            exit;
+        }
+        if (str_starts_with($path, '/api/v1/cdr/')) {
+            $audit = new \OpenEHR\Assistant\Integrations\Governance\ConfiguredAuditStore($settings);
+            $models = new \OpenEHR\Assistant\Application\NativeModels(new \OpenEHR\Assistant\Integrations\Engine\HttpOpenEhrEngine($settings));
+            $response = (new \OpenEHR\Assistant\Rest\CdrApi($settings, $audit, $models))->handle($request);
             http_response_code($response->getStatusCode());
             foreach ($response->getHeaders() as $name => $values) { foreach ($values as $value) { header($name . ': ' . $value, false); } }
             echo $response->getBody();
@@ -140,6 +149,9 @@ try {
     try { $access->assertModelWrite(); $governanceRoles = ['modeller']; } catch (RuntimeException) { /* Read-only callers cannot prepare or promote models. */ }
     $container->set(\OpenEHR\Assistant\Domain\Governance\Actor::class, new \OpenEHR\Assistant\Domain\Governance\Actor(
         $identity->id ?? $principal, $identity->tenant ?? 'shared', $governanceRoles));
+    $nativeModels = new \OpenEHR\Assistant\Application\NativeModels(new \OpenEHR\Assistant\Integrations\Engine\HttpOpenEhrEngine($settings));
+    $container->set(\OpenEHR\Assistant\Application\CdrWorkspace::class, \OpenEHR\Assistant\Integrations\Cdr\CdrFactory::workspace(
+        $settings, new \OpenEHR\Assistant\Domain\Governance\Actor($identity->id ?? $principal, $identity->tenant ?? 'shared', $governanceRoles), $nativeModels));
     $container->set(\OpenEHR\Assistant\Domain\Governance\AuditStore::class, new \OpenEHR\Assistant\Integrations\Governance\ConfiguredAuditStore($settings));
     $container->set(\OpenEHR\Assistant\Domain\Governance\ValidationProvider::class,
         new \OpenEHR\Assistant\Integrations\Governance\PreflightValidation(new \OpenEHR\Assistant\Domain\Modelling\QualityPipeline(new \OpenEHR\Assistant\Validation\ModelValidator())));
@@ -168,7 +180,7 @@ try {
     // rather than silently serving a mismatched, previously-cached capability set.
     // The namespace becomes a subdirectory under $cacheDir and old ones are never pruned
     // (no TTL), so releases accumulate directories there — see docs/development.md.
-    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-model-capabilities-2', 0, $cacheDir));
+    $cache = new Psr16Cache(new PhpFilesAdapter('mcp-server-' . APP_VERSION . '-model-capabilities-3', 0, $cacheDir));
 
     // Load server instructions. Optional at the protocol level, but this server
     // ships a canonical resources/server-instructions.md — a missing/unreadable

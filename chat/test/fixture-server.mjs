@@ -12,6 +12,7 @@ const config = {
     port: 8359,
     allowWrites: true,
     reviewEnabled: true,
+    cdrEnabled: true,
     dataDir: mkdtempSync(join(tmpdir(), "chat-browser-test-")),
     providerEncryptionKey: "ab".repeat(32),
 };
@@ -60,9 +61,126 @@ const reviews = {
         };
     },
 };
+let cdrConnections = [],
+    cdrSaved = [],
+    cdrHistory = [],
+    cancelled = new Set();
+const cdr = {
+    request: async (session, operation, input = {}) => {
+        if (operation === "connections") return { items: cdrConnections };
+        if (operation === "connection-save") {
+            const { secrets, ...connection } = input.connection;
+            const item = {
+                ...connection,
+                id: connection.id || "1".repeat(32),
+                hasCredentials: !!secrets,
+                headerNames: [],
+            };
+            cdrConnections = [...cdrConnections.filter((row) => row.id !== item.id), item];
+            return item;
+        }
+        if (operation === "connection-delete") {
+            cdrConnections = cdrConnections.filter((item) => item.id !== input.id);
+            return { deleted: true };
+        }
+        if (operation === "connection-test")
+            return {
+                ok: true,
+                checks: { network: "PASS", tls: "PASS", authentication: "PASS", openehr_api: "PASS", aql: "PASS" },
+            };
+        if (operation === "saved") return { items: cdrSaved };
+        if (operation === "saved-save") {
+            const item = { id: "2".repeat(32), name: input.name, query: input.query };
+            cdrSaved.push(item);
+            return item;
+        }
+        if (operation === "saved-delete") {
+            cdrSaved = cdrSaved.filter((item) => item.id !== input.id);
+            return { deleted: true };
+        }
+        if (operation === "history") return { items: cdrHistory };
+        if (operation === "history-clear") {
+            cdrHistory = [];
+            return { deleted: true };
+        }
+        if (operation === "cancel") {
+            cancelled.add(input.job);
+            return { cancel_requested: true };
+        }
+        const validation = {
+            valid: !input.query?.includes("invalid"),
+            status: input.query?.includes("invalid") ? "FAIL" : "PASS",
+            profile: input.templates?.length ? "AQL_TEMPLATE_PATHS" : "AQL_SYNTAX",
+            findings: [],
+            normalized_query: input.query || "SELECT m/name/value FROM COMPOSITION m LIMIT 100",
+            templates: input.templates?.map((item) => ({
+                identifier: item.identifier,
+                template_id: "Fixture",
+                sha256: "a".repeat(64),
+                status: "PASS",
+                paths: [{ query_path: "m/name/value", status: "PASS", message: "Path present" }],
+            })),
+        };
+        if (operation === "validate") return validation;
+        if (operation === "explain")
+            return { validation, explanation: "SELECT chooses the values.", references: { paths: ["m/name/value"] } };
+        const inspection = {
+            valid: true,
+            identifier: "Fixture",
+            content_sha256: "a".repeat(64),
+            inspection: {
+                paths: [
+                    { path: "/", rm_type: "COMPOSITION" },
+                    { path: "/content[at0001]", rm_type: "OBSERVATION" },
+                ],
+            },
+        };
+        if (operation === "inspect") return inspection;
+        if (operation === "generate")
+            return {
+                query: "SELECT m/content[at0001] FROM COMPOSITION m LIMIT 100",
+                parameters: {},
+                validation,
+                inspection,
+            };
+        if (operation === "templates")
+            return input.identifier
+                ? { source: "remote_cdr", content: "<template/>", identifier: "Fixture", format: "opt14" }
+                : { items: [{ identifier: "Fixture", concept: "Synthetic" }] };
+        if (operation === "execute") {
+            if (input.query.includes("slow")) await new Promise((resolve) => setTimeout(resolve, 800));
+            if (cancelled.has(input.job))
+                throw Object.assign(new Error("Query cancelled."), { status: 503, code: "CDR_CANCELLED" });
+            cdrHistory.unshift({
+                id: input.job,
+                query: input.query,
+                parameter_names: Object.keys(input.parameters),
+                at: new Date().toISOString(),
+                status: "SUCCEEDED",
+                duration_ms: 12,
+            });
+            const json = { columns: [{ name: "example" }], rows: [["<img src=x onerror=window.__cdrInjected=true>"]] };
+            return {
+                ...json,
+                json,
+                raw: JSON.stringify(json),
+                count: 1,
+                duration_ms: 12,
+                fetch: input.fetch,
+                offset: input.offset,
+                has_more: false,
+            };
+        }
+        throw new Error("Unknown fixture operation");
+    },
+};
 let loginSequence = 0;
 auth.login = async (req, res) => {
     reviewState = "REVIEW_REQUESTED";
+    cdrConnections = [];
+    cdrSaved = [];
+    cdrHistory = [];
+    cancelled = new Set();
     reviewSequence = 3;
     auth.sessions.set("browser-test", {
         identity: `fixture-user-${++loginSequence}`,
@@ -246,4 +364,4 @@ const mcpFactory = () => ({
         };
     },
 });
-createApplication(config, { auth, provider, reviews, mcpFactory }).listen(config.port, "127.0.0.1");
+createApplication(config, { auth, provider, reviews, cdr, mcpFactory }).listen(config.port, "127.0.0.1");

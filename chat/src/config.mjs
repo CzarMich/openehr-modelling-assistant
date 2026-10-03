@@ -35,6 +35,7 @@ export function loadConfig(env = process.env) {
             .map((host) => host.trim().toLowerCase())
             .filter(Boolean),
         reviewEnabled: env.CHAT_REVIEW_ENABLED === "true",
+        cdrEnabled: env.CHAT_CDR_ENABLED === "true",
         reviewSigningKey: env.CHAT_REVIEW_SIGNING_KEY || "",
         reviewKeyId: env.CHAT_REVIEW_KEY_ID || "active",
         reviewRolesClaim: env.CHAT_REVIEW_ROLES_CLAIM || "roles",
@@ -55,7 +56,7 @@ export function loadConfig(env = process.env) {
     const oidcConfigured = Boolean(config.issuer || config.clientId || config.clientSecret);
     if (oidcConfigured && (!config.issuer.startsWith("https://") || !config.clientId || !config.clientSecret))
         throw new Error("Configure all OIDC client settings");
-    if ((enabled || config.reviewEnabled) && !config.identityEnabled && !oidcConfigured)
+    if ((enabled || config.reviewEnabled || config.cdrEnabled) && !config.identityEnabled && !oidcConfigured)
         throw new Error("Chat or model review requires OIDC or explicitly enabled local identity");
     if (config.identityEnabled) {
         let localIssuer;
@@ -84,7 +85,7 @@ export function loadConfig(env = process.env) {
     if (!Number.isInteger(config.port) || !Number.isFinite(config.turnTimeoutMs))
         throw new Error("Invalid chat limits");
     if (
-        config.reviewEnabled &&
+        (config.reviewEnabled || config.cdrEnabled) &&
         (!/^[a-f0-9]{64,128}$/.test(config.reviewSigningKey) ||
             !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(config.reviewKeyId))
     )
