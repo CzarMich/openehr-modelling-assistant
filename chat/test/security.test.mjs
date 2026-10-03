@@ -85,6 +85,59 @@ async function fixture(t, { provider, mcp, reviews, cdr, reviewOnly = false } = 
     return { request, store, auth, config, calls, origin };
 }
 
+test("Copilot connection and tool test require identity and CSRF, and a plain success claim cannot pass", async (t) => {
+    const starts = [],
+        runs = [];
+    let invoke = true;
+    const provider = {
+        status: () => [{ id: "copilot", name: "Copilot Studio", connected: true }],
+        assertConnected(identity, name) {
+            assert.equal(name, "copilot");
+            assert.equal(identity, "issuer\nalice");
+        },
+        copilot: {
+            start: async (identity, settings) => {
+                starts.push({ identity, settings });
+                return { verificationUrl: "https://microsoft.com/devicelogin", userCode: "TEST-CODE" };
+            },
+        },
+        run: async (options) => {
+            runs.push(options);
+            assert.equal(options.provider, "copilot");
+            assert.deepEqual(
+                options.tools.map((tool) => tool.name),
+                ["workspace_connection_check"],
+            );
+            if (invoke) await options.callTool("workspace_connection_check", {});
+            return "Successfully connected";
+        },
+        disconnect() {},
+    };
+    const f = await fixture(t, { provider });
+    const settings = { tenantId: "tenant", clientId: "app", environmentId: "environment", schemaName: "agent" };
+    const path = "/chat/api/providers/copilot";
+    for (const endpoint of [path, path + "/test"]) {
+        assert.equal((await f.request(endpoint, { user: null, method: "POST", data: {} })).status, 401);
+        assert.equal((await f.request(endpoint, { csrf: false, method: "POST", data: {} })).status, 403);
+    }
+    assert.equal(
+        (await f.request(path, { method: "POST", data: { ...settings, secret: "must-not-be-accepted" } })).status,
+        400,
+    );
+    assert.equal((await f.request(path, { method: "POST", data: settings })).status, 200);
+    assert.deepEqual(starts, [{ identity: "issuer\nalice", settings }]);
+    const verified = await f.request(path + "/test", { method: "POST", data: {} });
+    assert.equal(verified.status, 200);
+    assert.equal((await verified.json()).verified, true);
+    invoke = false;
+    assert.equal((await f.request(path + "/test", { method: "POST", data: {} })).status, 409);
+    assert.equal(f.calls.length, 0, "Connection checks must never reach enterprise MCP");
+    const chat = await (
+        await f.request("/chat/api/conversations", { method: "POST", data: { provider: "copilot" } })
+    ).json();
+    assert.equal(chat.provider, "copilot");
+});
+
 test("AQL drafting requires the browser identity and CSRF and never forwards query or result fields", async (t) => {
     let providerCalls = 0;
     const operations = [];

@@ -73,6 +73,80 @@ async function addRepository(page) {
     await page.locator("#personal-settings > summary").click();
 }
 
+test("Copilot Studio can be connected, checked and selected from the browser with in-app setup help", async ({
+    page,
+}) => {
+    let connected = false,
+        signingIn = false,
+        received;
+    await page.route("**/chat/api/session", async (route) => {
+        const response = await route.fetch();
+        const data = await response.json();
+        if (data.authenticated)
+            data.providers = [
+                { id: "codex", name: "Codex", connected: true },
+                { id: "claude", name: "Claude", connected: false },
+                { id: "copilot", name: "Copilot Studio", connected, signingIn },
+            ];
+        await route.fulfill({ response, json: data });
+    });
+    await page.route("**/chat/api/providers/copilot", async (route) => {
+        if (route.request().method() === "DELETE") {
+            connected = false;
+            signingIn = false;
+            return route.fulfill({ json: { success: true } });
+        }
+        received = route.request().postDataJSON();
+        signingIn = true;
+        await route.fulfill({ json: { verificationUrl: "https://microsoft.com/devicelogin", userCode: "TEST-CODE" } });
+    });
+    await page.route("**/chat/api/providers/copilot/test", (route) =>
+        route.fulfill({
+            json: {
+                verified: true,
+                message: "Published agent and workspace tools verified. No patient data was accessed.",
+            },
+        }),
+    );
+    await login(page);
+    await settings(page);
+    await page.locator("#provider-settings > summary").click();
+    await page.locator("#chat-provider").selectOption("copilot");
+    await page.locator("#copilot-tenant").fill("11111111-1111-1111-1111-111111111111");
+    await page.locator("#copilot-client").fill("22222222-2222-2222-2222-222222222222");
+    await page.locator("#copilot-environment").fill("33333333-3333-3333-3333-333333333333");
+    await page.locator("#copilot-schema").fill("cr123_Modelling");
+    await page.locator("#connect-copilot").click();
+    await expect(page.locator("#copilot-device")).toBeVisible();
+    await expect(page.locator("#copilot-code")).toHaveText("TEST-CODE");
+    expect(received.schemaName).toBe("cr123_Modelling");
+    connected = true;
+    signingIn = false;
+    await expect(page.locator("#copilot-status")).toHaveText("Connected", { timeout: 10000 });
+    await page.locator("#test-copilot").click();
+    await expect(page.locator("#copilot-test-status")).toContainText("workspace tools verified");
+    await send(page, "List the available CKM sources");
+    await expect(page.locator("#chat-provider")).toHaveValue("copilot");
+    await settings(page);
+    await page.locator("#disconnect-copilot").click();
+    await expect(page.locator("#copilot-status")).toHaveText("Not connected");
+    await settings(page, false);
+    await page.goto("/chat/#help-copilot-browser");
+    await expect(page.getByRole("heading", { name: "Use Copilot Studio in this browser" })).toBeVisible();
+    await expect(page.locator("#copilot-tool-definition")).toHaveValue(/System.ClientPluginActions/);
+    await expect(page.locator("#copilot-agent-instructions")).toHaveValue(/Never fetch CDR patient records/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole("tab", { name: "Chat", exact: true }).click();
+    await settings(page);
+    await expect(page.locator("#copilot-connection")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await settings(page, false);
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(page.locator("#copilot-tenant")).toHaveValue("");
+    await expect(page.locator("#copilot-code")).toHaveText("");
+});
+
 test("repository selection must finish saving before the assistant can receive a message", async ({ page }) => {
     await login(page);
     await send(page, "Start a modelling conversation");

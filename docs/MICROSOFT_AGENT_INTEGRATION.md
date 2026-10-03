@@ -4,6 +4,8 @@ Microsoft is the primary documented enterprise consumer. The openEHR core has no
 Microsoft dependency. The model offered within the organisation's Copilot deployment
 is a client choice: no Claude/GPT provider is configured in this MCP server.
 
+For **Copilot Studio replies inside this browser**, use the separate [Copilot Studio browser setup](COPILOT_BROWSER.md). It preserves profile-scoped source/repository tools and browser confirmations through client-tool events. The MCP onboarding below remains the route for Microsoft-hosted agent interfaces.
+
 ## Supported Microsoft paths
 
 Official documentation reviewed 2026-09-26:

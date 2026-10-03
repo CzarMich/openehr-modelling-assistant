@@ -502,7 +502,62 @@ export function createApplication(
             if (sharedRoute && req.method === "GET") return json(res, 200, shares.get(sharedRoute[1]));
             if (path === "/chat/api/providers" && req.method === "GET")
                 return json(res, 200, { providers: provider.status(identity) });
-            const connection = path.match(/^\/chat\/api\/providers\/(codex|claude)$/);
+            if (path === "/chat/api/providers/copilot/test" && req.method === "POST") {
+                await body(req, []);
+                if (drafts.has(identity) || active.size + drafts.size >= config.maxConcurrentTurns)
+                    throw Object.assign(new Error("The assistant is busy. Please retry shortly."), { status: 429 });
+                provider.assertConnected(identity, "copilot");
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 60000);
+                const disconnected = () => {
+                    if (!res.writableEnded) controller.abort();
+                };
+                res.on("close", disconnected);
+                drafts.set(identity, controller);
+                let verified = false;
+                try {
+                    await provider.run({
+                        identity,
+                        provider: "copilot",
+                        signal: controller.signal,
+                        instructions:
+                            "This is a synthetic workspace connection test. Use the OpenEhrWorkspace client tool to describe and call workspace_connection_check with empty argumentsJson {}. Then confirm the returned result. Do not use external tools or fabricate a successful test.",
+                        messages: [{ role: "user", content: "Test the workspace connection now." }],
+                        tools: [
+                            {
+                                name: "workspace_connection_check",
+                                description:
+                                    "Read-only synthetic connection check. No files, repositories or patient data.",
+                                inputSchema: { type: "object", properties: {}, additionalProperties: false },
+                            },
+                        ],
+                        callTool: async (name, args) => {
+                            controller.signal.throwIfAborted();
+                            if (name !== "workspace_connection_check" || !args || Object.keys(args).length)
+                                throw new Error("Unavailable test tool");
+                            verified = true;
+                            return { connected: true, patientDataAccess: false };
+                        },
+                        onEvent() {},
+                    });
+                    if (!verified)
+                        throw Object.assign(
+                            new Error(
+                                "Agent access works, but its OpenEhrWorkspace client tool was not called. Follow Help → Copilot Studio browser setup, publish the agent, then test again.",
+                            ),
+                            { status: 409 },
+                        );
+                    return json(res, 200, {
+                        verified: true,
+                        message: "Published agent and workspace tools verified. No patient data was accessed.",
+                    });
+                } finally {
+                    clearTimeout(timer);
+                    res.off("close", disconnected);
+                    drafts.delete(identity);
+                }
+            }
+            const connection = path.match(/^\/chat\/api\/providers\/(codex|claude|copilot)$/);
             if (connection) {
                 const name = connection[1];
                 if (req.method === "DELETE") {
@@ -521,6 +576,10 @@ export function createApplication(
                     const input = await body(req, ["apiKey"]);
                     provider.connectClaude(identity, input.apiKey);
                     return json(res, 200, { success: true });
+                }
+                if (req.method === "POST" && name === "copilot") {
+                    const input = await body(req, ["tenantId", "clientId", "environmentId", "schemaName"]);
+                    return json(res, 200, await provider.copilot.start(identity, input));
                 }
                 throw Object.assign(new Error("Not found"), { status: 404 });
             }
@@ -592,7 +651,7 @@ export function createApplication(
                             ? await body(req, ["provider", "repository", "project", "folder"])
                             : {};
                     const selected = input.provider || "codex";
-                    if (!["codex", "claude"].includes(selected))
+                    if (!["codex", "claude", "copilot"].includes(selected))
                         throw Object.assign(new Error("Choose a provider."), { status: 400 });
                     const defaults = store.destination(identity, input.project ?? null);
                     checkMoving();

@@ -4,7 +4,7 @@ The current design is documented in [Architecture](ARCHITECTURE.md). The [requir
 
 ## Browser client
 
-REQ-F15 adds an optional Node chat service alongside the PHP MCP core. It uses verified OIDC identity, private per-user conversations, personal Claude or Codex connections and streamed responses and exact-change confirmation before model writes. See [browser architecture and deployment](BROWSER_CHAT.md), [system architecture](ARCHITECTURE.md) and the browser/security tests in `chat/test/`. It does not introduce a visual archetype editor. Native inbound MCP bearer verification is a separate [identity adapter](OIDC.md).
+REQ-F15 adds an optional Node chat service alongside the PHP MCP core. It uses verified OIDC identity, private per-user conversations, personal Claude, Codex or [Copilot Studio](COPILOT_BROWSER.md) connections and streamed responses and exact-change confirmation before model writes. See [browser architecture and deployment](BROWSER_CHAT.md), [system architecture](ARCHITECTURE.md) and the browser/security tests in `chat/test/`. It does not introduce a visual archetype editor. Native inbound MCP bearer verification is a separate [identity adapter](OIDC.md).
 
 The browser-only `request_user_choice` tool pauses a turn for a bounded single/multiple-choice question. SSE carries the question; an owner-authenticated, CSRF-protected endpoint validates the answer against its pending ID and offered options. The answer is returned to the provider and saved in private history. Timeout, stop and disconnect cancel the question. Decision answers remain separate from exact-change write confirmation and governance approval.
 

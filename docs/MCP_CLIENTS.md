@@ -76,4 +76,4 @@ If your Claude surface cannot send the configured API-key header, use an authent
 MCP gateway supported by that surface rather than disabling server authentication.
 
 The browser `/chat/` is a separate client of this same service. It provides one workspace
-with personal Claude or Codex connections; see [browser setup](BROWSER_CHAT.md).
+with personal Claude, Codex or Copilot Studio connections; see [browser setup](BROWSER_CHAT.md).

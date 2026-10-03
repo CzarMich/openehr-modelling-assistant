@@ -255,40 +255,55 @@ $("sign-in").onclick = (event) => {
 $("copilot-copy-url").onclick = () =>
     navigator.clipboard
         .writeText($("copilot-url").value)
-        .then(() => ($("copilot-status").textContent = "Server address copied."))
+        .then(() => ($("copilot-mcp-status").textContent = "Server address copied."))
         .catch(() => {
             $("copilot-url").select();
-            $("copilot-status").textContent = "Copy the selected address.";
+            $("copilot-mcp-status").textContent = "Copy the selected address.";
         });
 $("copilot-show-key").onclick = async () => {
     try {
         const result = await api("api/identity/mcp-connection", { method: "POST", data: {} });
         $("copilot-key").value = result.key;
         $("copilot-key-field").hidden = false;
-        $("copilot-status").textContent =
+        $("copilot-mcp-status").textContent =
             "Use this workspace connection key only in your trusted Copilot Studio connection.";
     } catch (error) {
-        $("copilot-status").textContent = error.message;
+        $("copilot-mcp-status").textContent = error.message;
     }
 };
 $("copilot-copy-key").onclick = () =>
     navigator.clipboard
         .writeText($("copilot-key").value)
-        .then(() => ($("copilot-status").textContent = "Connection key copied. Paste it into Copilot Studio."))
+        .then(() => ($("copilot-mcp-status").textContent = "Connection key copied. Paste it into Copilot Studio."))
         .catch(() => {
             $("copilot-key").select();
-            $("copilot-status").textContent = "Copy the selected key.";
+            $("copilot-mcp-status").textContent = "Copy the selected key.";
         });
 $("copilot-hide-key").onclick = () => {
     $("copilot-key").value = "";
     $("copilot-key-field").hidden = true;
-    $("copilot-status").textContent = "Connection key hidden.";
+    $("copilot-mcp-status").textContent = "Connection key hidden.";
 };
+for (const [button, field] of [
+    ["copy-copilot-tool", "copilot-tool-definition"],
+    ["copy-copilot-instructions", "copilot-agent-instructions"],
+])
+    $(button).onclick = () =>
+        navigator.clipboard
+            .writeText($(field).value)
+            .then(() => {
+                $("copilot-setup-status").textContent =
+                    "Copied. Paste it into your Copilot Studio agent and publish the changes.";
+            })
+            .catch(() => {
+                $(field).select();
+                $("copilot-setup-status").textContent = "Copy the selected text.";
+            });
 for (const section of ["chat", "models", "governance", "accounts"]) {
     document.addEventListener("workspace:" + section, () => {
         $("copilot-key").value = "";
         $("copilot-key-field").hidden = true;
-        $("copilot-status").textContent = "";
+        $("copilot-mcp-status").textContent = "";
     });
 }
 function renderProjectContext() {
@@ -957,7 +972,15 @@ document
     .querySelectorAll(".suggestion")
     .forEach((button) => (button.onclick = () => send(button.dataset.prompt).catch((e) => notice(e.message))));
 let providerPoll;
+let providerSession;
 function renderProviders() {
+    const owner = session?.authenticated ? session.csrf : null;
+    if (providerSession !== owner) {
+        providerSession = owner;
+        for (const field of ["tenant", "client", "environment", "schema"]) $("copilot-" + field).value = "";
+        $("copilot-code").textContent = "";
+        $("copilot-test-status").textContent = "";
+    }
     $("provider-bar").hidden = !session?.authenticated || !session.enabled;
     $("toggle-chat-settings").hidden = !session?.authenticated || (!session.enabled && !session.cdrEnabled);
     $("share-chat").hidden = $("provider-bar").hidden;
@@ -970,11 +993,38 @@ function renderProviders() {
               : "Not connected";
         $("connect-" + provider.id).disabled = provider.connected || provider.signingIn;
         $("disconnect-" + provider.id).hidden = !provider.connected && !provider.signingIn;
+        if (provider.id === "copilot") {
+            if (provider.error) $("copilot-status").textContent = provider.error;
+            $("test-copilot").hidden = !provider.connected;
+            const fields = {
+                tenant: "tenantId",
+                client: "clientId",
+                environment: "environmentId",
+                schema: "schemaName",
+            };
+            for (const [id, key] of Object.entries(fields)) {
+                $("copilot-" + id).disabled = provider.connected || provider.signingIn;
+                if (provider.settings) $("copilot-" + id).value = provider.settings[key];
+            }
+        }
     }
+    for (const name of ["codex", "copilot"])
+        if (!session?.providers?.some((p) => p.id === name && p.signingIn)) $(name + "-device").hidden = true;
     if (!session?.providers?.some((p) => p.signingIn)) {
         clearTimeout(providerPoll);
         $("codex-device").hidden = true;
     }
+}
+function pollProviders() {
+    clearTimeout(providerPoll);
+    providerPoll = setTimeout(async () => {
+        try {
+            await loadSession();
+            if (session.providers.some((p) => p.signingIn)) pollProviders();
+        } catch (error) {
+            notice(error.message);
+        }
+    }, 3000);
 }
 $("chat-provider").onchange = () => {
     if (!current?.messages?.length) current = null;
@@ -988,15 +1038,7 @@ $("connect-codex").onclick = async () => {
         $("codex-verification").href = result.verificationUrl;
         $("codex-code").textContent = result.userCode;
         $("codex-device").hidden = false;
-        const poll = async () => {
-            try {
-                await loadSession();
-                if (session.providers.some((p) => p.signingIn)) providerPoll = setTimeout(poll, 3000);
-            } catch (error) {
-                notice(error.message);
-            }
-        };
-        providerPoll = setTimeout(poll, 3000);
+        pollProviders();
     } catch (error) {
         notice(error.message);
         $("connect-codex").disabled = false;
@@ -1013,7 +1055,41 @@ $("claude-connection").onsubmit = async (event) => {
         notice(error.message);
     }
 };
-for (const name of ["codex", "claude"])
+$("copilot-connection").onsubmit = async (event) => {
+    event.preventDefault();
+    $("connect-copilot").disabled = true;
+    $("copilot-test-status").textContent = "";
+    try {
+        const data = {
+            tenantId: $("copilot-tenant").value.trim(),
+            clientId: $("copilot-client").value.trim(),
+            environmentId: $("copilot-environment").value.trim(),
+            schemaName: $("copilot-schema").value.trim(),
+        };
+        const result = await api("api/providers/copilot", { method: "POST", data });
+        await loadSession();
+        $("copilot-verification").href = result.verificationUrl;
+        $("copilot-code").textContent = result.userCode;
+        $("copilot-device").hidden = false;
+        pollProviders();
+    } catch (error) {
+        notice(error.message);
+        $("connect-copilot").disabled = false;
+    }
+};
+$("test-copilot").onclick = async () => {
+    $("test-copilot").disabled = true;
+    $("copilot-test-status").textContent = "Checking the agent and workspace tools…";
+    try {
+        const result = await api("api/providers/copilot/test", { method: "POST", data: {} });
+        $("copilot-test-status").textContent = result.message;
+    } catch (error) {
+        $("copilot-test-status").textContent = error.message;
+    } finally {
+        $("test-copilot").disabled = false;
+    }
+};
+for (const name of ["codex", "claude", "copilot"])
     $("disconnect-" + name).onclick = async () => {
         try {
             await api("api/providers/" + name, { method: "DELETE" });

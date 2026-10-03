@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 // Credentials are bound to both the verified browser identity and provider.
 export class ProviderStore {
-    constructor(directory, key, scopes = ["codex", "claude"]) {
+    constructor(directory, key, scopes = ["codex", "claude", "copilot"]) {
         if (!/^[a-f0-9]{64}$/.test(key || "")) throw new Error("Configure CHAT_PROVIDER_ENCRYPTION_KEY");
         this.directory = directory;
         this.key = Buffer.from(key, "hex");
