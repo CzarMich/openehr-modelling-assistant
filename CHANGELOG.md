@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- AQL workspace validates template paths and queries private CDR connections with protected credentials.
+
 - Chat allows longer file uploads and explains interrupted server responses.
 
 - Chat organises supporting artefacts by file type and exposes saved-file paths and version links.

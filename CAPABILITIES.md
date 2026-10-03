@@ -50,8 +50,10 @@ WORKING means the described subset is implemented; it does not imply clinical ap
 | Manual source import and platform provenance | WORKING | Exact text/binary originals in filesystem/Git/SharePoint, protected intent/receipt ledger, idempotence, format assurance and verified source download; [boundaries](docs/MODEL_IMPORTS.md) |
 | External-tool semantic exchange and release synchronisation | PARTIAL | Exact original preservation, structured bounded XML comparison and caller-declared external release-status provenance; proprietary conversion, verified semantic round trip, retrospective migration and external release sync remain pending |
 | Full native template editing/terminology application | NOT IMPLEMENTED | Separate editor/binding work; Designer authoring JSON is never relabelled as OPT |
-| AQL syntax parser | WORKING | Native openEHR SDK 2.35.0 grammar/AST, independent of a CDR; path/model compatibility remains unexecuted |
-| AQL execution, composition validation, CDR deployment | NOT IMPLEMENTED | Separate domain adapter/acceptance work |
+| AQL syntax parser | WORKING | Native openEHR SDK 2.35.0 grammar/AST, independent of a CDR |
+| Template-aware AQL paths | WORKING | Exact OPT 1.4/OPT 2 structural and RM paths; unsupported constructs explicitly INCOMPLETE, no value/function/clinical assurance |
+| AQL workspace and CDR query execution | WORKING | Private encrypted connections, read-only Query API, cancellation, table/JSON/raw views, saved queries and history; [scope](docs/CDR_WORKSPACE.md) |
+| Composition validation and CDR deployment | NOT IMPLEMENTED | No clinical data persistence or model deployment operations |
 | Copilot Studio tenant connection | NOT TESTED | Current official deployment guide; no tenant available |
 | Visual editor | NOT IMPLEMENTED | Architecture prepared |
 | General REST application API and CLI | PARTIAL | Versioned project/artifact REST endpoints with OpenAPI, optimistic revisions, project archival, shared repository authorization, and a Composer model CLI; broader application operations and OIDC-interactive CLI support remain; see [API and CLI guide](docs/MODEL_API.md) and [isolated OIDC acceptance](docs/evidence/model-api-oidc-smoke.json) |

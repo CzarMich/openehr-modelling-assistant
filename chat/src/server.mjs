@@ -7,6 +7,7 @@ import { Store } from "./store.mjs";
 import { McpClient, WRITE_TOOLS } from "./mcp.mjs";
 import { Providers } from "./providers.mjs";
 import { ReviewClient } from "./reviews.mjs";
+import { CdrClient, CDR_OPERATIONS } from "./cdr.mjs";
 import { readModels } from "./models.mjs";
 import { PersonalConnections } from "./personal-connections.mjs";
 import { Attachments, UPLOAD_LIMIT } from "./attachments.mjs";
@@ -21,14 +22,14 @@ const json = (res, status, data) => {
     res.writeHead(status, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data));
 };
-async function body(req, allowed, message = "Invalid request fields.") {
+async function body(req, allowed, message = "Invalid request fields.", maximum = 32768) {
     if (!/^application\/json(?:\s*;|$)/i.test(req.headers["content-type"] || ""))
         throw Object.assign(new Error("Expected JSON"), { status: 415 });
     let size = 0,
         parts = [];
     for await (const chunk of req) {
         size += chunk.length;
-        if (size > 32768) throw Object.assign(new Error("Message is too large"), { status: 413 });
+        if (size > maximum) throw Object.assign(new Error("Message is too large"), { status: 413 });
         parts.push(chunk);
     }
     let input;
@@ -65,6 +66,7 @@ export function createApplication(
         provider = new Providers(config),
         mcpFactory = (signal) => new McpClient(config, signal),
         reviews = new ReviewClient(config),
+        cdr = new CdrClient(config),
         connections = new PersonalConnections(config),
         attachments = new Attachments(store),
         shares = new Shares(store),
@@ -72,7 +74,8 @@ export function createApplication(
 ) {
     const active = new Map(),
         rate = new Map(),
-        modelReads = new Map();
+        modelReads = new Map(),
+        cdrRequests = new Map();
     const uploading = new Set();
     const moving = new Set();
     const projectMoves = new ProjectMoves(store, connections, config.allowWrites);
@@ -118,6 +121,8 @@ export function createApplication(
                 "/chat/style.css": ["style.css", "text/css"],
                 "/chat/reviews.js": ["reviews.js", "text/javascript"],
                 "/chat/identity.js": ["identity.js", "text/javascript"],
+                "/chat/aql.js": ["aql.js", "text/javascript"],
+                "/chat/aql.css": ["aql.css", "text/css"],
             };
             if (req.method === "GET" && path === "/chat/reviews") {
                 res.writeHead(302, { Location: "/chat/#governance" });
@@ -145,6 +150,7 @@ export function createApplication(
                     csrf: session?.csrf,
                     allowWrites: config.allowWrites,
                     reviewEnabled: config.reviewEnabled,
+                    cdrEnabled: !!config.cdrEnabled,
                     identityEnabled: config.identityEnabled,
                     identitySetupRequired: config.identityEnabled && auth.identityStore.read().users.length === 0,
                     oidcEnabled: !!config.issuer,
@@ -163,7 +169,7 @@ export function createApplication(
                             : [],
                 });
             }
-            if (!config.enabled && !config.reviewEnabled && !config.identityEnabled)
+            if (!config.enabled && !config.reviewEnabled && !config.identityEnabled && !config.cdrEnabled)
                 throw Object.assign(
                     new Error(
                         "Browser review is disabled. Configure CHAT_REVIEW_ENABLED=true and the browser OIDC client; CHAT_ENABLED and a model-provider account are only needed for conversational chat.",
@@ -281,6 +287,38 @@ export function createApplication(
                 const serviceRoute = path.match(/^\/chat\/api\/identity\/service-accounts\/([a-f0-9-]{36})$/);
                 if (serviceRoute && req.method === "DELETE")
                     return json(res, 200, { success: store.revokeServiceAccount(actor, serviceRoute[1]) });
+                throw Object.assign(new Error("Not found."), { status: 404 });
+            }
+            if (path.startsWith("/chat/api/cdr/")) {
+                const operation = path.slice("/chat/api/cdr/".length);
+                if (req.method !== "POST" || !CDR_OPERATIONS.has(operation) || new URL(req.url, config.origin).search)
+                    throw Object.assign(new Error("Unknown CDR operation."), { status: 404 });
+                const input = await body(req, undefined, "Invalid CDR request.", 16777216);
+                // Cancellation retains capacity even while query workers are busy.
+                if (operation === "cancel") return json(res, 200, await cdr.request(session, operation, input));
+                const count = cdrRequests.get(identity) || 0;
+                if (count >= 2 || [...cdrRequests.values()].reduce((sum, n) => sum + n, 0) >= 12)
+                    throw Object.assign(new Error("CDR requests are busy. Cancel a running query or retry shortly."), {
+                        status: 429,
+                    });
+                cdrRequests.set(identity, count + 1);
+                try {
+                    return json(res, 200, await cdr.request(session, operation, input));
+                } finally {
+                    const remaining = (cdrRequests.get(identity) || 1) - 1;
+                    if (remaining) cdrRequests.set(identity, remaining);
+                    else cdrRequests.delete(identity);
+                }
+            }
+            if (path.startsWith("/chat/api/aql-repository/")) {
+                if (req.method !== "POST") throw Object.assign(new Error("Read-only model access."), { status: 405 });
+                const operation = path.slice("/chat/api/aql-repository/".length);
+                const input = await body(req, ["repository", "path"]);
+                const signal = AbortSignal.timeout(30000);
+                if (operation === "list")
+                    return json(res, 200, await connections.listRepository(identity, input, signal));
+                if (operation === "get")
+                    return json(res, 200, await connections.readRepository(identity, input, signal));
                 throw Object.assign(new Error("Not found."), { status: 404 });
             }
             if (path === "/chat/api/reviews" || path.startsWith("/chat/api/reviews/")) {
@@ -760,6 +798,7 @@ export function createApplication(
                     conversation,
                     controller.signal,
                     config.allowWrites,
+                    config.cdrEnabled ? { client: cdr, session } : null,
                 );
                 const tools = await workspace.tools(),
                     names = new Set(tools.map((t) => t.name));
@@ -936,6 +975,7 @@ export function createApplication(
                 : 500;
             json(res, status, {
                 error: status === 500 ? "The service could not complete the request." : error.message,
+                ...(/^(?:CDR|ENGINE)_[A-Z_]{1,70}$/.test(error.code || "") ? { code: error.code } : {}),
             });
         }
     });

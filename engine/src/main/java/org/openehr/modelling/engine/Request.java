@@ -31,7 +31,7 @@ record Request(String operation, String content, List<Dependency> dependencies) 
                 dependencies.add(new Dependency(id, source, sha));
             }
         }
-        if (operation.equals("validate/aql") && !dependencies.isEmpty()) throw new EngineException("ENGINE_AQL_DEPENDENCIES_UNSUPPORTED");
+        if (operation.equals("validate/aql") && dependencies.size() > 8) throw new EngineException("ENGINE_DEPENDENCY_LIMIT");
         return new Request(operation, content, List.copyOf(dependencies));
     }
 

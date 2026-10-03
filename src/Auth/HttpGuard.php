@@ -45,9 +45,9 @@ final readonly class HttpGuard
     }
 
     /** Shared boundary for purpose-specific REST authentication. */
-    public function transportCheck(ServerRequestInterface $request): ?ResponseInterface
+    public function transportCheck(ServerRequestInterface $request, ?int $bodyLimit = null): ?ResponseInterface
     {
-        return $this->checkHostOrigin($request) ?? $this->checkBody($request);
+        return $this->checkHostOrigin($request) ?? $this->checkBody($request, $bodyLimit);
     }
 
     private function checkHostOrigin(ServerRequestInterface $request): ?ResponseInterface
@@ -64,13 +64,13 @@ final readonly class HttpGuard
         return null;
     }
 
-    private function checkBody(ServerRequestInterface $request): ?ResponseInterface
+    private function checkBody(ServerRequestInterface $request, ?int $bodyLimit = null): ?ResponseInterface
     {
         // php://input often has no reported size. Read a bounded prefix and rewind
         // so SDK decoding sees the same payload; never trust Content-Length alone.
         $body = $request->getBody();
         $size = $body->getSize();
-        $limit = (int) $this->settings->get('MAX_REQUEST_BYTES');
+        $limit = $bodyLimit ?? (int) $this->settings->get('MAX_REQUEST_BYTES');
         if ($size === null && $body->isSeekable()) {
             $body->rewind();
             $size = strlen($body->read($limit + 1));

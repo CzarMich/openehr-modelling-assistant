@@ -330,3 +330,12 @@ requirements:
     packages: [chat/src/project-moves.mjs, chat/src/repository-paths.mjs, chat/src/personal-*.mjs, chat/src/attachments.mjs, chat/src/extract-worker.mjs, chat/src/shares.mjs, chat/src/workspace-tools.mjs, chat/src/server.mjs, chat/src/store.mjs, chat/src/mcp.mjs, chat/src/codex.mjs, chat/src/claude.mjs, public/chat, .docker/Caddyfile]
     tests: [chat/test/project-moves.test.mjs, chat/test/personal-workspace.test.mjs, chat/test/browser.spec.mjs, chat/test/mcp.test.mjs, chat/test/codex.test.mjs, chat/test/providers.test.mjs]
     verification: npm --prefix chat test and npm --prefix chat run test:browser
+
+  - id: REQ-F24
+    title: Private CDR connections and model-aware AQL workspace
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [src/Domain/Cdr/*.php, src/Integrations/Cdr/*.php, src/Application/CdrWorkspace.php, src/Application/AqlWorkbench.php, src/Rest/CdrApi.php, src/Tools/CdrTools.php, chat/src/cdr.mjs, public/chat/aql.js, public/chat/aql.css, engine/src/main/java]
+    tests: [tests/Enterprise/CdrWorkspaceTest.php, tests/Enterprise/CdrAdapterTest.php, tests/Enterprise/CdrApiTest.php, tests/Tools/CdrOutputCases.php, tests/fixtures/cdr/probe.php, scripts/test-cdr-container.sh, chat/test/cdr.test.mjs, chat/test/browser.spec.mjs, engine/src/test/java]
+    adr: ["0024"]

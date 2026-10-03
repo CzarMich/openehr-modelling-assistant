@@ -323,3 +323,7 @@ Tests cover provider isolation and encryption, cancellation, tool results and er
 write confirmation, sessions, CSRF, history, mobile layout and accessibility. Provider
 fixtures use no live accounts. Live acceptance requires each user's sign-in or API
 key; a simulated reply is not provider acceptance.
+
+## AQL workspace
+
+The sidebar AQL workspace uses browser identity independently of Codex/Claude. Configure private CDRs through the top-bar gear. Query results stay in the results view and are not sent to chat. See [AQL/CDR workflow and configuration](CDR_WORKSPACE.md).

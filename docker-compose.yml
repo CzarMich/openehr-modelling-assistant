@@ -14,6 +14,7 @@ services:
     volumes:
       - models:/data/models
       - governance:/data/governance
+      - cdr-data:/data/cdr
     tmpfs:
       - /tmp:mode=1777,size=64m
     read_only: true
@@ -75,3 +76,4 @@ volumes:
   models:
   governance:
   chat-data:
+  cdr-data:

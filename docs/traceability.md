@@ -96,3 +96,5 @@ REQ-F21 maps the native engine boundary, compiler and project build evidence to 
 REQ-F22 links immutable external originals and protected import receipts to repository, audit, actual MCP and browser-download tests. See [ADR-0023](decisions/0023-immutable-originals-and-import-receipts.md) and the [workflow](MODEL_IMPORTS.md).
 
 REQ-F23 links personal browser connections, attachment extraction and read-only sharing to isolated HTTP, parser, credential, revision and browser tests in `chat/test/personal-workspace.test.mjs` and `chat/test/browser.spec.mjs`. These tests use synthetic documents and mocked Git/CKM responses, not live user credentials.
+
+REQ-F24 connects private CDR configuration, read-only execution, exact-template AQL checks and browser result handling to PHP service/authentication/contract tests, native path tests and browser privacy/cancellation tests. See [ADR-0024](decisions/0024-cdr-client-and-aql-workspace.md).

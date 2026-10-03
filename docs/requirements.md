@@ -48,7 +48,7 @@ repository and stores no patient data.
 
 ## Current extension boundaries
 
-Native ADL 2/OPT 2 compilation and AQL syntax parsing are available through the optional engine. Complete legacy OET/AOM coverage, cross-model AQL validation, CDR execution, full project/team RBAC and a visual editor remain separate work. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
+Native ADL 2/OPT 2 compilation and AQL syntax parsing are available through the optional engine. Exact-template structural AQL validation and read-only CDR execution are available in the dedicated workspace. Complete legacy OET/AOM coverage, full project/team RBAC and a visual editor remain separate work. See CAPABILITIES.md for exact scope. No model SDK or client plugin is required.
 
 ## Modelling platform requirements
 
@@ -83,3 +83,5 @@ Native ADL 2/OPT 2 compilation and AQL syntax parsing are available through the 
 | **REQ-F22** | Preserve exact externally supplied original bytes, distinguish source declarations and format detection from conformance, record protected idempotent import provenance, reject original mutation and prevent imports from implying clinical approval. | `model_import_inspect`, `model_artifact_import`, `model_artifact_provenance`, original repository port and browser source download |
 
 | **REQ-F23** | Provide profile-private CKMs without duplicating enterprise sources, personal GitHub/GitLab artifact destinations with persistent profile/project folder defaults, separate folders for every supported artefact type, current and exact-version file references, confirmed revision-conditional saves and previewed moves of a chat’s saved artefacts into its project folder, bounded source-file extraction and PNG/JPG interpretation with composer attachment previews for modelling, and revocable read-only chat snapshots for authenticated workspace users. | Browser personal connections, attachment tools and snapshot sharing; limits in [browser chat](BROWSER_CHAT.md) |
+
+| **REQ-F24** | Provide a separate AQL workspace with native syntax and exact-template path validation, model-derived queries, profile-private encrypted CDR connections, standard read-only Query API execution, cancellation, bounded results, saved queries/history and remote template inspection without automatically exposing clinical rows to AI or persisting results. | [CDR workspace](CDR_WORKSPACE.md), provider-neutral CDR adapter and controlled MCP tools |

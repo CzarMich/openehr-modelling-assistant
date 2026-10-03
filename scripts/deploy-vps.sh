@@ -26,6 +26,12 @@ if [[ -r "$state_dir/config/engine-key" ]]; then
   compose+=(-f deploy/compose.engine.yml)
   engine=true
 fi
+cdr=false
+if [[ -r "$state_dir/config/cdr-key" ]]; then
+  export MODELLING_CDR_KEY_FILE="$state_dir/config/cdr-key"
+  compose+=(-f deploy/compose.cdr.yml)
+  cdr=true
+fi
 "${compose[@]}" config --quiet
 "${compose[@]}" build
 previous=""
@@ -41,6 +47,7 @@ rollback() {
     rollback_compose=(docker compose -p openehr-modelling-assistant --env-file .env -f docker-compose.yml)
     if [[ "$storage" == true ]]; then rollback_compose+=(-f deploy/compose.storage.yml); fi
     if [[ "$engine" == true && -f deploy/compose.engine.yml ]]; then rollback_compose+=(-f deploy/compose.engine.yml); fi
+    if [[ "$cdr" == true && -f deploy/compose.cdr.yml ]]; then rollback_compose+=(-f deploy/compose.cdr.yml); fi
     "${rollback_compose[@]}" up -d --build --wait || true
   fi
 }
