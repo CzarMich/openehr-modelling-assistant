@@ -24,7 +24,7 @@ The browser connection currently supports the commercial Microsoft cloud. Tenant
 
 ### Agent maker: browser tool
 
-Create a dedicated browser agent using generative orchestration and Microsoft authentication. In the Copilot Studio code editor, register the `OpenEhrWorkspace` client task action using the definition provided in the in-app guide. It uses Microsoft's `TaskDialog` / `InvokeClientTaskAction` mechanism:
+Create a dedicated browser agent with Topics, generative orchestration and Microsoft authentication. Open **Topics → System → Conversation Start → … → Open code editor**. Paste the complete topic from the in-app guide and save it. Its `SetVariable` action registers `OpenEhrWorkspace` through Microsoft’s `System.ClientPluginActions` mechanism. The adapter emits the start event before sending the workspace conversation:
 
 - Inputs: `operation`, `tool`, `argumentsJson` (strings).
 - Operations: `list` returns this session's available tools; `describe` returns one tool's input schema; `call` executes that tool with a JSON object encoded in `argumentsJson`.

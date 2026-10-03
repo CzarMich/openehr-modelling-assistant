@@ -133,7 +133,7 @@ test("Copilot Studio can be connected, checked and selected from the browser wit
     await settings(page, false);
     await page.goto("/chat/#help-copilot-browser");
     await expect(page.getByRole("heading", { name: "Use Copilot Studio in this browser" })).toBeVisible();
-    await expect(page.locator("#copilot-tool-definition")).toHaveValue(/InvokeClientTaskAction/);
+    await expect(page.locator("#copilot-tool-definition")).toHaveValue(/System.ClientPluginActions/);
     await expect(page.locator("#copilot-agent-instructions")).toHaveValue(/Never fetch CDR patient records/);
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

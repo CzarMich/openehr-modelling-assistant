@@ -5,8 +5,10 @@ globalThis.fetch = async (url, options) => {
     assert(new URL(url).hostname.endsWith(".environment.api.powerplatform.com"));
     const body = JSON.parse(options.body);
     let activities;
-    if (Object.hasOwn(body, "emitStartConversationEvent")) activities = [];
-    else if (body.activity.type === "message")
+    if (Object.hasOwn(body, "emitStartConversationEvent")) {
+        assert.equal(body.emitStartConversationEvent, true, "The setup topic must register the workspace tool");
+        activities = [];
+    } else if (body.activity.type === "message")
         activities = [
             {
                 type: "event",

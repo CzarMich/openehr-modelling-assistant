@@ -13,7 +13,7 @@ export async function copilotSession(
     { messages = [], images = [], tools = [], callTool, onEvent, signal, instructions = INSTRUCTIONS, probe = false },
 ) {
     signal.throwIfAborted();
-    for await (const activity of client.startConversationStreaming(false)) {
+    for await (const activity of client.startConversationStreaming(true)) {
         signal.throwIfAborted();
         if (activity.type === "endOfConversation" && activity.code && activity.code !== "completedSuccessfully")
             throw problem(

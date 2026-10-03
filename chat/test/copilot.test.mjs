@@ -37,7 +37,7 @@ function client(responses) {
     return {
         sent,
         async *startConversationStreaming(flag) {
-            assert.equal(flag, false);
+            assert.equal(flag, true);
         },
         async *sendActivityStreaming(activity) {
             sent.push(structuredClone(activity));
