@@ -88,7 +88,7 @@ export class WorkspaceTools {
                 ? "The selected connection is unavailable. Choose another repository."
                 : !destination.authenticated
                   ? "Add a token through Update access in My sources and repositories; repository saves require write access."
-                  : null;
+                  : destination.lastWriteError?.message || null;
         return {
             selectedRepository: this.conversation.repository || null,
             destination,
