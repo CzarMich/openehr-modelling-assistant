@@ -36,6 +36,9 @@ final class RepositoryAndGovernanceTest extends TestCase
         self::assertSame('<second/>', $reopened->getArtifact('neonatal', 'templates/admission.oet')['content']);
         self::assertSame('<first/>', $reopened->getArtifact('neonatal', 'templates/admission.oet', $first['revision'])['content']);
         self::assertCount(2, $reopened->history('neonatal', 'templates/admission.oet'));
+        $unchanged = $reopened->saveArtifact('neonatal', 'templates/admission.oet', '<second/>', [], $second['revision']);
+        self::assertSame($second['revision'], $unchanged['revision']);
+        self::assertCount(2, $reopened->history('neonatal', 'templates/admission.oet'));
         try {
             $reopened->saveArtifact('neonatal', 'templates/admission.oet', 'lost update', [], $first['revision']);
             self::fail('Stale revision overwrote content.');

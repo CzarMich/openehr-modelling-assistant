@@ -295,21 +295,36 @@ export class PersonalConnections {
         } catch {
             throw problem("Invalid repository response.", 503);
         }
+        // GitHub omits base64 bodies above 1 MiB. Read the exact verified blob
+        // so a large compiled OPT can still advance at its existing filename.
+        if (
+            repo.kind === "github" &&
+            data.type === "file" &&
+            data.encoding === "none" &&
+            /^[a-f0-9]{40}$/.test(data.sha || "")
+        ) {
+            const { RepositoryModels } = await import("./repository-models.mjs");
+            const reader = new RepositoryModels(this, identity, signal);
+            const content = await reader.readBlob(repo, data.sha);
+            return { exists: true, revision: data.sha, path, content, repository: visible(repo) };
+        }
         if (
             (data.type && data.type !== "file") ||
             data.encoding !== "base64" ||
             typeof data.content !== "string" ||
-            data.size > 1024 * 1024
+            data.size > 2 * 1024 * 1024
         )
             throw problem("The repository file is unavailable or too large.", 413);
         const revision = repo.kind === "github" ? data.sha : data.last_commit_id;
         if (typeof revision !== "string" || !/^[a-f0-9]{40,64}$/.test(revision))
             throw problem("Invalid repository revision.", 503);
+        const content = Buffer.from(data.content, "base64").toString("utf8");
+        if (Buffer.byteLength(content) > 2 * 1024 * 1024) throw problem("The repository file exceeds 2 MiB.", 413);
         return {
             exists: true,
             revision,
             path,
-            content: Buffer.from(data.content, "base64").toString("utf8"),
+            content,
             repository: visible(repo),
         };
     }
@@ -378,8 +393,10 @@ export class PersonalConnections {
                 path: file.path,
                 content: file.content,
                 revision: current.revision,
-                dependency: file.identicalOnly === true,
+                dependency: file.dependency === true || file.identicalOnly === true,
                 changed: !current.exists || current.content !== file.content,
+                change: !current.exists ? "created" : current.content === file.content ? "unchanged" : "updated",
+                previousSha256: current.exists ? createHash("sha256").update(current.content).digest("hex") : null,
                 sha256: createHash("sha256").update(file.content).digest("hex"),
             });
         }
@@ -463,10 +480,10 @@ export class PersonalConnections {
             if (!/^[a-f0-9]{40,64}$/.test(created.id || "")) throw problem("Invalid repository commit.", 503);
             commit = created.id;
         }
-        const url = (path) =>
+        const url = (path, ref = repo.branch) =>
             repo.url +
             (repo.kind === "github" ? "/blob/" : "/-/blob/") +
-            encodeURIComponent(repo.branch) +
+            encodeURIComponent(ref) +
             "/" +
             path.split("/").map(encodeURIComponent).join("/");
         return {
@@ -476,12 +493,19 @@ export class PersonalConnections {
             status: "DRAFT",
             clinicalApproval: false,
             commit,
+            changed: changed.length > 0,
+            sha256: plan.files.find((file) => file.path === args.path)?.sha256,
+            change: plan.files.find((file) => file.path === args.path)?.change,
             url: url(args.path),
-            files: plan.files.map(({ path, sha256, changed, dependency }) => ({
+            files: plan.files.map(({ path, sha256, changed, dependency, change, previousSha256 }) => ({
                 path,
                 sha256,
                 changed,
                 dependency,
+                change,
+                previousSha256,
+                previousCommit: previousSha256 ? plan.base : null,
+                versionUrl: url(path, commit),
                 url: url(path),
             })),
         };
@@ -492,7 +516,7 @@ export class PersonalConnections {
         if (
             typeof args.content !== "string" ||
             !args.content.trim() ||
-            Buffer.byteLength(args.content) > 1024 * 1024 ||
+            Buffer.byteLength(args.content) > 2 * 1024 * 1024 ||
             !(
                 args.expectedRevision === null ||
                 (typeof args.expectedRevision === "string" && /^[a-f0-9]{40,64}$/.test(args.expectedRevision))
@@ -507,6 +531,30 @@ export class PersonalConnections {
         const current = await this.readRepository(identity, args, signal);
         if (current.revision !== args.expectedRevision)
             throw problem("Repository changed. Read the current revision and retry.", 409);
+        const sha256 = createHash("sha256").update(args.content).digest("hex");
+        const version = {
+            sha256,
+            previousSha256: current.exists ? createHash("sha256").update(current.content).digest("hex") : null,
+            changed: !current.exists || current.content !== args.content,
+            change: !current.exists ? "created" : current.content === args.content ? "unchanged" : "updated",
+        };
+        const url =
+            repo.url +
+            (repo.kind === "github" ? "/blob/" : "/-/blob/") +
+            encodeURIComponent(repo.branch) +
+            "/" +
+            path.split("/").map(encodeURIComponent).join("/");
+        if (!version.changed)
+            return {
+                saved: true,
+                repository: visible(repo),
+                path,
+                status: "DRAFT",
+                clinicalApproval: false,
+                revision: current.revision,
+                url,
+                ...version,
+            };
         let suffix, body, method;
         if (repo.kind === "github") {
             suffix = "/contents/" + path.split("/").map(encodeURIComponent).join("/");
@@ -518,13 +566,19 @@ export class PersonalConnections {
                 ...(current.exists ? { sha: current.revision } : {}),
             };
         } else {
-            suffix = "/repository/files/" + encodeURIComponent(path);
-            method = current.exists ? "PUT" : "POST";
+            suffix = "/repository/commits";
+            method = "POST";
             body = {
                 branch: repo.branch,
                 commit_message: args.message,
-                content: args.content,
-                ...(current.exists ? { last_commit_id: current.revision } : {}),
+                actions: [
+                    {
+                        action: current.exists ? "update" : "create",
+                        file_path: path,
+                        content: args.content,
+                        ...(current.exists ? { last_commit_id: current.revision } : {}),
+                    },
+                ],
             };
         }
         const response = await this.remote(this.repoApi(repo), suffix, { method, body, signal });
@@ -533,13 +587,14 @@ export class PersonalConnections {
         try {
             receipt = JSON.parse(response.text);
         } catch {}
-        const commit = repo.kind === "github" ? receipt?.commit?.sha : receipt?.commit_id;
+        const commit = repo.kind === "github" ? receipt?.commit?.sha : receipt?.id;
         return {
             saved: true,
             repository: visible(repo),
             path,
             status: "DRAFT",
             clinicalApproval: false,
+            ...version,
             ...(typeof commit === "string" && /^[a-f0-9]{40,64}$/.test(commit) ? { commit } : {}),
             url:
                 repo.url +

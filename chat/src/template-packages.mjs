@@ -6,6 +6,25 @@ import { artifactKind } from "./repository-paths.mjs";
 import { problem } from "./personal-http.mjs";
 
 const hash = (content) => createHash("sha256").update(content).digest("hex");
+const canonical = (value) =>
+    Array.isArray(value)
+        ? value.map(canonical)
+        : value && typeof value === "object"
+          ? Object.fromEntries(
+                Object.keys(value)
+                    .sort()
+                    .map((key) => [key, canonical(value[key])]),
+            )
+          : value;
+const gitBlobs = (content) =>
+    Object.fromEntries(
+        ["sha1", "sha256"].map((algorithm) => [
+            algorithm,
+            createHash(algorithm)
+                .update("blob " + Buffer.byteLength(content) + "\0" + content)
+                .digest("hex"),
+        ]),
+    );
 export const isTemplate = (path) => ["oet", "adlTemplates"].includes(artifactKind(path));
 export const modelResult = (result) => {
     let value = result?.structuredContent;
@@ -131,11 +150,11 @@ export class TemplatePackages {
         const sources = inputs.map((item) => ({
             path: prefix + "archetypes/" + item.identifier + ".adl",
             content: item.content,
-            identicalOnly: true,
+            dependency: true,
         }));
         const generated = [];
-        // Immutable, content-addressed outputs avoid overwriting manually edited
-        // OPTs or form schemas. The manifest links each build to its exact source.
+        // Stable current paths; Git preserves earlier bytes and the package pins
+        // immutable dependency blobs even when another template updates an ADL.
         for (const [kind, output] of [
             ["opt", report.output],
             ["web_template", report.web_template],
@@ -143,18 +162,16 @@ export class TemplatePackages {
             if (typeof output?.content !== "string") continue;
             if (hash(output.content) !== output.sha256)
                 throw problem("A generated template output failed its integrity check.");
-            const name = relative
-                .split("/")
-                .at(-1)
-                .replace(/\.(?:oet(?:\.xml)?|adlt)$/i, "");
+            const name = relative.replace(/^templates\/(?:oet|adl)\//, "").replace(/\.(?:oet(?:\.xml)?|adlt)$/i, "");
             const target =
                 kind === "opt"
-                    ? "templates/opt/" + name + "." + output.sha256.slice(0, 12) + ".opt"
-                    : "data/json/web-templates/" + name + "." + output.sha256.slice(0, 12) + ".webtemplate.json";
+                    ? "templates/opt/" + name + ".opt"
+                    : "data/json/web-templates/" + name + ".webtemplate.json";
             generated.push({ kind, path: target, content: output.content, sha256: output.sha256 });
         }
         const manifest = {
-            schema: "openehr-template-package/1",
+            schema: "openehr-template-package/2",
+            versioning: "git-history-stable-paths",
             status: "DRAFT",
             clinicalApproval: false,
             template: { path: relative, sha256: hash(args.content) },
@@ -162,6 +179,7 @@ export class TemplatePackages {
                 identifier: item.identifier,
                 path: "archetypes/" + item.identifier + ".adl",
                 sha256: item.sha256,
+                git_blob: gitBlobs(item.content),
                 ...(cached?.dependencies.some(
                     (source) => source.identifier === item.identifier && source.sha256 === item.sha256,
                 ) && cached.provenance?.[item.identifier]
@@ -179,14 +197,14 @@ export class TemplatePackages {
         return [
             { path: args.path, content: args.content, expectedRevision: args.expectedRevision },
             ...sources,
-            ...generated.map((item) => ({ path: prefix + item.path, content: item.content, identicalOnly: true })),
+            ...generated.map((item) => ({ path: prefix + item.path, content: item.content })),
             {
                 path:
                     prefix +
                     "data/json/template-packages/" +
                     relative.replace(/^templates\/(?:oet|adl)\//, "") +
                     ".json",
-                content: JSON.stringify(manifest, null, 2) + "\n",
+                content: JSON.stringify(canonical(manifest), null, 2) + "\n",
             },
         ];
     }

@@ -68,6 +68,9 @@ final class GitRepositoryTest extends TestCase
         $reopened = new GitModelRepository($this->settings());
         self::assertSame('<first/>', $reopened->getArtifact('default', 'templates/admission.oet', $first['revision'])['content']);
         self::assertSame($second['revision'], $reopened->getArtifact('default', 'templates/admission.oet')['revision']);
+        $unchanged = $reopened->saveArtifact('default', 'templates/admission.oet', '<second/>', [], $second['revision']);
+        self::assertSame($second['revision'], $unchanged['revision']);
+        self::assertCount(2, $reopened->history('default', 'templates/admission.oet'));
         $reopened->deleteArtifact('default', 'templates/admission.oet', $second['revision']);
         $history = $reopened->history('default', 'templates/admission.oet');
         self::assertCount(3, $history);

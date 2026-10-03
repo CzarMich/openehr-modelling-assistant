@@ -1197,6 +1197,10 @@ test("saved artefacts expose current paths and exact-version links after reload 
     await page.getByRole("button", { name: "Link my saved files", exact: true }).click();
     const files = page.locator("#conversation-artifacts");
     await files.locator("summary").click();
+    await expect(files.getByRole("link", { name: "Version history", exact: true })).toHaveAttribute(
+        "href",
+        /\/commits\/main\//,
+    );
     await expect(files).toContainText(path);
     await expect(files.getByRole("link", { name: "Open file", exact: true })).toHaveAttribute(
         "href",

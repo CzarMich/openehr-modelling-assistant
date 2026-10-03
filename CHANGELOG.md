@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Artefacts use stable filenames with automatic revision history and exact template dependency versions.
+
 - Template compilation verifies form-schema generation and saves linked OPT and Web Template outputs.
 
 - AQL drafts directly into its editor, fixes path selection, isolates environment libraries and caches archetype packages.

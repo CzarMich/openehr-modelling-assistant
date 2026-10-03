@@ -11,12 +11,21 @@ const fingerprint = (chat) => {
 // Only server-recorded successful saves belong to a chat. Older files can be
 // explicitly included by their owner; assistant prose is never a file manifest.
 export function recordArtifact(chat, args, receipt = {}) {
+    const previous = (chat.artifacts || []).find(
+        (item) => item.repository === args.repository && item.path === args.path,
+    );
     const artifact = {
         repository: args.repository,
         path: args.path,
         folder: chat.folder || "",
         ...(receipt.dependency === true ? { dependency: true } : {}),
-        ...(sha(receipt.commit) ? { commit: receipt.commit } : {}),
+        ...(sha(receipt.commit)
+            ? { commit: receipt.commit }
+            : receipt.changed === false && receipt.sha256 === previous?.sha256 && sha(previous?.commit)
+              ? { commit: previous.commit }
+              : {}),
+        ...(/^[a-f0-9]{64}$/.test(receipt.sha256 || "") ? { sha256: receipt.sha256 } : {}),
+        ...(["created", "updated", "unchanged"].includes(receipt.change) ? { change: receipt.change } : {}),
         ...(["github", "gitlab"].includes(receipt.repository?.kind)
             ? {
                   destination: {

@@ -211,7 +211,7 @@ final class ProjectQualityTest extends TestCase
             'dependencies' => $manifest, 'engine' => $engine, 'output_sha256' => hash('sha256', $output)];
         $build = $identity + ['id' => hash('sha256', json_encode($this->canonicalEvidence($identity), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
             'format' => 'opt14_xml', 'report' => $report];
-        $artifact = $repository->saveArtifact('project', 'templates/compiled/synthetic.opt', $output,
+        $artifact = $repository->saveArtifact('project', 'templates/opt/synthetic.opt', $output,
             ['kind' => 'compiled_opt14', 'build' => $build], null);
 
         $result = self::service($repository)->evaluate('project', $source['path'], $source['revision']);
@@ -223,6 +223,18 @@ final class ProjectQualityTest extends TestCase
         self::assertSame('NOT_EXECUTED', $report['checks']['full_aom_semantics']);
         self::assertFalse($result['release_eligible']);
         self::assertFalse($result['clinical_approval']);
+
+        $nextSource = $repository->saveArtifact('project', $source['path'], $source['content'] . "\n", $source['metadata'], $source['revision']);
+        $identity['source'] = array_intersect_key($nextSource, array_flip(['path', 'revision', 'sha256', 'provider']));
+        $nextBuild = $identity + $build;
+        $nextBuild['id'] = hash('sha256', json_encode($this->canonicalEvidence($identity), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+        $nextBuild['report']['content_sha256'] = $nextSource['sha256'];
+        $next = $repository->saveArtifact('project', $artifact['path'], $output, ['kind' => 'compiled_opt14', 'build' => $nextBuild], $artifact['revision']);
+        $historical = self::service($repository)->evaluate('project', $source['path'], $source['revision']);
+        $evidence = array_column($historical['checks'], null, 'name')['native_build_evidence'];
+        self::assertSame('PASS', $evidence['status']);
+        self::assertSame($artifact['revision'], $evidence['builds'][0]['artifact']['revision']);
+        self::assertNotSame($next['revision'], $artifact['revision']);
     }
 
     #[DataProvider('providers')]

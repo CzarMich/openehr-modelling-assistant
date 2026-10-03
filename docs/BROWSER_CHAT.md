@@ -78,7 +78,7 @@ changed source revision blocks the move. Future saves use the project's folder.
 were not recorded, use **Include older saved artefacts** and enter each repository path.
 The preview never infers paths from the assistant's prose. Up to 200 recorded artefacts can move at once (up to 50 older paths may be included explicitly). Shared package archetypes are copied so templates remaining in the source folder retain their dependencies. The **Models** tab continues to show repository modelling projects.
 
-OET and ADL template saves include exact archetype inputs under `archetypes/` and a project-relative hash manifest under `data/json/template-packages/`, committed atomically with the template. Native compilation of those exact bytes must pass before confirmation. Identical existing archetypes are reused; differing archetypes require explicit review and are not overwritten by a template save. Browser turns retain up to four exact build input sets, encrypted and private to the profile and conversation, for seven days (8 MiB cache; 64 dependencies and 6 MiB inputs per package). Changed or uncached templates require explicit dependency contents. The manifest records compilation scope and limitations; saving does not establish clinical approval. Import an OET together with its archetypes into other modelling tools.
+OET and ADL template saves include exact archetype inputs under `archetypes/` and a project-relative hash manifest under `data/json/template-packages/`, committed atomically with the template. Native compilation of those exact bytes must pass before confirmation. Stable current paths are versioned by default: changed content replaces the current file in a new Git commit, while identical content is reused. Exact Git blob pins keep older templates bound to their own archetype bytes, even when a shared current file changes. See [artefact versions](ARTEFACT_VERSIONING.md). Browser turns retain up to four exact build input sets, encrypted and private to the profile and conversation, for seven days (8 MiB cache; 64 dependencies and 6 MiB inputs per package). Changed or uncached templates require explicit dependency contents. The manifest records compilation scope and limitations; saving does not establish clinical approval. Import an OET together with its archetypes into other modelling tools.
 Limits are 40 chat projects and the existing 100 conversations per profile. Chat
 retention still applies inside projects; project names persist until removed.
 
@@ -150,7 +150,7 @@ storage; these rules organise generated personal-repository artefacts.
 
 **Saved artefacts** above the composer lists files from confirmed personal saves.
 Open a file or use **Copy path** and **Copy link** for references. **Saved version**
-and **Copy version link** appear when the provider returns a commit receipt; those
+and **Copy version link** appear when the provider returns a commit receipt; **Version history** opens the file history and the saved SHA-256 identifies its bytes. Those version
 links identify the exact saved version. Current paths and links refresh after a
 project move. Moving files preserves their contents: existing links embedded
 inside documents are not rewritten. Use the current saved-file paths when
