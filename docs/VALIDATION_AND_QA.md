@@ -14,7 +14,7 @@ Validation responses include `parse_valid`, `structurally_valid` and a `stages` 
 | OET | XML, supported namespace/root, required identity/definition elements, typed COMPOSITION root, placement xsi:type/archetype RM-class agreement, parent-to-placement element kind, archetype identifier syntax, nonnegative occurrence bounds and absolute rule path prefix | Full schema, exact archetype paths, inherited constraints, slots and dependency compatibility require the engine |
 | OPT | XML, v1/v2 namespace profiles, identity/language/concept/definition presence, interval bounds/flags and RM type-name syntax | RM membership, AOM semantics, complete schema and deployability require the engine |
 | ADL | Leading declaration and supported archetype identifier, including UTF-8 BOM and leading comments | Grammar parsing is NOT_EXECUTED; a valid-looking header is not a valid archetype |
-| AQL | Input safety/size only | Syntax, path/model compatibility and execution are separate, currently NOT_EXECUTED |
+| AQL | Input safety/size only | These document QA operations do not execute syntax/path checks or queries; use native `aql_validate` and the separate [AQL/CDR workspace](CDR_WORKSPACE.md) |
 | FLAT | Unambiguous JSON, object shape, bounded field/index/suffix notation, scalar values and explicit raw-object type | Web Template path existence, RM values, cardinality, terminology and composition conformance need an OPT/engine |
 | STRUCTURED | Unambiguous JSON, composition/ctx objects, data arrays, separate attribute suffixes and explicit raw-object type | The same model-aware requirements as FLAT; context fields support scalar defaults and nested objects/occurrence arrays |
 
