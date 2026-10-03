@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { ProviderStore } from "./provider-store.mjs";
 import { CodexProvider } from "./codex.mjs";
 import { ClaudeProvider } from "./claude.mjs";
+import { CopilotAccounts } from "./copilot-auth.mjs";
 
 export class Providers {
     constructor(
@@ -12,6 +13,7 @@ export class Providers {
             store,
             codex = (settings) => new CodexProvider(settings),
             claude = (key) => new ClaudeProvider(config, key),
+            copilot,
         } = {},
     ) {
         this.config = config;
@@ -22,19 +24,23 @@ export class Providers {
                 : null);
         this.codex = codex;
         this.claude = claude;
+        this.copilot = new CopilotAccounts(config, this.store, copilot);
         this.logins = new Map();
         this.busy = new Set();
     }
     status(identity) {
-        return ["codex", "claude"].map((id) => ({
-            id,
-            name: id === "codex" ? "Codex" : "Claude",
-            connected: !!this.store?.get(identity, id),
-            signingIn: id === "codex" && this.logins.has(identity),
-        }));
+        return [
+            ...["codex", "claude"].map((id) => ({
+                id,
+                name: id === "codex" ? "Codex" : "Claude",
+                connected: !!this.store?.get(identity, id),
+                signingIn: id === "codex" && this.logins.has(identity),
+            })),
+            this.copilot.status(identity),
+        ];
     }
     assertConnected(identity, provider) {
-        if (!["codex", "claude"].includes(provider) || !this.store?.get(identity, provider))
+        if (!["codex", "claude", "copilot"].includes(provider) || !this.store?.get(identity, provider))
             throw Object.assign(new Error("Connect your provider account before sending a message."), { status: 409 });
     }
     connectClaude(identity, apiKey) {
@@ -96,9 +102,11 @@ export class Providers {
     }
     cancelLogin(identity) {
         this.logins.get(identity)?.controller.abort();
+        this.copilot.cancel(identity);
     }
     disconnect(identity, provider) {
-        if (provider === "codex") this.cancelLogin(identity);
+        if (provider === "codex") this.logins.get(identity)?.controller.abort();
+        if (provider === "copilot") this.copilot.cancel(identity);
         this.store.delete(identity, provider);
     }
     async withCodex(credential, operation) {
@@ -114,6 +122,7 @@ export class Providers {
         this.assertConnected(identity, provider);
         const record = this.store.get(identity, provider);
         if (provider === "claude") return this.claude(record.credential).run(options);
+        if (provider === "copilot") return this.copilot.run(identity, options);
         // Serialize a user's Codex turns so refresh-token rotation cannot race itself.
         if (
             this.busy.has(identity) ||
@@ -138,6 +147,7 @@ export class Providers {
         }
     }
     close() {
+        this.copilot.close();
         for (const pending of this.logins.values()) pending.controller.abort();
     }
 }

@@ -40,7 +40,7 @@ const object = (value, keys) =>
 export async function draftAql({ input, identity, session, provider, cdr, signal }) {
     if (
         !object(input, ["provider", "intent", "model", "paths"]) ||
-        !["codex", "claude"].includes(input.provider) ||
+        !["codex", "claude", "copilot"].includes(input.provider) ||
         typeof input.intent !== "string" ||
         !input.intent.trim() ||
         input.intent.length > 1000 ||

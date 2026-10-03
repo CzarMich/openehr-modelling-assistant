@@ -1,7 +1,7 @@
 # Browser chat
 
 Open `/chat/`, sign in to the modelling workspace, and open the **Chat settings** gear, then **My AI connections**.
-Each user connects their own provider account. Choose **Codex** or **Claude** before
+Each user connects their own provider account. Choose **Codex**, **Claude** or **Copilot Studio** before
 starting a conversation; a conversation keeps that provider when reopened.
 
 **Sign in** stays at the top right while signed out, including in Help, Models and
@@ -15,6 +15,7 @@ not repeat sign-in prompts. Built-in account forms open in the workspace.
   be enabled for that account or organisation.
 - **Claude:** enter an Anthropic API key. Claude API usage is billed separately from
   a Claude subscription. Subscription sign-in is not offered in this application.
+- **Copilot Studio:** follow **Help → Copilot Studio in this browser**, enter your organisation’s four connection settings, sign in with Microsoft and run **Test workspace tools**. See [browser setup and boundaries](COPILOT_BROWSER.md).
 - **Disconnect** removes that connection from the modelling service and stops its
   active responses. To revoke access at the provider too, use that provider's account
   settings. Signing out of the workspace leaves the saved connection available for
@@ -189,7 +190,7 @@ Select **+ (Add files and images)** inside the composer, drop files onto it, or 
 
 The chat service allows up to two minutes to receive a file on slower connections, with the same 10 MiB file limit. An interrupted connection shows a retry message. If the response was incomplete, reopen the conversation and check its files before uploading again. Your unsent instructions stay in the message box. Any additional proxy must also allow the intended upload duration.
 
-The assistant receives source names, hashes and extraction status. It reads extracted text in bounded chunks through `attachment_read`. PNG/JPG images are supplied as actual image inputs to the selected Codex or Claude connection on each subsequent turn while attached, including after reload. Images are not persisted as base64 in messages or shared snapshots. Cite/check the original publication, page, sheet or image when reviewing derived requirements; extraction and visual interpretation do not establish clinical validity.
+The assistant receives source names, hashes and extraction status. It reads extracted text in bounded chunks through `attachment_read`. PNG/JPG images are supplied as actual image inputs to the selected provider connection (Copilot Studio also requires an image-capable published agent) on each subsequent turn while attached, including after reload. Images are not persisted as base64 in messages or shared snapshots. Cite/check the original publication, page, sheet or image when reviewing derived requirements; extraction and visual interpretation do not establish clinical validity.
 
 PDF with selectable text, Excel XLS/XLSX/XLSB, ODS, DOCX, UTF-8/UTF-16 text, CSV, XML, JSON and other text formats are supported. Every format can be attached and downloaded as its original bytes. Unsupported binaries, scanned PDFs and damaged/password-protected documents report missing extraction. For a scanned publication, provide a text version or attach the relevant pages as PNG/JPG images. Images uploaded before vision support must be reattached. Formulas, macros, scripts and external document references are not executed.
 
@@ -222,7 +223,7 @@ and can be cleared. This is the deployment's existing MCP key, not a separately 
 personal credential; rotating it is an administrator deployment operation.
 Copilot Studio uses the [Microsoft MCP integration](MICROSOFT_AGENT_INTEGRATION.md).
 An enterprise subscription alone does not configure the connection; tenant policy
-and acceptance testing still apply. The browser assistant selector remains Claude/Codex.
+and acceptance testing still apply. For Copilot Studio replies in this browser, use the separate [browser provider connection](COPILOT_BROWSER.md), available in the assistant selector alongside Codex and Claude.
 
 ## Deployment
 
@@ -328,7 +329,7 @@ key; a simulated reply is not provider acceptance.
 
 ## AQL workspace
 
-The sidebar AQL workspace uses browser identity independently of Codex/Claude. Configure private CDRs through the top-bar gear. Query results stay in the results view and are not sent to chat. See [AQL/CDR workflow and configuration](CDR_WORKSPACE.md).
+The sidebar AQL workspace uses browser identity independently of any assistant-provider connection. Configure private CDRs through the top-bar gear. Query results stay in the results view and are not sent to chat. See [AQL/CDR workflow and configuration](CDR_WORKSPACE.md).
 
 GitHub save failures distinguish token permissions, expired credentials, protected branches and rate limits. A confirmed token/branch refusal is shown beside the private connection and blocks repeated save proposals until **Update access → Save connection** acknowledges the repair. A repository owner's account permissions do not prove that a fine-grained token has **Contents: Read and write**. Updating an existing token's GitHub permissions does not require re-entering it; saving the connection with a blank token preserves the credential and clears the previous failure. Remote error bodies and credentials are never displayed.
 

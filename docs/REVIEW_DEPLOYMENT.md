@@ -58,7 +58,7 @@ Invitations, password resets and account recovery produce one-time links for del
 
 For deployments without an organisation IdP, use built-in accounts instead. Keep
 the browser variables in the protected `chat.env` selected by
-`MODELLING_CHAT_ENV_FILE`, and set `MODELLING_BROWSER_TARGET=chat` for Codex/Claude:
+`MODELLING_CHAT_ENV_FILE`, and set `MODELLING_BROWSER_TARGET=chat` for browser AI providers:
 
 ```dotenv
 CHAT_ENABLED=true
@@ -75,7 +75,7 @@ CHAT_MCP_API_KEY=<existing-core-api-key>
 ```
 
 Use the native owner bootstrap described above, then complete account creation and
-MFA in the UI. Users connect Codex or Claude through **My AI connections**. Native
+MFA in the UI. Users connect Codex, Claude or Copilot Studio through **My AI connections**. Native
 human review additionally needs `CHAT_REVIEW_ENABLED=true`, matching review signing
 keys and `GOVERNANCE_LOCAL_IDENTITY_ISSUER` in the core. The optional Copilot Studio
 walkthrough lives in **Help**; a native administrator can copy connection details

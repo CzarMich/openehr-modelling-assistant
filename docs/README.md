@@ -5,6 +5,7 @@
 - [Installation](install.md), [deployment](DEPLOYMENT.md) and [configuration](CONFIGURATION.md)
 - [Claude, Codex and other MCP clients](MCP_CLIENTS.md); [Microsoft clients](MICROSOFT_AGENT_INTEGRATION.md)
 - [Browser chat](BROWSER_CHAT.md), [workspace](BROWSER_WORKSPACE.md) and [human review setup](REVIEW_DEPLOYMENT.md)
+- [Copilot Studio browser setup](COPILOT_BROWSER.md): Microsoft sign-in, published agents, client tools and verification.
 - [Capabilities and limitations](../CAPABILITIES.md), [MCP tools](MCP_TOOLS.md) and [protocol support](MCP_PROTOCOL.md)
 - [Identity and access](IDENTITY_AND_ACCESS.md), [OIDC](OIDC.md) and [security](SECURITY.md)
 

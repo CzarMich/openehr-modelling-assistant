@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { draftAql } from "../src/aql-drafting.mjs";
+import { copilotSession } from "../src/copilot.mjs";
 
 const input = {
     provider: "codex",
@@ -109,4 +110,41 @@ test("drafting rejects query/result injection and never accepts unvalidated prov
         f.calls.map((call) => call.operation),
         ["inspect"],
     );
+});
+
+test("Copilot client tools place a checked AQL draft in the editor without any patient-data operation", async () => {
+    const sent = [];
+    const actions = [
+        { operation: "call", tool: "cdr_query_execute", argumentsJson: "{}" },
+        { operation: "call", tool: "model_paths", argumentsJson: "{}" },
+        {
+            operation: "call",
+            tool: "submit_aql",
+            argumentsJson: JSON.stringify({ query, parameters: { ehr: null }, explanation: "Model-based draft." }),
+        },
+    ];
+    const client = {
+        async *startConversationStreaming() {},
+        async *sendActivityStreaming(activity) {
+            sent.push(activity);
+            if (actions.length)
+                yield {
+                    type: "event",
+                    name: "OpenEhrWorkspace",
+                    replyToId: "step-" + actions.length,
+                    value: actions.shift(),
+                };
+        },
+    };
+    const f = fixture((options) => copilotSession(client, options));
+    f.options.input.provider = "copilot";
+    const draft = await draftAql(f.options);
+    assert.equal(draft.query, query);
+    assert.equal(draft.executed, false);
+    assert.equal(sent[1].value.succeeded, false);
+    assert.deepEqual(
+        f.calls.map((call) => call.operation),
+        ["inspect", "validate"],
+    );
+    assert.doesNotMatch(sent[0].text, /synthetic OPT/);
 });
