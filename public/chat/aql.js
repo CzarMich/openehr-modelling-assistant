@@ -245,7 +245,13 @@ function controls() {
     $("aql-parameters").readOnly = busy;
     $("aql-cancel").hidden = !job;
     $("aql-progress").hidden = !busy;
-    $("aql-ask-assistant").disabled = !ready || busy || !model || !["personal", "enterprise"].includes(model.source);
+    $("aql-ask-assistant").disabled = !ready || busy || !model?.template;
+    $("aql-generate").disabled = !ready || busy || !model || !selectedPaths.size;
+    $("aql-clear-paths").disabled = busy || !selectedPaths.size;
+    $("aql-download-opt").hidden = !model?.template;
+    $("aql-download-web-template").hidden = !model?.webTemplate;
+    $("aql-download-opt").disabled = busy;
+    $("aql-download-web-template").disabled = busy;
     $("cdr-new").disabled = !ready;
 }
 async function work(label, action) {
@@ -392,6 +398,8 @@ $("aql-editor").onscroll = highlight;
 $("aql-parameters").oninput = changed;
 $("aql-connection").onchange = () => {
     changed();
+    $("aql-unassigned").checked = false;
+    safely(refreshLibrary);
     if ($("aql-source").value === "remote") resetModel();
     controls();
 };
@@ -608,7 +616,17 @@ $("aql-clear-results").onclick = () => {
     $("aql-results").hidden = true;
 };
 async function refreshLibrary() {
-    const [saved, history] = await Promise.all([api("saved"), api("history")]);
+    const connectionId = $("aql-connection").value;
+    const libraryId = $("aql-unassigned").checked ? "" : connectionId;
+    const [saved, history] = await Promise.all([
+        api("saved", { connection_id: libraryId }),
+        api("history", { connection_id: connectionId }),
+    ]);
+    if (connectionId !== $("aql-connection").value || libraryId !== ($("aql-unassigned").checked ? "" : connectionId))
+        return;
+    $("aql-library-context").textContent = libraryId
+        ? "Private to your profile in this CDR environment."
+        : "Private queries not yet assigned to a CDR. Load one and save it for the selected environment.";
     $("aql-saved-list").replaceChildren();
     $("aql-history-list").replaceChildren();
     for (const item of saved.items) {
@@ -618,11 +636,12 @@ async function refreshLibrary() {
             button("Load", () => {
                 if (!busy) {
                     $("aql-editor").value = item.query;
+                    $("aql-parameters").value = "{}";
                     changed();
                 }
             }),
             button("Delete", async () => {
-                await api("saved-delete", { id: item.id });
+                await api("saved-delete", { id: item.id, connection_id: libraryId });
                 await refreshLibrary();
             }),
         );
@@ -657,16 +676,22 @@ async function refreshLibrary() {
 $("aql-save-form").onsubmit = (event) => {
     event.preventDefault();
     safely(async () => {
-        await api("saved-save", { name: $("aql-save-name").value, query: $("aql-editor").value });
-        notice("Query saved privately.");
+        await api("saved-save", {
+            name: $("aql-save-name").value,
+            query: $("aql-editor").value,
+            connection_id: $("aql-connection").value,
+        });
+        $("aql-unassigned").checked = false;
+        notice("Query saved privately for this environment.");
         await refreshLibrary();
     });
 };
 $("aql-history-clear").onclick = () =>
     safely(async () => {
-        await api("history-clear");
+        await api("history-clear", { connection_id: $("aql-connection").value });
         await refreshLibrary();
     });
+$("aql-unassigned").onchange = () => safely(refreshLibrary);
 function resetModel() {
     model = null;
     selectedPaths.clear();
@@ -815,7 +840,8 @@ $("aql-inspect").onclick = () =>
                 dependencies.push({ identifier: dependencyIdentifier(dep.content), content: dep.content });
             }
             let content = source.content,
-                format;
+                format,
+                webTemplate;
             const xml = /^\s*(?:<\?xml[^>]*>\s*)?</.test(content);
             const template =
                 /\.oet(?:\.xml)?$|\.adlt$/i.test(source.path) ||
@@ -837,6 +863,7 @@ $("aql-inspect").onclick = () =>
                 }
                 content = compiled.output.content;
                 format = compiled.output.format === "opt14_xml" ? "opt14" : "opt2";
+                webTemplate = compiled.web_template?.content;
             } else format = xml ? "opt14" : /^\s*operational_template\b/i.test(content) ? "opt2" : "adl2";
             const inspection = await api("inspect", {
                 content,
@@ -852,6 +879,7 @@ $("aql-inspect").onclick = () =>
                 content,
                 format,
                 inspection,
+                webTemplate,
                 dependencies: format === "adl2" ? dependencies : [],
                 template: format !== "adl2",
             };
@@ -875,6 +903,15 @@ $("aql-inspect").onclick = () =>
             renderPaths();
         }),
     );
+const modelFilename = () => (model?.inspection.identifier || "template").replace(/[^A-Za-z0-9_-]/g, "_");
+$("aql-download-opt").onclick = () => {
+    if (model?.template && !busy)
+        download(model.content, modelFilename() + ".opt", model.format === "opt14" ? "application/xml" : "text/plain");
+};
+$("aql-download-web-template").onclick = () => {
+    if (model?.webTemplate && !busy)
+        download(model.webTemplate, modelFilename() + ".webtemplate.json", "application/json");
+};
 function renderPaths() {
     $("aql-paths").replaceChildren();
     if (!model) return;
@@ -884,7 +921,13 @@ function renderPaths() {
                 .toLowerCase()
                 .includes(filter),
         );
-    $("aql-paths").append(el("p", matches.length + " matching paths · " + selectedPaths.size + " selected"));
+    const summary = el("p");
+    const selectionChanged = () => {
+        summary.textContent = matches.length + " matching paths · " + selectedPaths.size + " selected";
+        controls();
+    };
+    $("aql-paths").append(summary);
+    selectionChanged();
     for (const path of matches.slice(0, 300)) {
         const row = el("div", undefined, "aql-path-row"),
             label = el("label", undefined, "aql-check"),
@@ -892,12 +935,17 @@ function renderPaths() {
         check.type = "checkbox";
         check.checked = selectedPaths.has(path.path);
         check.onchange = () => {
+            if (busy) {
+                check.checked = selectedPaths.has(path.path);
+                return;
+            }
             if (check.checked && selectedPaths.size >= 30) {
                 check.checked = false;
                 notice("Select up to 30 paths for one query.");
                 return;
             }
             check.checked ? selectedPaths.add(path.path) : selectedPaths.delete(path.path);
+            selectionChanged();
         };
         label.append(
             check,
@@ -928,33 +976,40 @@ function renderPaths() {
 }
 $("aql-path-filter").oninput = renderPaths;
 $("aql-clear-paths").onclick = () => {
+    if (busy) return;
     selectedPaths.clear();
     renderPaths();
+    notice("All selected paths cleared. Select fields to generate a new query; the current query is kept.");
 };
-$("aql-ask-assistant").onclick = () => {
-    if (!model || busy || !["personal", "enterprise"].includes(model.source)) return;
-    const context =
-        model.source === "personal"
-            ? { repository: model.repository, path: model.path, ref: model.ref, tool: "personal_repository_aql" }
-            : { project: model.project, path: model.path, revision: model.revision };
-    $("tab-chat").click();
-    document.dispatchEvent(
-        new CustomEvent("workspace:discuss", {
-            detail: {
-                prompt:
-                    "Help me write AQL for this exact repository model: " +
-                    JSON.stringify(context) +
-                    ". Requested result: " +
-                    ($("aql-intent").value.trim() || "suggest useful fields from this template") +
-                    ". Inspect the real model paths and dependencies, generate the query, and validate it against this same template. Include parameter values. Explain any requested fields that are missing; do not invent paths. Do not execute it or change repository files.",
-            },
+$("aql-ask-assistant").onclick = () =>
+    safely(() =>
+        work("Assistant is drafting and checking your query…", async () => {
+            if (!model) throw new Error("Inspect a model first.");
+            const draft = await workspaceFetch("aql-draft", {
+                provider: $("chat-provider").value,
+                intent: $("aql-intent").value.trim() || "Suggest useful fields from this template",
+                model: { content: model.content, format: model.format },
+                paths: [...selectedPaths],
+            });
+            if (!draft.query || draft.executed !== false)
+                throw new Error("The assistant did not return a query draft.");
+            $("aql-editor").value = formatAql(draft.query);
+            $("aql-parameters").value = JSON.stringify(draft.parameters, null, 2);
+            $("aql-offset").value = 0;
+            changed();
+            renderReport(draft.validation);
+            notice(
+                "Draft placed in the AQL query box. Review it, enter any parameter values, then press Run query. " +
+                    (draft.explanation || ""),
+            );
+            $("aql-editor").scrollIntoView({ block: "center", behavior: "smooth" });
+            $("aql-editor").focus();
         }),
     );
-};
 $("aql-generate").onclick = () =>
     safely(() =>
         work("Generating query from model…", async () => {
-            if (!model) throw new Error("Inspect a model first.");
+            if (!model || !selectedPaths.size) throw new Error("Select at least one model path.");
             const generated = await api("generate", {
                 content: model.content,
                 format: model.format,

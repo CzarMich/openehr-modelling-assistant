@@ -28,3 +28,7 @@ Run `StagedValidationTest` and `ProjectQualityTest` for parser/profile boundarie
 CKM federation tests use mocked HTTP and isolated HTTPS profiles for Basic, session, bearer and API-key methods. CI runs `scripts/test-ckm-container.sh` to verify actual source isolation, redirects, failures and secret rotation. The separately opted-in `scripts/ckm-public-smoke.php --allow-public-network` records public reference acceptance and never reads deployment credentials.
 
 Original preservation is covered by `OriginalRepositoryTest`, `ArtifactTypeInspectorTest` and `ModelImportsTest`; SQLite/PostgreSQL stream filtering prevents provenance records from appearing as reviews. `scripts/test-storage-container.sh` also runs actual MCP import acceptance. `scripts/import-fixture-smoke.py` is read-only unless `--writes` explicitly selects isolated synthetic fixture creation. Browser tests verify exact binary downloads. [Details](MODEL_IMPORTS.md).
+
+## Form compatibility and CDR privacy
+
+The [patient-data boundary](PATIENT_DATA_BOUNDARY.md) maps each enforced boundary to repeatable tests. The native engine build runs an independent SDK Web Template parser against generated OPTs, including a regression for missing description/language metadata. Browser tests verify clear-selection state and direct-to-editor AI drafts with synthetic private-value canaries. Repository-cache tests verify encryption, ownership, revision/credential invalidation, upstream revocation, expiry and bounded storage. No real clinical queries are needed for this acceptance.

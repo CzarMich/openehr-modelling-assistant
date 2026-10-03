@@ -12,13 +12,14 @@ import { Store } from "../src/store.mjs";
 import { createApplication } from "../src/server.mjs";
 import { McpClient } from "../src/mcp.mjs";
 
-async function fixture(t, { provider, mcp, reviews, reviewOnly = false } = {}) {
+async function fixture(t, { provider, mcp, reviews, cdr, reviewOnly = false } = {}) {
     const directory = mkdtempSync(join(tmpdir(), "modelling-chat-"));
     const config = { ...loadConfig(), enabled: true, dataDir: directory, allowWrites: true, maxConcurrentTurns: 3 };
     if (reviewOnly) {
         config.enabled = false;
         config.reviewEnabled = true;
     }
+    if (cdr) config.cdrEnabled = true;
     const auth = new Auth(config),
         store = new Store(directory);
     auth.sessions.set("alice", {
@@ -53,6 +54,7 @@ async function fixture(t, { provider, mcp, reviews, reviewOnly = false } = {}) {
         provider: provider || defaultProvider,
         mcpFactory: () => service,
         ...(reviews ? { reviews } : {}),
+        ...(cdr ? { cdr } : {}),
     });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
@@ -82,6 +84,60 @@ async function fixture(t, { provider, mcp, reviews, reviewOnly = false } = {}) {
     }
     return { request, store, auth, config, calls, origin };
 }
+
+test("AQL drafting requires the browser identity and CSRF and never forwards query or result fields", async (t) => {
+    let providerCalls = 0;
+    const operations = [];
+    const f = await fixture(t, {
+        provider: {
+            run: async ({ identity, messages, callTool }) => {
+                providerCalls++;
+                assert.equal(identity, "issuer\nalice");
+                assert(!JSON.stringify(messages).includes("synthetic-private-canary"));
+                await callTool("submit_aql", {
+                    query: "SELECT m/name/value FROM COMPOSITION m LIMIT 100",
+                    parameters: {},
+                    explanation: "Checked model.",
+                });
+            },
+        },
+        cdr: {
+            request: async (session, operation) => {
+                assert.equal(session.identity, "issuer\nalice");
+                operations.push(operation);
+                if (operation === "inspect")
+                    return {
+                        valid: true,
+                        identifier: "Synthetic",
+                        inspection: { paths: [{ path: "/", rm_type: "COMPOSITION" }] },
+                    };
+                assert.equal(operation, "validate");
+                return { valid: true, ast: { limit: 100 } };
+            },
+        },
+    });
+    const data = {
+        provider: "codex",
+        intent: "Return a model name",
+        model: { content: "synthetic OPT", format: "opt14" },
+        paths: [],
+    };
+    const path = "/chat/api/aql-draft";
+    assert.equal((await f.request(path, { user: null, method: "POST", data })).status, 401);
+    assert.equal((await f.request(path, { method: "POST", data, csrf: false })).status, 403);
+    assert.equal(
+        (await f.request(path, { method: "POST", data: { ...data, results: "synthetic-private-canary" } })).status,
+        400,
+    );
+    assert.equal(providerCalls, 0);
+    assert.deepEqual(operations, []);
+    const response = await f.request(path, { method: "POST", data });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).executed, false);
+    assert.equal(providerCalls, 1);
+    assert.deepEqual(operations, ["inspect", "validate"]);
+    assert.equal(f.store.list("issuer\nalice").length, 0, "drafting never creates a conversation");
+});
 
 test("configuration refuses non-TLS public origins, embedded credentials, missing OIDC and invalid limits", () => {
     assert.throws(() => loadConfig({ CHAT_PUBLIC_URL: "http://example.org" }));

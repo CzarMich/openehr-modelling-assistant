@@ -184,31 +184,50 @@ final class CdrWorkspace
 
     /**
      * @return array<string, mixed> */
-    public function history(): array { return ['items' => $this->store()->read()['history']]; }
+    public function history(?string $connectionId = null): array
+    {
+        return ['items' => array_values(array_filter($this->store()->read()['history'],
+            static fn (array $item): bool => $connectionId === null || ($item['connection_id'] ?? '') === $connectionId))];
+    }
 
     /**
      * @return array<string, mixed> */
-    public function clearHistory(): array { $this->store()->update(static function (array $state): array { $state['history'] = []; return $state; }); return ['deleted' => true]; }
+    public function clearHistory(?string $connectionId = null): array
+    {
+        $this->store()->update(static function (array $state) use ($connectionId): array {
+            $state['history'] = $connectionId === null ? [] : array_values(array_filter($state['history'],
+                static fn (array $item): bool => ($item['connection_id'] ?? '') !== $connectionId));
+            return $state;
+        });
+        return ['deleted' => true];
+    }
 
     /**
      * @return array<string, mixed> */
-    public function saved(?string $id = null): array
+    public function saved(?string $id = null, ?string $connectionId = null): array
     {
         $items = $this->store()->read()['saved'];
+        if ($connectionId !== null) {
+            $items = array_filter($items, static fn (array $item): bool => ($item['connection_id'] ?? '') === $connectionId);
+        }
         if ($id === null) { return ['items' => array_values($items)]; }
         return $items[$id] ?? throw new \RuntimeException('CDR_SAVED_QUERY_NOT_FOUND');
     }
 
     /**
      * @return array<string, mixed> */
-    public function saveQuery(string $name, string $query, ?string $id = null): array
+    public function saveQuery(string $name, string $query, ?string $id = null, ?string $connectionId = null): array
     {
         if (trim($name) === '' || strlen($name) > 100 || strlen($query) > 65536 || trim($query) === ''
             || ($id !== null && !preg_match('/^[a-f0-9]{32}$/D', $id))) { throw new \InvalidArgumentException('CDR_INVALID_SAVED_QUERY'); }
+        if ($connectionId !== null && $connectionId !== '') { $this->connection($connectionId); }
         $item = ['id' => $id ?? bin2hex(random_bytes(16)), 'name' => trim($name), 'query' => $query, 'updated_at' => gmdate('c')];
-        $this->store()->update(static function (array $state) use ($item, $id): array {
+        $this->store()->update(static function (array $state) use (&$item, $id, $connectionId): array {
             if ($id !== null && !isset($state['saved'][$id])) { throw new \RuntimeException('CDR_SAVED_QUERY_NOT_FOUND'); }
             if ($id === null && count($state['saved']) >= 100) { throw new \RuntimeException('CDR_SAVED_QUERY_LIMIT'); }
+            // Old queries remain private and unassigned; do not silently attach them
+            // to whichever centrally configured server happens to be selected next.
+            $item['connection_id'] = $connectionId ?? ($state['saved'][$id]['connection_id'] ?? '');
             $state['saved'][$item['id']] = $item; return $state;
         });
         return $item;
@@ -216,9 +235,14 @@ final class CdrWorkspace
 
     /**
      * @return array<string, mixed> */
-    public function deleteQuery(string $id): array
+    public function deleteQuery(string $id, ?string $connectionId = null): array
     {
-        $this->store()->update(static function (array $state) use ($id): array { unset($state['saved'][$id]); return $state; });
+        $this->store()->update(static function (array $state) use ($id, $connectionId): array {
+            if ($connectionId !== null && ($state['saved'][$id]['connection_id'] ?? '') !== $connectionId) {
+                throw new \RuntimeException('CDR_SAVED_QUERY_NOT_FOUND');
+            }
+            unset($state['saved'][$id]); return $state;
+        });
         return ['deleted' => true];
     }
 }

@@ -34,10 +34,11 @@ final readonly class CdrApi
             if (!is_array($input)) { throw new \InvalidArgumentException('CDR_INVALID_REQUEST'); }
             $operation = substr($request->getUri()->getPath(), strlen('/api/v1/cdr/'));
             $fields = match ($operation) {
-                'connections', 'history', 'history-clear', 'saved' => [],
-                'connection-save' => ['connection'], 'connection-delete', 'connection-test', 'capabilities', 'saved-get', 'saved-delete' => ['id'],
+                'connections' => [], 'history', 'history-clear', 'saved' => ['connection_id'],
+                'connection-save' => ['connection'], 'connection-delete', 'connection-test', 'capabilities' => ['id'],
+                'saved-get', 'saved-delete' => ['id', 'connection_id'],
                 'templates' => ['id', 'identifier'], 'execute', 'execute-metadata' => ['id', 'query', 'parameters', 'fetch', 'offset', 'job'], 'cancel' => ['job'],
-                'saved-save' => ['name', 'query', 'id'], 'validate', 'explain' => ['query', 'templates'],
+                'saved-save' => ['name', 'query', 'id', 'connection_id'], 'validate', 'explain' => ['query', 'templates'],
                 'generate' => ['content', 'format', 'paths', 'dependencies'], 'inspect' => ['content', 'format', 'dependencies'], 'compile' => ['content', 'dependencies'],
                 default => throw new \InvalidArgumentException('CDR_UNKNOWN_OPERATION'),
             };
@@ -49,9 +50,10 @@ final readonly class CdrApi
                 'connection-delete' => $cdr->deleteConnection($input['id'] ?? ''), 'connection-test' => $cdr->test($input['id'] ?? ''),
                 'capabilities' => $cdr->capabilities($input['id'] ?? ''), 'templates' => $cdr->templates($input['id'] ?? '', $input['identifier'] ?? null),
                 'execute', 'execute-metadata' => $cdr->execute($input['id'] ?? '', $input['query'] ?? '', $input['parameters'] ?? [], $input['fetch'] ?? 100, $input['offset'] ?? 0, $input['job'] ?? null, $operation === 'execute'),
-                'cancel' => $cdr->cancel($input['job'] ?? ''), 'history' => $cdr->history(), 'history-clear' => $cdr->clearHistory(),
-                'saved' => $cdr->saved(), 'saved-get' => $cdr->saved($input['id'] ?? ''), 'saved-save' => $cdr->saveQuery($input['name'] ?? '', $input['query'] ?? '', $input['id'] ?? null),
-                'saved-delete' => $cdr->deleteQuery($input['id'] ?? ''),
+                'cancel' => $cdr->cancel($input['job'] ?? ''), 'history' => $cdr->history($input['connection_id'] ?? null), 'history-clear' => $cdr->clearHistory($input['connection_id'] ?? null),
+                'saved' => $cdr->saved(null, $input['connection_id'] ?? null), 'saved-get' => $cdr->saved($input['id'] ?? '', $input['connection_id'] ?? null),
+                'saved-save' => $cdr->saveQuery($input['name'] ?? '', $input['query'] ?? '', $input['id'] ?? null, $input['connection_id'] ?? null),
+                'saved-delete' => $cdr->deleteQuery($input['id'] ?? '', $input['connection_id'] ?? null),
                 'validate' => $this->models->validate($input['query'] ?? '', 'aql', $input['templates'] ?? []),
                 'explain' => $workbench->explain($input['query'] ?? '', $input['templates'] ?? []),
                 'generate' => $workbench->generate($input['content'] ?? '', $input['format'] ?? '', $input['paths'] ?? [], $input['dependencies'] ?? []),

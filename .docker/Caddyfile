@@ -4,7 +4,7 @@
     persist_config off
 }
 :8343 {
-    @ordinary not path /chat/api/conversations/*/attachments /chat/api/cdr/* /api/v1/cdr/*
+    @ordinary not path /chat/api/conversations/*/attachments /chat/api/cdr/* /api/v1/cdr/* /chat/api/aql-draft
     request_body @ordinary {
         max_size {$MAX_REQUEST_BYTES:2097152}
     }
@@ -12,11 +12,11 @@
     request_body @uploads {
         max_size 10485760
     }
-    @cdr path /chat/api/cdr/* /api/v1/cdr/*
+    @cdr path /chat/api/cdr/* /api/v1/cdr/* /chat/api/aql-draft
     request_body @cdr {
         max_size 16777216
     }
-    @model_requests path /chat/api/cdr/* /chat/api/aql-repository/*
+    @model_requests path /chat/api/cdr/* /chat/api/aql-repository/* /chat/api/aql-draft
     handle @model_requests {
         reverse_proxy chat:8350 {
             transport http {

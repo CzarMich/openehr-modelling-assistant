@@ -9,7 +9,7 @@ Hosted Designer import/export and semantic round trips are **UNVERIFIED**. The a
 | Designer `.t.json` | Exact immutable original preservation and protected platform receipt; semantic interpretation unverified | Distinct authoring format; unknown fields must remain in original source |
 | OET import/export | EXTERNAL_ACCEPTANCE_REQUIRED | Do not infer capability from existing files or historical descriptions |
 | Legacy OPT 1.4 XML import/export | EXTERNAL_ACCEPTANCE_REQUIRED | Structural assistant inspection does not prove Designer acceptance |
-| Assistant-generated OPT 1.4 XML | Compiler fixture profile verified; Designer import unverified | Bounded OET/ADL 1.4 adapter; see [limits](LEGACY_OPT_COMPILATION.md) |
+| Assistant-generated OPT 1.4 XML | Compiler profile and SDK Web Template consumer verified; hosted Designer import unverified | Bounded OET/ADL 1.4 adapter; see [limits](LEGACY_OPT_COMPILATION.md) |
 | Assistant-generated ADL 2 OPT | Compiler fixture verified; Designer import unverified | Archie output is OPT 2 ADL, not legacy OPT XML |
 | Languages, bindings, annotations, slots, identifiers and constraint round trip | UNVERIFIED | Requires real export/import/re-export comparison with the actual account/version |
 | Hosted API, automatic push, publish or release | NOT SUPPORTED | No verified supported automation contract or authenticated capability check |

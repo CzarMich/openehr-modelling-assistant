@@ -122,6 +122,13 @@ final readonly class HttpOpenEhrEngine implements OpenEhrEngine
                 throw new \RuntimeException('ENGINE_OUTPUT_HASH_MISMATCH');
             }
         }
+        if (isset($data['web_template'])) {
+            $web = $data['web_template'];
+            if (!is_array($web) || !is_string($web['content'] ?? null) || ($web['format'] ?? null) !== 'web_template_json'
+                || ($web['sha256'] ?? null) !== hash('sha256', $web['content']) || ($data['checks']['web_template_generation'] ?? null) !== 'PASS') {
+                throw new \RuntimeException('ENGINE_OUTPUT_HASH_MISMATCH');
+            }
+        }
         if (!array_is_list($data['findings']) || count($data['findings']) > 1000) {
             throw new \RuntimeException('ENGINE_RESPONSE_INVALID');
         }

@@ -28,10 +28,18 @@ final class LegacyEngine {
         result.put("inspection", Map.of("paths", inspected.paths()));
         result.put("terminology_dependencies", inspected.bindings());
         result.put("compilation_actions", actions);
+        // Qualify generated OPTs with an independent downstream consumer before
+        // calling compilation successful. Existing imported OPT validation keeps
+        // its explicitly structural scope.
+        if (template) {
+            var webTemplate = LegacyWebTemplate.generate(content);
+            if (request.operation().equals("compile/template")) result.put("web_template", webTemplate);
+        }
         if (request.operation().equals("compile/template")) result.put("output", Map.of("format", "opt14_xml", "content", content, "sha256", NativeEngine.sha256(content)));
         result.put("valid", true); result.put("status", "PASS"); result.put("completed_stage", "legacy_profile");
         result.put("checks", Map.of("oet_application", template ? "PASS" : "NOT_EXECUTED", "adl14_parse", template ? "PASS" : "NOT_EXECUTED",
                 "opt14_xml_schema", "PASS", "rm_structure_profile", "PASS", "full_aom_semantics", "NOT_EXECUTED",
+                "web_template_generation", template ? "PASS" : "NOT_EXECUTED",
                 "external_terminology", "NOT_EXECUTED", "clinical_review", "NOT_EXECUTED"));
         result.put("limitations", List.of("Explicit legacy compatibility profile; not complete AOM conformance.",
                 "Unsupported OET/ADL constructs fail closed. No external modeller round-trip qualification is inferred."));

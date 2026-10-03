@@ -133,6 +133,26 @@ export class TemplatePackages {
             content: item.content,
             identicalOnly: true,
         }));
+        const generated = [];
+        // Immutable, content-addressed outputs avoid overwriting manually edited
+        // OPTs or form schemas. The manifest links each build to its exact source.
+        for (const [kind, output] of [
+            ["opt", report.output],
+            ["web_template", report.web_template],
+        ]) {
+            if (typeof output?.content !== "string") continue;
+            if (hash(output.content) !== output.sha256)
+                throw problem("A generated template output failed its integrity check.");
+            const name = relative
+                .split("/")
+                .at(-1)
+                .replace(/\.(?:oet(?:\.xml)?|adlt)$/i, "");
+            const target =
+                kind === "opt"
+                    ? "templates/opt/" + name + "." + output.sha256.slice(0, 12) + ".opt"
+                    : "data/json/web-templates/" + name + "." + output.sha256.slice(0, 12) + ".webtemplate.json";
+            generated.push({ kind, path: target, content: output.content, sha256: output.sha256 });
+        }
         const manifest = {
             schema: "openehr-template-package/1",
             status: "DRAFT",
@@ -148,6 +168,7 @@ export class TemplatePackages {
                     ? { provenance: cached.provenance[item.identifier] }
                     : {}),
             })),
+            generated: generated.map(({ kind, path, sha256 }) => ({ kind, path, sha256 })),
             compilation: {
                 profile: report.profile,
                 outputSha256: report.output.sha256,
@@ -158,6 +179,7 @@ export class TemplatePackages {
         return [
             { path: args.path, content: args.content, expectedRevision: args.expectedRevision },
             ...sources,
+            ...generated.map((item) => ({ path: prefix + item.path, content: item.content, identicalOnly: true })),
             {
                 path:
                     prefix +

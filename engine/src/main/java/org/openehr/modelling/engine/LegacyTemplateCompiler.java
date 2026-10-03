@@ -45,7 +45,7 @@ final class LegacyTemplateCompiler {
         writer = new LegacyOptWriter(language, BuiltinReferenceModels.getMetaModelProvider().getMetaModel(rootSource.model()));
         LegacyOptWriter.phrase(add(writer.template, "language"), rootSource.model().getOriginalLanguage());
         Element description = one(oet, "description", false);
-        if (description != null) description(description);
+        description(description, rootSource, name);
         // OET id is source identity; it is preserved verbatim in the build actions. Only actual UUIDs become OPT uid.
         if (uid.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) value(add(writer.template, "uid"), "value", uid);
         actions.add(Map.of("code", "OET_SOURCE_ID", "location", "/", "value", uid));
@@ -380,11 +380,30 @@ final class LegacyTemplateCompiler {
     private static void common(Element object, String type) {
         value(object, "rm_type_name", type); LegacyOptWriter.interval(add(object, "occurrences"), new MultiplicityInterval(1, 1)); value(object, "node_id", "");
     }
-    private void description(Element source) {
-        // The draft authoring helper emits lifecycle_state alone; retain it as explicit source metadata.
-        closed(source, OET, Set.of("lifecycle_state"), Set.of());
-        String lifecycle = scalar(one(source, "lifecycle_state", true));
+    private void description(Element source, LegacyArchetype root, String name) {
+        String lifecycle = "Initial";
+        Element sourceDetails = null;
+        if (source != null) {
+            closed(source, OET, Set.of("lifecycle_state", "details"), Set.of());
+            lifecycle = scalar(one(source, "lifecycle_state", true));
+            sourceDetails = one(source, "details", false);
+            if (sourceDetails != null) closed(sourceDetails, OET, Set.of("purpose", "use", "misuse"), Set.of());
+        }
         actions.add(Map.of("code", "OET_SOURCE_LIFECYCLE", "location", "/", "value", lifecycle));
+        // The OPT XSD permits no description, but downstream Web Template parsers
+        // need a description with language details. Do not invent a human author.
+        Element description = add(writer.template, "description");
+        value(description, "original_author", "openEHR Modelling Assistant").setAttribute("id", "generator");
+        value(description, "lifecycle_state", lifecycle);
+        Element details = add(description, "details");
+        LegacyOptWriter.phrase(add(details, "language"), root.model().getOriginalLanguage());
+        Element purpose = sourceDetails == null ? null : one(sourceDetails, "purpose", false);
+        value(details, "purpose", purpose == null ? "Draft model: " + name : scalar(purpose));
+        for (String field : List.of("use", "misuse")) {
+            Element value = sourceDetails == null ? null : one(sourceDetails, field, false);
+            if (value != null) value(details, field, scalar(value));
+        }
+        actions.add(Map.of("code", "OPT_DESCRIPTION_FOR_INTEROPERABILITY", "location", "/description", "value", "Template language, lifecycle and purpose; generator attribution only."));
     }
     private static String scalar(Element source) {
         closed(source, OET, Set.of(), Set.of());

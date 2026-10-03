@@ -12,6 +12,8 @@ import { readModels } from "./models.mjs";
 import { PersonalConnections } from "./personal-connections.mjs";
 import { TemplatePackages } from "./template-packages.mjs";
 import { RepositoryModels } from "./repository-models.mjs";
+import { draftAql } from "./aql-drafting.mjs";
+import { ModelCache } from "./model-cache.mjs";
 import { Attachments, UPLOAD_LIMIT } from "./attachments.mjs";
 import { Shares } from "./shares.mjs";
 import { repositoryFolder } from "./repository-paths.mjs";
@@ -78,17 +80,25 @@ export function createApplication(
         rate = new Map(),
         modelReads = new Map(),
         cdrRequests = new Map();
+    const drafts = new Map();
     const uploading = new Set();
     const moving = new Set();
     const projectMoves = new ProjectMoves(store, connections, config.allowWrites);
     store.prune();
     shares.prune();
     TemplatePackages.prune(config);
+    const modelCache = new ModelCache(config);
+    try {
+        modelCache.prune();
+    } catch {
+        /* Cache maintenance must not block startup. */
+    }
     const cleanup = setInterval(() => {
         try {
             store.prune();
             shares.prune();
             TemplatePackages.prune(config);
+            modelCache.prune();
         } catch {
             console.error('{"event":"chat_retention_failed"}');
         }
@@ -237,6 +247,7 @@ export function createApplication(
                 for (const [key, turn] of active)
                     if (key.startsWith(store.owner(identity) + ":")) turn.controller.abort();
                 provider.cancelLogin?.(identity);
+                drafts.get(identity)?.abort();
                 auth.logout(req, res);
                 return json(res, 200, { success: true });
             }
@@ -312,6 +323,49 @@ export function createApplication(
                     const remaining = (cdrRequests.get(identity) || 1) - 1;
                     if (remaining) cdrRequests.set(identity, remaining);
                     else cdrRequests.delete(identity);
+                }
+            }
+            if (path === "/chat/api/aql-draft") {
+                if (req.method !== "POST")
+                    throw Object.assign(new Error("Use the AQL drafting button."), { status: 405 });
+                if (!config.enabled || !config.cdrEnabled)
+                    throw Object.assign(new Error("AQL drafting is not configured."), { status: 503 });
+                if (drafts.has(identity) || drafts.size + active.size >= config.maxConcurrentTurns)
+                    throw Object.assign(new Error("An assistant is busy. Please retry shortly."), { status: 429 });
+                const now = Date.now(),
+                    recent = (rate.get(identity) || []).filter((time) => now - time < 60000);
+                if (recent.length >= 10)
+                    throw Object.assign(new Error("Please wait before drafting another query."), { status: 429 });
+                rate.set(identity, [...recent, now]);
+                const input = await body(
+                    req,
+                    ["provider", "intent", "model", "paths"],
+                    "Only modelling input is accepted for AQL drafting.",
+                    4194304,
+                );
+                if (drafts.has(identity) || drafts.size + active.size >= config.maxConcurrentTurns)
+                    throw Object.assign(new Error("An assistant is busy. Please retry shortly."), { status: 429 });
+                const controller = new AbortController();
+                const closed = () => controller.abort();
+                res.once("close", closed);
+                drafts.set(identity, controller);
+                try {
+                    return json(
+                        res,
+                        200,
+                        await draftAql({
+                            input,
+                            identity,
+                            session,
+                            provider,
+                            cdr,
+                            signal: AbortSignal.any([controller.signal, AbortSignal.timeout(120000)]),
+                        }),
+                    );
+                } finally {
+                    controller.abort();
+                    res.off("close", closed);
+                    drafts.delete(identity);
                 }
             }
             if (path.startsWith("/chat/api/aql-repository/")) {
@@ -456,6 +510,7 @@ export function createApplication(
                         if (key.startsWith(store.owner(identity) + ":") && turn.provider === name)
                             turn.controller.abort();
                     provider.disconnect(identity, name);
+                    drafts.get(identity)?.abort();
                     return json(res, 200, { success: true });
                 }
                 if (req.method === "POST" && name === "codex") {
@@ -761,7 +816,7 @@ export function createApplication(
                 );
             provider.assertConnected?.(identity, conversation.provider || "codex");
             if (active.has(key)) throw Object.assign(new Error("A response is already running."), { status: 409 });
-            if (active.size >= config.maxConcurrentTurns)
+            if (active.size + drafts.size >= config.maxConcurrentTurns)
                 throw Object.assign(new Error("The assistant is busy. Please try again shortly."), { status: 429 });
             if (conversation.messages.length >= 80)
                 throw Object.assign(new Error("Start a new conversation to continue."), { status: 429 });
@@ -1020,6 +1075,7 @@ export function createApplication(
         clearInterval(cleanup);
         provider.close?.();
         for (const turn of active.values()) turn.controller.abort();
+        for (const draft of drafts.values()) draft.abort();
     });
     return server;
 }

@@ -8,6 +8,18 @@ import { PersonalConnections } from "../src/personal-connections.mjs";
 import { RepositoryModels } from "../src/repository-models.mjs";
 import { WorkspaceTools } from "../src/workspace-tools.mjs";
 
+test("warm model packages reuse encrypted immutable archetypes but recheck upstream access", async (t) => {
+    const { models, connections, args, state } = fixture(t);
+    const first = await models.package(args);
+    const before = state.requests.length;
+    const warm = new RepositoryModels(connections, "alice");
+    assert.deepEqual(await warm.package({ ...args, ref }), first);
+    assert.equal(state.requests.length - before, 1, "only authorization/head is fetched on a warm read");
+    assert(warm.cacheHits >= 3);
+    connections.request = async () => ({ status: 403, text: "{}" });
+    await assert.rejects(new RepositoryModels(connections, "alice").package({ ...args, ref }));
+});
+
 const hash = (text) => createHash("sha256").update(text).digest("hex");
 const gitHash = (text) =>
     createHash("sha1")
@@ -145,11 +157,10 @@ test("legacy templates load only their project's archetypes; OPTs need no depend
     const { models, state, args } = fixture(t);
     delete state.files["AKI/data/json/template-packages/aki.oet.json"];
     state.files["Other/archetypes/elsewhere.adl"] = "unrelated";
+    state.files["AKI/templates/opt/aki.opt"] = "compiled";
     const loaded = await models.package(args);
     assert.equal(loaded.dependencySource, "project_folder");
     assert.equal(loaded.dependencies.length, 1);
-    state.files["AKI/templates/opt/aki.opt"] = "compiled";
-    models.trees.clear(); // A separate immutable-revision fixture for this read.
     assert.deepEqual((await models.package({ ...args, path: "AKI/templates/opt/aki.opt" })).dependencies, []);
 });
 

@@ -951,6 +951,10 @@
                             OPTs need no additional dependencies.
                         </p>
                         <p id="aql-model-status" role="status"></p>
+                        <div class="aql-actions">
+                            <button id="aql-download-opt" type="button" hidden>Download compiled template</button>
+                            <button id="aql-download-web-template" type="button" hidden>Download Web Template</button>
+                        </div>
                         <label class="aql-check"
                             ><input id="aql-use-template" type="checkbox" disabled />Validate query paths against this
                             inspected template</label
@@ -969,8 +973,10 @@
                             /></label>
                             <button id="aql-ask-assistant" type="button">Ask assistant to write AQL</button>
                             <p id="aql-assistant-help">
-                                For a repository model, this opens chat with the exact template and revision. Describe
-                                the result you need; the assistant can inspect its fields and check the query.
+                                Inspect a template or OPT to ask the assistant for a checked draft directly in the AQL
+                                query box. It receives model fields and this instruction only. Results, existing queries
+                                and parameter values stay out of the assistant. Keep this instruction free of patient
+                                details.
                             </p>
                             <div id="aql-paths" class="aql-paths"></div>
                         </div>
@@ -1060,6 +1066,10 @@ LIMIT 100</textarea
                     <div class="aql-library">
                         <section class="aql-card">
                             <h2>Saved queries</h2>
+                            <p id="aql-library-context"></p>
+                            <label class="aql-check"
+                                ><input id="aql-unassigned" type="checkbox" />Show my unassigned queries</label
+                            >
                             <form id="aql-save-form" class="aql-actions">
                                 <label>Query name<input id="aql-save-name" maxlength="100" required /></label
                                 ><button id="aql-save" type="submit">Save query</button>
@@ -1201,9 +1211,12 @@ LIMIT 100</textarea
                             <li>
                                 Press <strong>Inspect paths</strong>. Select the fields you need and press
                                 <strong>Generate query</strong>. You can also describe the result you need and press
-                                <strong>Ask assistant to write AQL</strong>. In the editor, type the root alias followed
-                                by / to choose a path from the inspected model. Use <strong>Validate</strong> to check
-                                syntax and the selected template's paths. An incomplete check tells you what still needs
+                                <strong>Ask assistant to write AQL</strong>. Both actions fill the same AQL query box;
+                                review the draft and enter any parameter values before running it.
+                                <strong>Clear selection</strong> clears all selected fields, including ones hidden by
+                                the filter, and keeps your query text. In the editor, type the root alias followed by /
+                                to choose a path from the inspected model. Use <strong>Validate</strong> to check syntax
+                                and the selected template's paths. An incomplete check tells you what still needs
                                 review.
                             </li>
                             <li>
@@ -1222,8 +1235,37 @@ LIMIT 100</textarea
                         <p>
                             Saved queries and history contain query text, not results. Keep patient identifiers in
                             parameters instead of query text. Results are cleared when you sign out or reload; use Copy
-                            or Export only when you want a local copy. Your assistant receives execution counts and
-                            timing, never the clinical result rows.
+                            or Export only when you want a local copy. Each CDR environment has its own query library
+                            within your profile, even with a centrally configured server. Use
+                            <strong>Show my unassigned queries</strong>
+                            for older queries; load and save one to copy it into the selected environment.
+                        </p>
+                        <h3>Why the assistant cannot see CDR patient data</h3>
+                        <p>
+                            The assistant has no tool that can execute a CDR query or read results, history or saved
+                            queries. Those requests are rejected by the server, even if an assistant tries to make them.
+                            Only an authenticated request from the workspace can return results to your screen.
+                            Credentials stay on the server, and result rows and parameter values are not stored in chat
+                            or query history.
+                        </p>
+                        <p>
+                            When you ask for AQL, a separate drafting session receives only the model's fields and your
+                            instruction. It cannot read the query already in the editor. This keeps identifiable records
+                            out of the AI provider while still allowing help with model structure. Automated tests check
+                            blocked execution, separate users and synthetic private values. Content you deliberately
+                            type into an instruction, upload or include in a model is still shared for that task: keep
+                            it free of identifiable patient information.
+                        </p>
+                        <h3>Use a template in a form tool</h3>
+                        <p>
+                            Load the OET and its archetypes, then press <strong>Inspect paths</strong>.
+                            <strong>Download compiled template</strong> provides the OPT;
+                            <strong>Download Web Template</strong>
+                            provides the form schema when available. Choose the format your form tool accepts. An OET
+                            needs its archetypes; it is not a self-contained form schema. Repository template saves
+                            include compiled outputs in separate folders, with a manifest linking the exact files. A
+                            successful form-schema check does not replace clinical review or guarantee every designer's
+                            import support.
                         </p>
                         <p>
                             Each request returns at most 1,000 rows and has a maximum two-minute CDR timeout. To page

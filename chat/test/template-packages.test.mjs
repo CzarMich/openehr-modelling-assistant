@@ -9,6 +9,10 @@ import { WorkspaceTools, PERSONAL_WRITE } from "../src/workspace-tools.mjs";
 import { TemplatePackages } from "../src/template-packages.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+const gitHash = (value) =>
+    createHash("sha1")
+        .update("blob " + Buffer.byteLength(value) + "\0" + value)
+        .digest("hex");
 const source = { identifier: "openEHR-EHR-COMPOSITION.encounter.v1", content: "exact ADL source bytes\n" };
 const envelope = (result) => ({ structuredContent: { success: true, result } });
 function fixture(t, kind = "github") {
@@ -43,7 +47,20 @@ function fixture(t, kind = "github") {
                       });
             }
             if (path.includes("/git/commits/") && !options.method) return result({ tree: { sha: "c".repeat(40) } });
-            if (path.includes("/git/trees/") && !options.method) return result({ tree: [] });
+            if (path.includes("/git/trees/") && !options.method)
+                return result({
+                    tree: Object.entries(state.files).map(([path, content]) => ({
+                        path,
+                        type: "blob",
+                        mode: "100644",
+                        sha: gitHash(content),
+                    })),
+                });
+            if (path.includes("/git/blobs/") && !options.method)
+                return {
+                    status: 200,
+                    text: Object.values(state.files).find((content) => gitHash(content) === path.split("/").at(-1)),
+                };
             if (path.endsWith("/git/trees")) {
                 state.pending = options.body.tree;
                 return result({ sha: "d".repeat(40) }, 201);
@@ -91,6 +108,20 @@ function fixture(t, kind = "github") {
                 dependencies: [{ identifier: source.identifier, sha256: hash(source.content) }],
                 profile: "fixture",
                 output: { sha256: "f".repeat(64) },
+                ...(state.generated
+                    ? {
+                          output: {
+                              format: "opt14_xml",
+                              content: state.generated.opt,
+                              sha256: hash(state.generated.opt),
+                          },
+                          web_template: {
+                              format: "web_template_json",
+                              content: state.generated.web,
+                              sha256: hash(state.generated.web),
+                          },
+                      }
+                    : {}),
             });
         },
     };
@@ -105,6 +136,29 @@ function fixture(t, kind = "github") {
     };
     return { config, directory, state, connections, repo, chat, makeWorkspace, args, mcp };
 }
+
+for (const kind of ["github", "gitlab"])
+    test(`${kind} saves linked form outputs in separate folders without overwriting earlier builds`, async (t) => {
+        const f = fixture(t, kind);
+        f.state.generated = {
+            opt: "<template>" + "x".repeat(1080000) + "</template>",
+            web: '{"templateId":"Synthetic","tree":{}}',
+        };
+        const workspace = f.makeWorkspace();
+        await workspace.tools();
+        const args = { ...f.args, dependencies: [source] };
+        const plan = await workspace.prepareWrite(PERSONAL_WRITE, args);
+        assert.equal(plan.files.length, 5);
+        await workspace.call(PERSONAL_WRITE, args);
+        const manifest = JSON.parse(f.state.files[plan.files.at(-1).path]);
+        assert.equal(manifest.generated.length, 2);
+        for (const output of manifest.generated) {
+            const actual = f.state.files["AKI/" + output.path];
+            assert.equal(hash(actual), output.sha256);
+            assert(output.path.startsWith(output.kind === "opt" ? "templates/opt/" : "data/json/web-templates/"));
+        }
+        assert.equal(f.state.files["AKI/" + manifest.generated[0].path], f.state.generated.opt);
+    });
 
 for (const kind of ["github", "gitlab"])
     test(`${kind} saves the template and exact archetype bytes together with a relative hash manifest`, async (t) => {

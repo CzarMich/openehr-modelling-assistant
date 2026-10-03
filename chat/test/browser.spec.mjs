@@ -1304,7 +1304,7 @@ test("AQL cancellation and model paths remain separate from chat", async ({ page
     await page.screenshot({ path: "/tmp/aql-workspace-desktop.png", fullPage: true });
 });
 
-test("AQL loads a repository template package, completes exact paths and hands its revision to the assistant", async ({
+test("AQL loads a package, clears selections and drafts directly in its sole query editor without leaking results", async ({
     page,
 }) => {
     const ref = "a".repeat(40),
@@ -1362,6 +1362,14 @@ test("AQL loads a repository template package, completes exact paths and hands i
     await expect(page.locator("#aql-model option:checked")).toHaveText(path);
     await page.getByRole("button", { name: "Inspect paths", exact: true }).click();
     await expect(page.locator("#aql-model-status")).toContainText("1 archetypes loaded · package hashes verified");
+    await page.locator("#aql-paths").getByRole("checkbox").nth(1).check();
+    await expect(page.locator("#aql-paths")).toContainText("1 selected");
+    await page.locator("#aql-path-filter").fill("no-match");
+    await page.getByRole("button", { name: "Clear selection", exact: true }).click();
+    await page.locator("#aql-path-filter").fill("");
+    await expect(page.locator("#aql-paths input:checked")).toHaveCount(0);
+    await expect(page.locator("#aql-paths")).toContainText("0 selected");
+    await expect(page.locator("#aql-generate")).toBeDisabled();
     expect(compiled).toBe(true);
     await page.locator("#aql-editor").fill("SELECT m/ FROM COMPOSITION m");
     await page.locator("#aql-editor").evaluate((node) => {
@@ -1386,11 +1394,14 @@ test("AQL loads a repository template package, completes exact paths and hands i
     await page.getByRole("button", { name: "Run query", exact: true }).click();
     await expect(page.locator("#aql-result-body")).toContainText("synthetic-private-result");
     await page.locator("#aql-intent").fill("Return body weight and laboratory results");
+    const drafting = page.waitForRequest("**/chat/api/aql-draft");
     await page.getByRole("button", { name: "Ask assistant to write AQL" }).click();
-    await expect(page.locator("#panel-chat")).toBeVisible();
-    await expect(page.locator("#message")).toHaveValue(new RegExp(ref));
-    await expect(page.locator("#message")).toHaveValue(/personal_repository_aql/);
-    await expect(page.locator("#message")).toHaveValue(/body weight and laboratory results/);
+    const payload = (await drafting).postData();
+    expect(payload).not.toContain("synthetic-private-");
+    expect(JSON.parse(payload).intent).toBe("Return body weight and laboratory results");
+    await expect(page.locator("#panel-aql")).toBeVisible();
+    await expect(page.locator("#aql-editor")).toHaveValue(/SELECT m\/content\[at0001\]/);
+    await expect(page.locator("#aql-notice")).toContainText("Draft placed in the AQL query box");
     await expect(page.locator("#message")).not.toHaveValue(/synthetic-private-/);
     expect(browserErrors).toEqual([]);
 });
