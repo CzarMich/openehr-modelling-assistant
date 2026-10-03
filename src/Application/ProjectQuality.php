@@ -149,6 +149,28 @@ final readonly class ProjectQuality
             $matching[] = $artifact;
         }
         if ($matching === []) {
+            // Stable output paths expose only their current build in listings.
+            // An explicitly historical source can still use its exact saved evidence.
+            try {
+                foreach ($artifacts as $artifact) {
+                    $build = $artifact['metadata']['build'] ?? [];
+                    if (($build['source']['path'] ?? null) !== ($source['path'] ?? null)
+                        || !in_array($artifact['metadata']['kind'] ?? null, ['compiled_opt14', 'compiled_opt2'], true)) {
+                        continue;
+                    }
+                    foreach ($this->repository->history($project, $artifact['path']) as $version) {
+                        $historical = $version['metadata']['build'] ?? [];
+                        if (($version['status'] ?? null) !== 'DELETED' && is_array($historical['source'] ?? null)
+                            && $this->sameSource($historical['source'], $source)) {
+                            $matching[] = $version;
+                        }
+                    }
+                }
+            } catch (\RuntimeException|\InvalidArgumentException) {
+                return ['status' => 'NOT_EXECUTED', 'builds' => [], 'invalid_builds' => [], 'reason' => 'Historical build evidence could not be read.'];
+            }
+        }
+        if ($matching === []) {
             return ['status' => 'NOT_EXECUTED', 'builds' => [], 'invalid_builds' => [], 'reason' => 'No saved compiler build names this exact source revision.'];
         }
         $verified = [];

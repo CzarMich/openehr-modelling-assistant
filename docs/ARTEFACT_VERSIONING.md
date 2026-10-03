@@ -28,7 +28,7 @@ Package schema `openehr-template-package/2` records each archetype's stable path
 
 Older schema `/1` packages remain readable. If their current dependency file has changed or disappeared, the loader locates the commit that last changed that manifest, verifies its exact manifest bytes, and reads the dependency there. Missing or mismatching historical content fails explicitly. Templates without a package manifest still use their project folder and require native compilation; they have no recorded dependency pin to recover.
 
-`template_compile_project` similarly updates a stable `templates/opt/` path and retains source/dependency revisions and hashes in build metadata. Repeating the same build reuses its revision. A manually owned output or an output belonging to a different source is not silently replaced. Immutable imported originals remain protected; updates belong in working artefacts.
+`template_compile_project` similarly updates a stable `templates/opt/` path and retains source/dependency revisions and hashes in build metadata. Repeating the same build reuses its revision. QA for an older source can retrieve the matching build evidence from that output’s history. A manually owned output or an output belonging to a different source is not silently replaced. Immutable imported originals remain protected; updates belong in working artefacts.
 
 ## Modelling and governance
 
