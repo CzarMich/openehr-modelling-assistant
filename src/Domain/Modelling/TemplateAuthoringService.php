@@ -46,13 +46,23 @@ final readonly class TemplateAuthoringService
         $xsi = 'http://www.w3.org/2001/XMLSchema-instance';
         $template = $document->createElementNS($namespace, 'template');
         $document->appendChild($template);
-        foreach (['id' => bin2hex(random_bytes(16)), 'name' => $name] as $key => $value) {
+        $uuid = random_bytes(16);
+        $uuid[6] = chr((ord($uuid[6]) & 0x0f) | 0x40);
+        $uuid[8] = chr((ord($uuid[8]) & 0x3f) | 0x80);
+        $hex = bin2hex($uuid);
+        $identifier = substr($hex, 0, 8) . '-' . substr($hex, 8, 4) . '-' . substr($hex, 12, 4) . '-' . substr($hex, 16, 4) . '-' . substr($hex, 20);
+        foreach (['id' => $identifier, 'name' => $name] as $key => $value) {
             $element = $document->createElementNS($namespace, $key);
             $element->appendChild($document->createTextNode($value));
             $template->appendChild($element);
         }
         $description = $document->createElementNS($namespace, 'description');
         $description->appendChild($document->createElementNS($namespace, 'lifecycle_state', 'Initial'));
+        $details = $document->createElementNS($namespace, 'details');
+        $purpose = $document->createElementNS($namespace, 'purpose');
+        $purpose->appendChild($document->createTextNode('Draft model: ' . $name));
+        $details->appendChild($purpose);
+        $description->appendChild($details);
         $template->appendChild($description);
         $definition = $document->createElementNS($namespace, 'definition');
         $definition->setAttributeNS($xsi, 'xsi:type', 'COMPOSITION');

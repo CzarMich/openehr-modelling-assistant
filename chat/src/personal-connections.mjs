@@ -344,7 +344,7 @@ export class PersonalConnections {
         if (
             !Array.isArray(files) ||
             files.length < 2 ||
-            files.length > 66 ||
+            files.length > 68 ||
             typeof args.message !== "string" ||
             !args.message.trim() ||
             args.message.length > 200 ||
@@ -353,27 +353,23 @@ export class PersonalConnections {
             throw problem("Invalid template package or commit message.");
         const git = new ProjectMoves(null, this, true, signal);
         const base = await git.head(repo);
-        const trees = new Map();
+        const { RepositoryModels } = await import("./repository-models.mjs");
+        const reader = new RepositoryModels(this, identity, signal);
         const verified = [];
         for (const file of files) {
             this.validatePath(file.path);
             if (
                 typeof file.content !== "string" ||
                 !file.content.trim() ||
-                Buffer.byteLength(file.content) > 1024 * 1024
+                Buffer.byteLength(file.content) > 2 * 1024 * 1024
             )
                 throw problem("A template package file is empty or too large.", 413);
-            if (repo.kind === "github") {
-                const entry = await git.githubEntry(repo, base, file.path, trees);
-                if (entry && (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode)))
-                    throw problem("A package path is not a regular repository file.", 409);
-            }
-            const current = await this.readRepository(identity, { repository: repo.id, path: file.path }, signal, base);
+            const current = await reader.get({ repository: repo.id, path: file.path, ref: base });
             if (Object.hasOwn(file, "expectedRevision") && current.revision !== file.expectedRevision)
                 throw problem("Repository changed. Read the current template revision and retry.", 409);
             if (file.identicalOnly && current.exists && current.content !== file.content)
                 throw problem(
-                    "An archetype with different contents already exists at " +
+                    "A dependency or compiled output with different contents already exists at " +
                         file.path +
                         ". Review that revision explicitly before replacing it or choose a different project folder. No files were saved.",
                     409,

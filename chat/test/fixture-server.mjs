@@ -88,9 +88,19 @@ const cdr = {
                 ok: true,
                 checks: { network: "PASS", tls: "PASS", authentication: "PASS", openehr_api: "PASS", aql: "PASS" },
             };
-        if (operation === "saved") return { items: cdrSaved };
+        if (operation === "saved")
+            return {
+                items: cdrSaved.filter(
+                    (item) => input.connection_id === undefined || (item.connection_id || "") === input.connection_id,
+                ),
+            };
         if (operation === "saved-save") {
-            const item = { id: "2".repeat(32), name: input.name, query: input.query };
+            const item = {
+                id: String(cdrSaved.length + 2).padStart(32, "0"),
+                name: input.name,
+                query: input.query,
+                connection_id: input.connection_id || "",
+            };
             cdrSaved.push(item);
             return item;
         }
@@ -98,9 +108,16 @@ const cdr = {
             cdrSaved = cdrSaved.filter((item) => item.id !== input.id);
             return { deleted: true };
         }
-        if (operation === "history") return { items: cdrHistory };
+        if (operation === "history")
+            return {
+                items: cdrHistory.filter(
+                    (item) => input.connection_id === undefined || item.connection_id === input.connection_id,
+                ),
+            };
         if (operation === "history-clear") {
-            cdrHistory = [];
+            cdrHistory = cdrHistory.filter(
+                (item) => input.connection_id !== undefined && item.connection_id !== input.connection_id,
+            );
             return { deleted: true };
         }
         if (operation === "cancel") {
@@ -109,6 +126,7 @@ const cdr = {
         }
         const validation = {
             valid: !input.query?.includes("invalid"),
+            ast: { limit: 100 },
             status: input.query?.includes("invalid") ? "FAIL" : "PASS",
             profile: input.templates?.length ? "AQL_TEMPLATE_PATHS" : "AQL_SYNTAX",
             findings: [],
@@ -153,6 +171,7 @@ const cdr = {
                 throw Object.assign(new Error("Query cancelled."), { status: 503, code: "CDR_CANCELLED" });
             cdrHistory.unshift({
                 id: input.job,
+                connection_id: input.id,
                 query: input.query,
                 parameter_names: Object.keys(input.parameters),
                 at: new Date().toISOString(),
@@ -194,6 +213,14 @@ auth.login = async (req, res) => {
 };
 const provider = {
     run: async ({ messages, images, tools, callTool, onEvent, signal }) => {
+        if (tools.some((tool) => tool.name === "submit_aql")) {
+            await callTool("submit_aql", {
+                query: "SELECT m/content[at0001] FROM COMPOSITION m LIMIT 100",
+                parameters: {},
+                explanation: "Model fields checked.",
+            });
+            return "Draft submitted.";
+        }
         const text = messages.at(-1).content.split("\n\nWorkspace context")[0];
         if (["choose intended use", "choose multiple"].includes(text)) {
             const { structuredContent: choice } = await callTool("request_user_choice", {

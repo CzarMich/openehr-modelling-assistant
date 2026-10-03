@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { problem } from "./personal-http.mjs";
 import { ProjectMoves } from "./project-moves.mjs";
 import { modelResult } from "./template-packages.mjs";
+import { ModelCache } from "./model-cache.mjs";
 
 const revision = (value) => typeof value === "string" && /^[a-f0-9]{40,64}$/.test(value);
 const digest = (value) => createHash("sha256").update(value).digest("hex");
@@ -20,6 +21,20 @@ export class RepositoryModels {
         this.trees = new Map();
         this.files = new Map();
         this.cachedBytes = 0;
+        this.cache = new ModelCache(connections.config);
+        this.authorised = new Map();
+        this.cacheHits = 0;
+    }
+    async authorise(repo) {
+        // Recheck upstream access once per operation, including immutable cache
+        // hits. A removed connection or revoked token must not unlock old sources.
+        this.connections.get(this.identity, repo.id);
+        if (!this.authorised.has(repo.id))
+            this.authorised.set(
+                repo.id,
+                this.retry(() => this.git.head(repo)),
+            );
+        return this.authorised.get(repo.id);
     }
     async retry(read) {
         try {
@@ -36,12 +51,31 @@ export class RepositoryModels {
         if (repo.kind === "ckm") throw problem("Choose a Git repository.");
         if (args.ref !== undefined && !revision(args.ref))
             throw problem("Reload the source to choose an exact revision.");
-        return { repo, ref: args.ref || (await this.retry(() => this.git.head(repo))) };
+        const head = await this.authorise(repo);
+        return { repo, ref: args.ref || head };
     }
     async tree(repo, ref) {
         const key = repo.id + ":" + ref;
-        if (!this.trees.has(key)) this.trees.set(key, this.readTree(repo, ref));
+        await this.authorise(repo);
+        if (!this.trees.has(key))
+            this.trees.set(
+                key,
+                this.cached(repo, ref, "tree", "", () => this.readTree(repo, ref)),
+            );
         return this.trees.get(key);
+    }
+    async cached(repo, ref, kind, path, read) {
+        this.signal?.throwIfAborted();
+        const key = this.cache.key(this.identity, repo, ref, kind, path);
+        const hit = this.cache.get(key);
+        if (hit !== null) {
+            this.cacheHits++;
+            return hit;
+        }
+        const value = await read();
+        this.signal?.throwIfAborted();
+        this.cache.set(key, value);
+        return value;
     }
     async readTree(repo, ref) {
         if (repo.kind === "github") {
@@ -80,10 +114,11 @@ export class RepositoryModels {
         return { items, ref, windowed: false };
     }
     async read(args, ref) {
-        this.connections.get(this.identity, args.repository);
+        const repo = this.connections.get(this.identity, args.repository);
+        await this.authorise(repo);
         const key = JSON.stringify([args.repository, ref, args.path]);
         if (this.files.has(key)) return this.files.get(key);
-        const file = await this.readFile(args, ref);
+        const file = await this.cached(repo, ref, "file", args.path, () => this.readFile(args, ref));
         const bytes = Buffer.byteLength(file.content || "");
         if (this.files.size < 130 && this.cachedBytes + bytes <= 8 * 1024 * 1024) {
             this.files.set(key, file);
@@ -108,22 +143,25 @@ export class RepositoryModels {
             throw problem("The selected repository model is not a regular file or exceeds 2 MiB.", 413);
         // Raw Git blobs avoid base64 expansion and keep large archetype reads
         // small. Verify the Git object hash as well as any package SHA-256.
-        const response = await this.retry(() =>
-            this.connections.remote(this.connections.repoApi(repo), "/git/blobs/" + entry.sha, {
-                signal: this.signal,
-                accept: "application/vnd.github.raw+json",
-                timeoutMs: 45000,
-            }),
-        );
-        if (response.status !== 200) throw problem("The model blob is unavailable at this revision.", 404);
-        const content = response.text;
-        if (Buffer.byteLength(content) > 2097152) throw problem("The repository model exceeds 2 MiB.", 413);
-        const objectHash = createHash(entry.sha.length === 40 ? "sha1" : "sha256")
-            .update("blob " + Buffer.byteLength(content) + "\0")
-            .update(content)
-            .digest("hex");
-        if (objectHash !== entry.sha)
-            throw problem("The downloaded model did not match its Git revision. Reload the source and retry.", 503);
+        const content = await this.cached(repo, entry.sha, "blob", "", async () => {
+            const response = await this.retry(() =>
+                this.connections.remote(this.connections.repoApi(repo), "/git/blobs/" + entry.sha, {
+                    signal: this.signal,
+                    accept: "application/vnd.github.raw+json",
+                    timeoutMs: 45000,
+                }),
+            );
+            if (response.status !== 200) throw problem("The model blob is unavailable at this revision.", 404);
+            const content = response.text;
+            if (Buffer.byteLength(content) > 2097152) throw problem("The repository model exceeds 2 MiB.", 413);
+            const objectHash = createHash(entry.sha.length === 40 ? "sha1" : "sha256")
+                .update("blob " + Buffer.byteLength(content) + "\0")
+                .update(content)
+                .digest("hex");
+            if (objectHash !== entry.sha)
+                throw problem("The downloaded model did not match its Git revision. Reload the source and retry.", 503);
+            return content;
+        });
         return { exists: true, revision: entry.sha, path, repository, content };
     }
     async get(args) {

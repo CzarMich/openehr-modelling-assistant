@@ -10,7 +10,7 @@ export class CodexProvider {
     constructor(config) {
         this.config = config;
     }
-    async run({ messages, images = [], tools, callTool, onEvent, signal, onLogin }) {
+    async run({ messages, images = [], tools, callTool, onEvent, signal, onLogin, instructions = INSTRUCTIONS }) {
         let imageDirectory;
         const env = { PATH: process.env.PATH, LANG: "C.UTF-8", TOKIO_WORKER_THREADS: "2", RAYON_NUM_THREADS: "2" };
         for (const key of [
@@ -206,7 +206,7 @@ export class CodexProvider {
                 ephemeral: true,
                 approvalPolicy: "never",
                 sandbox: "read-only",
-                baseInstructions: INSTRUCTIONS,
+                baseInstructions: instructions,
                 dynamicTools: tools.map((t) => ({
                     type: "function",
                     name: t.name,

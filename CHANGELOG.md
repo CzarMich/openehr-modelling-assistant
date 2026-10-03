@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Template compilation verifies form-schema generation and saves linked OPT and Web Template outputs.
+
+- AQL drafts directly into its editor, fixes path selection, isolates environment libraries and caches archetype packages.
+
 - CDR patient-data guards restrict execution and query-library access to the user’s AQL workspace.
 
 - AQL loads repository template packages automatically and offers exact-path completion and grounded assistant query drafting.

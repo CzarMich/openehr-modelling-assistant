@@ -5,6 +5,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LegacyTemplateCompilerTest {
+    @Test void compiledTemplateCanGenerateWebTemplateForForms() throws Exception {
+        var result = new LegacyTemplateCompiler().compile(NativeEngineTest.fixture("legacy/nested.oet"), dependencies());
+        var document = (org.openehr.schemas.v1.TemplateDocument) org.openehr.schemas.v1.TemplateDocument.type.getTypeSystem().parse(
+                SafeXml.parse(result.content()), org.openehr.schemas.v1.TemplateDocument.type, new org.apache.xmlbeans.XmlOptions());
+        var opt = document.getTemplate();
+        var form = org.ehrbase.openehr.sdk.webtemplate.parser.OPTParser.parse(opt);
+        assertEquals(opt.getTemplateId().getValue(), form.getTemplateId());
+        assertTrue(form.getLanguages().contains(form.getDefaultLanguage()));
+        assertFalse(form.getTree().getChildren().isEmpty());
+    }
     static List<Request.Dependency> dependencies() throws Exception {
         List<Request.Dependency> dependencies = new ArrayList<>();
         for (String fixture : List.of("composition", "section", "evaluation", "cluster")) {

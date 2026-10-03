@@ -16,7 +16,7 @@ export class ClaudeProvider {
         this.config = config;
         this.client = client;
     }
-    async run({ messages, images = [], tools, callTool, onEvent, signal }) {
+    async run({ messages, images = [], tools, callTool, onEvent, signal, instructions = INSTRUCTIONS }) {
         let remaining = 60000,
             text = "";
         const history = [];
@@ -46,7 +46,7 @@ export class ClaudeProvider {
                 {
                     model: this.config.claudeModel,
                     max_tokens: 8192,
-                    system: INSTRUCTIONS,
+                    system: instructions,
                     messages: history,
                     tools: tools.map((tool) => ({
                         name: tool.name,

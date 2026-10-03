@@ -143,4 +143,41 @@ final class CdrWorkspaceTest extends TestCase
         $value = json_decode(file_get_contents($file), true); $value['tag'] = base64_encode(str_repeat('0', 16)); file_put_contents($file, json_encode($value));
         $this->expectExceptionMessage('CDR_STORAGE_INVALID'); $this->workspace->connections();
     }
+    public function test_central_cdr_does_not_share_query_libraries_between_users_or_environments(): void
+    {
+        file_put_contents($this->directory . '/central.json', json_encode(['connections' => [
+            ['allowedActors' => ['alice', 'bob'], 'connection' => ['id' => 'central', 'name' => 'Central', 'baseUrl' => 'https://cdr.example']],
+            ['allowedActors' => ['alice', 'bob'], 'connection' => ['id' => 'training', 'name' => 'Training', 'baseUrl' => 'https://training.example']],
+        ]]));
+        $settings = new Settings(['CDR_ENABLED' => 'true', 'CDR_DATA_DIR' => $this->directory,
+            'CDR_ENCRYPTION_KEY_FILE' => $this->directory . '/key', 'CDR_CONNECTIONS_FILE' => $this->directory . '/central.json']);
+        $workspace = fn (Actor $actor): CdrWorkspace => new CdrWorkspace($settings, $actor,
+            $this->createStub(CdrAdapter::class), new CdrConnection(new CdrHttp($settings)), $this->models);
+        $alice = $workspace($this->actor);
+        $bob = $workspace(new Actor('bob', 'shared', [], true, 'interactive_local'));
+        self::assertCount(2, $alice->connections()['items']); self::assertCount(2, $bob->connections()['items']);
+        $one = $alice->saveQuery('Private central query', 'SELECT e FROM EHR e LIMIT 10', connectionId: 'central');
+        $two = $alice->saveQuery('Training query', 'SELECT e FROM EHR e LIMIT 5', connectionId: 'training');
+        $old = $alice->saveQuery('Unassigned query', 'SELECT e FROM EHR e LIMIT 1');
+        self::assertSame([$one], $alice->saved(connectionId: 'central')['items']);
+        self::assertSame([$two], $alice->saved(connectionId: 'training')['items']);
+        self::assertSame([$old], $alice->saved(connectionId: '')['items']);
+        self::assertSame([], $bob->saved(connectionId: 'central')['items']);
+        foreach ([$bob, $workspace(new Actor('alice', str_repeat('b', 64), [], true, 'interactive_local'))] as $other) {
+            try { $other->saved($one['id']); self::fail('Another identity read a saved query'); }
+            catch (\RuntimeException $error) { self::assertSame('CDR_SAVED_QUERY_NOT_FOUND', $error->getMessage()); }
+        }
+        try { $alice->deleteQuery($one['id'], 'training'); self::fail('Cross-environment deletion accepted'); }
+        catch (\RuntimeException $error) { self::assertSame('CDR_SAVED_QUERY_NOT_FOUND', $error->getMessage()); }
+        self::assertSame($one, $alice->saved($one['id']));
+        $store = new EncryptedCdrStore($settings, $this->actor);
+        $store->update(static function (array $state): array {
+            $state['history'] = [['connection_id' => 'central', 'query' => 'central query'], ['connection_id' => 'training', 'query' => 'training query']];
+            return $state;
+        });
+        self::assertCount(1, $alice->history('central')['items']);
+        $alice->clearHistory('central');
+        self::assertSame('training query', $alice->history()['items'][0]['query']);
+        self::assertSame([], $bob->history()['items']);
+    }
 }
