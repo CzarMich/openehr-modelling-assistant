@@ -1,6 +1,6 @@
 # ADR-0024: Private CDR client and model-aware AQL workspace
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
