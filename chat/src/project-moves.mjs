@@ -15,6 +15,7 @@ export function recordArtifact(chat, args, receipt = {}) {
         repository: args.repository,
         path: args.path,
         folder: chat.folder || "",
+        ...(receipt.dependency === true ? { dependency: true } : {}),
         ...(sha(receipt.commit) ? { commit: receipt.commit } : {}),
         ...(["github", "gitlab"].includes(receipt.repository?.kind)
             ? {
@@ -34,13 +35,17 @@ export function recordArtifact(chat, args, receipt = {}) {
 }
 
 export class ProjectMoves {
-    constructor(store, connections, allowWrites) {
+    constructor(store, connections, allowWrites, signal) {
         this.store = store;
         this.connections = connections;
         this.allowWrites = allowWrites;
+        this.signal = signal;
     }
     async remote(repo, suffix, options = {}) {
-        const response = await this.connections.remote(this.connections.repoApi(repo), suffix, options);
+        const response = await this.connections.remote(this.connections.repoApi(repo), suffix, {
+            signal: this.signal,
+            ...options,
+        });
         if (response.status === 404) throw problem("Repository, branch or file not found.", 404);
         try {
             return JSON.parse(response.text);
@@ -120,7 +125,7 @@ export class ProjectMoves {
             );
         const moves = [];
         if (project) {
-            if (artifacts.length > 50) throw problem("A chat move supports up to 50 saved artefacts.", 413);
+            if (artifacts.length > 200) throw problem("A chat move supports up to 200 saved artefacts.", 413);
             for (const artifact of artifacts) {
                 const source = this.connections.get(identity, artifact.repository);
                 if (!repository || source.url !== repository.url || source.branch !== repository.branch)
@@ -134,7 +139,13 @@ export class ProjectMoves {
                 const to = this.connections.validatePath(
                     artifactPath((target.folder ? target.folder + "/" : "") + relative, target.folder || ""),
                 );
-                if (to !== artifact.path) moves.push({ from: artifact.path, to, repository: artifact.repository });
+                if (to !== artifact.path)
+                    moves.push({
+                        from: artifact.path,
+                        to,
+                        repository: artifact.repository,
+                        ...(artifact.dependency ? { retainSource: true } : {}),
+                    });
             }
         }
         if (new Set(moves.map((move) => move.to)).size !== moves.length)
@@ -180,6 +191,7 @@ export class ProjectMoves {
                     if (destination.exists)
                         throw problem("A file already exists at " + move.to + ". Choose another folder.", 409);
                     move.revision = source.revision;
+                    if (move.retainSource) move.content = source.content;
                 }
             }
         }
@@ -241,7 +253,9 @@ export class ProjectMoves {
                             body: {
                                 base_tree: parent.tree.sha,
                                 tree: plan.moves.flatMap((move) => [
-                                    { path: move.from, mode: move.mode, type: "blob", sha: null },
+                                    ...(move.retainSource
+                                        ? []
+                                        : [{ path: move.from, mode: move.mode, type: "blob", sha: null }]),
                                     { path: move.to, mode: move.mode, type: "blob", sha: move.revision },
                                 ]),
                             },
@@ -276,10 +290,11 @@ export class ProjectMoves {
                             force: false,
                             commit_message: "Move modelling artefacts to " + (plan.folder || "repository root"),
                             actions: plan.moves.map((move) => ({
-                                action: "move",
-                                previous_path: move.from,
+                                action: move.retainSource ? "create" : "move",
                                 file_path: move.to,
-                                last_commit_id: move.revision,
+                                ...(move.retainSource
+                                    ? { content: move.content }
+                                    : { previous_path: move.from, last_commit_id: move.revision }),
                             })),
                         },
                     });
@@ -301,6 +316,7 @@ export class ProjectMoves {
                       repository: plan.repository,
                       path: move.to,
                       folder: plan.folder,
+                      ...(artifact.dependency ? { dependency: true } : {}),
                       destination: plan.destination,
                       ...(plan.commit ? { commit: plan.commit } : {}),
                   }

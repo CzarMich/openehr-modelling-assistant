@@ -395,7 +395,7 @@ $("move-chat-form").onsubmit = (event) => {
                     ":";
                 for (const move of movePreview.moves) {
                     const item = document.createElement("li");
-                    item.textContent = move.from + " → " + move.to;
+                    item.textContent = move.from + " → " + move.to + (move.retainSource ? " (keep shared source)" : "");
                     list.append(item);
                 }
                 preview.replaceChildren(intro, list);
@@ -678,6 +678,19 @@ function approval(event, target) {
     const p = document.createElement("p");
     p.textContent =
         "Confirm the exact repository action below before it is executed. This does not approve a model for clinical use.";
+    const files = event.arguments?.package?.files;
+    if (files) {
+        p.textContent =
+            "Save this template with its archetypes and dependency manifest in one commit. Identical files are reused. This remains a draft requiring clinical review.";
+        const list = document.createElement("ul");
+        list.className = "package-files";
+        for (const file of files) {
+            const item = document.createElement("li");
+            item.textContent = file.path + (file.changed ? " · save" : " · already present");
+            list.append(item);
+        }
+        card.append(list);
+    }
     const pre = document.createElement("pre");
     pre.textContent = JSON.stringify(event.arguments, null, 2);
     const yes = document.createElement("button");
@@ -707,7 +720,8 @@ function approval(event, target) {
     };
     yes.onclick = () => decide(true);
     no.onclick = () => decide(false);
-    card.append(h, p, pre, yes, no);
+    card.prepend(h, p);
+    card.append(pre, yes, no);
     target.article.append(card);
     card.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }

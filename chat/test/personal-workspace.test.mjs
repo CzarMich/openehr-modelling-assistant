@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
+import { createHash } from "node:crypto";
 import { request as httpRequest } from "node:http";
 import { fileURLToPath } from "node:url";
 import * as XLSX from "xlsx";
@@ -304,7 +305,7 @@ test("selecting a personal repository disables enterprise writes and cannot publ
     );
 });
 
-async function httpFixture(t, run, requestRemote) {
+async function httpFixture(t, run, requestRemote, callModel) {
     const f = setup(t, requestRemote);
     const auth = new Auth(f.config);
     for (const identity of ["alice", "bob"])
@@ -315,7 +316,9 @@ async function httpFixture(t, run, requestRemote) {
         provider: { run },
         mcpFactory: () => ({
             tools: async () => [],
-            call: async () => ({ structuredContent: { sources: { default: "https://ckm.example/rest/" } } }),
+            call:
+                callModel ||
+                (async () => ({ structuredContent: { sources: { default: "https://ckm.example/rest/" } } })),
         }),
     });
     server.connectionsCheckingInterval = 100;
@@ -460,7 +463,7 @@ test("personal commits wait for owner confirmation of the destination and cannot
         async ({ callTool }) => {
             await callTool("personal_repository_save", {
                 repository,
-                path: "AKI/templates/oet/renal.oet",
+                path: "AKI/templates/opt/renal.opt",
                 content: "<draft/>",
                 message: "Draft renal model",
                 expectedRevision: null,
@@ -521,7 +524,7 @@ test("personal commits wait for owner confirmation of the destination and cannot
         const saved = f.store.get("alice", conversation.id);
         assert.equal(saved.artifacts?.length || 0, approved ? 1 : 0);
         if (approved) {
-            assert.equal(saved.artifacts[0].path, "AKI/templates/oet/renal.oet");
+            assert.equal(saved.artifacts[0].path, "AKI/templates/opt/renal.opt");
             assert.deepEqual(saved.artifacts[0].destination, {
                 kind: "github",
                 url: "https://github.com/alice/models",
@@ -875,7 +878,7 @@ test("personal save discovery explains readiness and enforces the folder before 
     );
     const args = {
         repository,
-        path: "AKI/templates/oet/AKI_clinical_documentation.oet",
+        path: "AKI/templates/opt/AKI_clinical_documentation.opt",
         content: "<template/>",
         expectedRevision: null,
         message: "Synthetic draft",
@@ -886,7 +889,7 @@ test("personal save discovery explains readiness and enforces the folder before 
     const status = (await workspace.call("personal_connections", {})).structuredContent.saveStatus;
     assert.equal(status.ready, true);
     assert.equal(status.folder, "AKI");
-    for (const path of ["Other/template.oet", "AKI-other/template.oet", "AKI/../template.oet", ".github/draft.xml"])
+    for (const path of ["Other/template.opt", "AKI-other/template.opt", "AKI/../template.opt", ".github/draft.xml"])
         await assert.rejects(workspace.call("personal_repository_save", { ...args, path }));
     await assert.rejects(workspace.call("model_artifact_save", args), /Enterprise writes are unavailable/);
     assert.equal(remote.length, 0);
@@ -894,7 +897,7 @@ test("personal save discovery explains readiness and enforces the folder before 
     assert.equal(saved.saved, true);
     assert.equal(saved.path, args.path);
     assert.equal(remote.filter((call) => call.method).length, 1);
-    assert.match(remote.at(-1).url, /\/contents\/AKI\/templates\/oet\/AKI_clinical_documentation.oet$/);
+    assert.match(remote.at(-1).url, /\/contents\/AKI\/templates\/opt\/AKI_clinical_documentation.opt$/);
     conversation.repository = f.connections.add("alice", {
         ...github,
         url: "https://github.com/alice/public",
@@ -998,4 +1001,84 @@ test("a failed request using an old token cannot invalidate a concurrently updat
     );
     assert.equal(f.connections.get("alice", connection.id).token, "replacement-token");
     assert.equal(f.connections.list("alice")[0].lastWriteError, undefined);
+});
+
+test("template package confirmation covers all files and records every dependency for project moves", async (t) => {
+    let repository,
+        writes = 0;
+    const dependency = { identifier: "openEHR-EHR-COMPOSITION.fixture.v1", content: "exact fixture ADL" };
+    const f = await httpFixture(
+        t,
+        async ({ callTool }) => {
+            await callTool("personal_repository_save", {
+                repository,
+                path: "AKI/templates/oet/fixture.oet",
+                content: "<template/>",
+                expectedRevision: null,
+                message: "Save package",
+                dependencies: [dependency],
+            });
+            return "Complete package saved";
+        },
+        undefined,
+        async () => ({
+            structuredContent: {
+                success: true,
+                result: {
+                    valid: true,
+                    dependencies: [
+                        {
+                            identifier: dependency.identifier,
+                            sha256: createHash("sha256").update(dependency.content).digest("hex"),
+                        },
+                    ],
+                    output: { sha256: "a".repeat(64) },
+                },
+            },
+        }),
+    );
+    repository = f.connections.add("alice", github).connection.id;
+    f.connections.prepareBundle = async (identity, args, files) => {
+        assert.equal(identity, "alice");
+        return {
+            base: "b".repeat(40),
+            files: files.map((file) => ({ ...file, dependency: !!file.identicalOnly, changed: true })),
+        };
+    };
+    f.connections.publish = async (identity, args, signal, plan) => {
+        assert.equal(plan.files.length, 3);
+        writes++;
+        return { saved: true, commit: "c".repeat(40), files: plan.files };
+    };
+    const conversation = f.store.create("alice", "codex", repository, null, "AKI");
+    const base = "conversations/" + conversation.id;
+    const response = await f.request(base + "/messages", {
+        method: "POST",
+        data: { content: "Save this template package" },
+    });
+    const reader = response.body.getReader();
+    let text = "",
+        approval;
+    while (!approval) {
+        const part = await reader.read();
+        assert.equal(part.done, false);
+        text += new TextDecoder().decode(part.value);
+        approval = text
+            .split("\n")
+            .filter((line) => line.startsWith("data: "))
+            .map((line) => JSON.parse(line.slice(6)))
+            .find((event) => event.type === "approval");
+    }
+    assert.equal(writes, 0);
+    assert.equal(approval.arguments.package.files.length, 3);
+    assert.equal(approval.arguments.package.files[1].content, dependency.content);
+    await f.request(base + "/approval", { method: "POST", data: { id: approval.id, approved: true } });
+    while (!(await reader.read()).done) {
+        /* Wait for the server to persist all receipts. */
+    }
+    assert.equal(writes, 1);
+    const saved = f.store.get("alice", conversation.id);
+    assert.equal(saved.artifacts.length, 3);
+    assert.equal(saved.artifacts.find((item) => item.path.endsWith(".adl")).dependency, true);
+    assert.doesNotMatch(JSON.stringify(saved.messages), /exact fixture ADL/);
 });

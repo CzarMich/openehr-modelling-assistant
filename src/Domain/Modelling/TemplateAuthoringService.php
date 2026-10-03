@@ -98,6 +98,7 @@ final readonly class TemplateAuthoringService
         }
         $warnings[] = 'Human modelling and clinical review are required before release.';
         return ['format' => 'oet', 'status' => 'DRAFT', 'content' => $xml,
+            'dependencies' => $nativeDependencies,
             'provenance' => $sources, 'validation' => $this->validator->validate($xml, 'oet'),
             'placements' => $placements === [] ? 'direct_entries_only' : 'explicit_nested_paths',
             'native_compile_check' => $nativeCheck, 'clinical_approval' => false, 'warnings' => $warnings];

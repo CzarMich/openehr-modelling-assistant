@@ -1,8 +1,9 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { join } from "node:path";
 import { ProviderStore } from "./provider-store.mjs";
 import { httpsUrl, personalRequest, problem } from "./personal-http.mjs";
 import { artifactKind } from "./repository-paths.mjs";
+import { ProjectMoves } from "./project-moves.mjs";
 
 const canonical = (value) => {
     const url = httpsUrl(value);
@@ -312,11 +313,13 @@ export class PersonalConnections {
             repository: visible(repo),
         };
     }
-    async publish(identity, args, signal) {
+    async publish(identity, args, signal, plan = null) {
         if (!this.config.allowWrites) throw problem("Repository writes are disabled.", 403);
         const repo = this.get(identity, args.repository);
         try {
-            return await this.publishFile(identity, args, signal, repo);
+            return plan
+                ? await this.publishBundle(identity, args, signal, repo, plan)
+                : await this.publishFile(identity, args, signal, repo);
         } catch (error) {
             if (error.accessCode) {
                 const items = this.all(identity),
@@ -333,6 +336,159 @@ export class PersonalConnections {
             }
             throw error;
         }
+    }
+    async prepareBundle(identity, args, files, signal) {
+        const repo = this.get(identity, args.repository);
+        if (!this.config.allowWrites || repo.kind === "ckm" || !repo.token)
+            throw problem("Choose a repository with a personal write token.", 403);
+        if (
+            !Array.isArray(files) ||
+            files.length < 2 ||
+            files.length > 66 ||
+            typeof args.message !== "string" ||
+            !args.message.trim() ||
+            args.message.length > 200 ||
+            new Set(files.map((file) => file.path)).size !== files.length
+        )
+            throw problem("Invalid template package or commit message.");
+        const git = new ProjectMoves(null, this, true, signal);
+        const base = await git.head(repo);
+        const trees = new Map();
+        const verified = [];
+        for (const file of files) {
+            this.validatePath(file.path);
+            if (
+                typeof file.content !== "string" ||
+                !file.content.trim() ||
+                Buffer.byteLength(file.content) > 1024 * 1024
+            )
+                throw problem("A template package file is empty or too large.", 413);
+            if (repo.kind === "github") {
+                const entry = await git.githubEntry(repo, base, file.path, trees);
+                if (entry && (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode)))
+                    throw problem("A package path is not a regular repository file.", 409);
+            }
+            const current = await this.readRepository(identity, { repository: repo.id, path: file.path }, signal, base);
+            if (Object.hasOwn(file, "expectedRevision") && current.revision !== file.expectedRevision)
+                throw problem("Repository changed. Read the current template revision and retry.", 409);
+            if (file.identicalOnly && current.exists && current.content !== file.content)
+                throw problem(
+                    "An archetype with different contents already exists at " +
+                        file.path +
+                        ". Review that revision explicitly before replacing it or choose a different project folder. No files were saved.",
+                    409,
+                );
+            verified.push({
+                path: file.path,
+                content: file.content,
+                revision: current.revision,
+                dependency: file.identicalOnly === true,
+                changed: !current.exists || current.content !== file.content,
+                sha256: createHash("sha256").update(file.content).digest("hex"),
+            });
+        }
+        return {
+            base,
+            repository: repo.id,
+            destination: { kind: repo.kind, url: repo.url, branch: repo.branch },
+            files: verified,
+        };
+    }
+    async publishBundle(identity, args, signal, repo, plan) {
+        if (
+            repo.kind === "ckm" ||
+            !repo.token ||
+            plan.repository !== repo.id ||
+            Object.entries(plan.destination).some(([key, value]) => repo[key] !== value)
+        )
+            throw problem("The repository selection changed. Review the template package again.", 409);
+        const git = new ProjectMoves(null, this, true, signal);
+        if ((await git.head(repo)) !== plan.base)
+            throw problem("Repository changed after the package was prepared. Review it again before saving.", 409);
+        let commit = plan.base;
+        const changed = plan.files.filter((file) => file.changed);
+        if (changed.length && repo.kind === "github") {
+            const previous = await git.remote(repo, "/git/commits/" + plan.base);
+            if (!/^[a-f0-9]{40}$/.test(previous.tree?.sha || "")) throw problem("Invalid repository tree.", 503);
+            const tree = await git.remote(repo, "/git/trees", {
+                method: "POST",
+                body: {
+                    base_tree: previous.tree.sha,
+                    tree: changed.map((file) => ({
+                        path: file.path,
+                        mode: "100644",
+                        type: "blob",
+                        content: file.content,
+                    })),
+                },
+            });
+            if (!/^[a-f0-9]{40}$/.test(tree.sha || "")) throw problem("Invalid repository tree.", 503);
+            const created = await git.remote(repo, "/git/commits", {
+                method: "POST",
+                body: {
+                    message: args.message,
+                    tree: tree.sha,
+                    parents: [plan.base],
+                },
+            });
+            if (!/^[a-f0-9]{40}$/.test(created.sha || "")) throw problem("Invalid repository commit.", 503);
+            const updated = await git.remote(
+                repo,
+                "/git/refs/heads/" + repo.branch.split("/").map(encodeURIComponent).join("/"),
+                {
+                    method: "PATCH",
+                    body: { sha: created.sha, force: false },
+                },
+            );
+            if (updated.object?.sha !== created.sha)
+                throw problem(
+                    "The repository did not confirm the package commit. Read the branch before retrying.",
+                    503,
+                );
+            commit = created.sha;
+        } else if (changed.length) {
+            const created = await git.remote(repo, "/repository/commits", {
+                method: "POST",
+                body: {
+                    branch: repo.branch,
+                    start_sha: plan.base,
+                    force: false,
+                    commit_message: args.message,
+                    // Include unchanged dependencies with revision guards as well, so
+                    // a concurrent dependency edit cannot enter the compiled package.
+                    actions: plan.files.map((file) => ({
+                        action: file.revision ? "update" : "create",
+                        file_path: file.path,
+                        content: file.content,
+                        ...(file.revision ? { last_commit_id: file.revision } : {}),
+                    })),
+                },
+            });
+            if (!/^[a-f0-9]{40,64}$/.test(created.id || "")) throw problem("Invalid repository commit.", 503);
+            commit = created.id;
+        }
+        const url = (path) =>
+            repo.url +
+            (repo.kind === "github" ? "/blob/" : "/-/blob/") +
+            encodeURIComponent(repo.branch) +
+            "/" +
+            path.split("/").map(encodeURIComponent).join("/");
+        return {
+            saved: true,
+            repository: visible(repo),
+            path: args.path,
+            status: "DRAFT",
+            clinicalApproval: false,
+            commit,
+            url: url(args.path),
+            files: plan.files.map(({ path, sha256, changed, dependency }) => ({
+                path,
+                sha256,
+                changed,
+                dependency,
+                url: url(path),
+            })),
+        };
     }
     async publishFile(identity, args, signal, repo) {
         if (repo.kind === "ckm" || !repo.token) throw problem("Choose a repository with a personal write token.");

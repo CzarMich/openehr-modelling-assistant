@@ -3,6 +3,7 @@ import { problem } from "./personal-http.mjs";
 import { requireFolderPath, artifactPath, ARTIFACT_FOLDERS } from "./repository-paths.mjs";
 import { CHOICE_TOOL } from "./choices.mjs";
 import { CDR_TOOLS } from "./cdr.mjs";
+import { TemplatePackages, isTemplate, modelResult } from "./template-packages.mjs";
 
 const string = { type: "string" };
 const tool = (name, description, properties, required = Object.keys(properties)) => ({
@@ -15,6 +16,8 @@ export const PERSONAL_WRITE = "personal_repository_save";
 export class WorkspaceTools {
     constructor(mcp, connections, attachments, identity, conversation, signal, allowWrites, cdr = null) {
         Object.assign(this, { mcp, connections, attachments, identity, conversation, signal, allowWrites, cdr });
+        this.packages = new TemplatePackages(connections.config, identity, conversation.id);
+        this.prepared = new WeakMap();
     }
     async tools() {
         const core = await this.mcp.tools();
@@ -63,10 +66,25 @@ export class WorkspaceTools {
                         content: string,
                         message: string,
                         expectedRevision: { type: ["string", "null"] },
+                        dependencies: {
+                            type: "array",
+                            maxItems: 64,
+                            items: {
+                                type: "object",
+                                additionalProperties: false,
+                                required: ["identifier", "content"],
+                                properties: { identifier: string, content: string },
+                            },
+                        },
                     },
+                    ["repository", "path", "content", "message", "expectedRevision"],
                 ),
             );
         this.personal = personal;
+        const save = personal.find((item) => item.name === PERSONAL_WRITE);
+        if (save)
+            save.description +=
+                " OET and ADL template saves always include their exact archetypes under archetypes/ and a hash manifest, atomically in one commit. Exact template_build_oet or template_compile inputs from this conversation are retained automatically; otherwise supply dependencies (identifier/content). Native compilation must pass. Existing identical archetypes are reused; differing content is a conflict requiring explicit review, never silently overwritten.";
         return [
             ...core.filter(
                 (t) =>
@@ -133,6 +151,16 @@ export class WorkspaceTools {
             JSON.stringify(context);
         return copy;
     }
+    async prepareWrite(name, args) {
+        this.checkWrite(name, args);
+        if (name !== PERSONAL_WRITE || !isTemplate(args.path)) return null;
+        if (this.prepared.has(args)) return this.prepared.get(args);
+        const files = await this.packages.files(args, this.conversation.folder || "", this.mcp);
+        for (const file of files) this.checkWrite(name, { ...args, path: file.path });
+        const plan = await this.connections.prepareBundle(this.identity, args, files, this.signal);
+        this.prepared.set(args, plan);
+        return plan;
+    }
     async call(name, args) {
         if (CDR_TOOLS.has(name)) {
             if (!this.cdr) throw problem("CDR connections are unavailable.");
@@ -142,7 +170,27 @@ export class WorkspaceTools {
         const personal = this.personal.find((t) => t.name === name);
         if (!personal) {
             this.checkWrite(name, args);
-            return this.mcp.call(name, args);
+            const response = await this.mcp.call(name, args);
+            this.packages.capture(name, args, response);
+            const result = name === "template_build_oet" ? modelResult(response) : null;
+            if (result?.dependencies) {
+                const value = {
+                    success: true,
+                    error: null,
+                    result: {
+                        ...result,
+                        dependencies: result.dependencies.map(({ content, ...metadata }) => metadata),
+                        repository_package:
+                            "Exact archetype bytes are retained privately for this conversation. Save this unchanged template with personal_repository_save; its dependencies are included automatically.",
+                    },
+                };
+                return {
+                    ...response,
+                    structuredContent: value,
+                    content: [{ type: "text", text: JSON.stringify(value) }],
+                };
+            }
+            return response;
         }
         if (
             !args ||
@@ -168,7 +216,8 @@ export class WorkspaceTools {
             result = await this.connections.readRepository(this.identity, args, this.signal);
         else if (name === PERSONAL_WRITE) {
             this.checkWrite(name, args);
-            result = await this.connections.publish(this.identity, args, this.signal);
+            const plan = await this.prepareWrite(name, args);
+            result = await this.connections.publish(this.identity, args, this.signal, plan);
         }
         return { structuredContent: result, content: [{ type: "text", text: JSON.stringify(result) }] };
     }

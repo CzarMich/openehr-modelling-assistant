@@ -1430,6 +1430,15 @@ LIMIT 100</textarea
                             chat organises its saved models into these folders.
                         </p>
                         <p>
+                            Saving an OET template also saves the exact archetypes it uses in
+                            <code>archetypes/</code>, together in one commit. The confirmation lists every file. A
+                            dependency manifest under <code>data/json/template-packages/</code> links the template to
+                            its archetypes and records their file hashes. Identical archetypes are reused; conflicting
+                            versions or missing dependencies stop the save. When moving a chat, shared archetypes are
+                            copied into the new project so other templates keep working. Import the template together
+                            with its archetypes into your modelling tool.
+                        </p>
+                        <p>
                             Depending on your task, the assistant can also prepare queries, example data, terminology
                             tables, design notes and reports. Each supported file type has its own folder:
                         </p>

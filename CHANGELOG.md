@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Template saves bundle exact archetype dependencies and a hash manifest in one repository commit.
+
 - Chat identifies GitHub token and branch restrictions and guides users through restoring repository access.
 
 - AQL workspace validates template paths and queries private CDR connections with protected credentials.
