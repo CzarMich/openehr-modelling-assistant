@@ -938,7 +938,7 @@
                             ><button id="aql-inspect" type="button">Inspect paths</button>
                         </div>
                         <label id="aql-dependencies-label"
-                            >Exact dependencies for OET / ADL templates<select
+                            >Additional dependencies (optional)<select
                                 id="aql-dependencies"
                                 multiple
                                 size="4"
@@ -946,8 +946,9 @@
                             ></select
                         ></label>
                         <p id="aql-dependency-help">
-                            Select the archetypes used by this template. For local files, load them together with the
-                            template. Compiled OPTs need no additional dependencies.
+                            Repository templates load their saved archetypes automatically. For local files, load the
+                            template and its archetypes together. Use this selection for older custom layouts. Compiled
+                            OPTs need no additional dependencies.
                         </p>
                         <p id="aql-model-status" role="status"></p>
                         <label class="aql-check"
@@ -960,6 +961,17 @@
                                 <button id="aql-generate" type="button">Generate query from selected paths</button
                                 ><button id="aql-clear-paths" type="button">Clear selection</button>
                             </div>
+                            <label
+                                >What should the query return?<input
+                                    id="aql-intent"
+                                    placeholder="For example, laboratory results and body weight for this template"
+                                    maxlength="1000"
+                            /></label>
+                            <button id="aql-ask-assistant" type="button">Ask assistant to write AQL</button>
+                            <p id="aql-assistant-help">
+                                For a repository model, this opens chat with the exact template and revision. Describe
+                                the result you need; the assistant can inspect its fields and check the query.
+                            </p>
                             <div id="aql-paths" class="aql-paths"></div>
                         </div>
                     </details>
@@ -973,14 +985,23 @@
                                 autocapitalize="off"
                                 autocomplete="off"
                                 aria-describedby="aql-editor-help"
+                                aria-controls="aql-suggestion-list"
                             >
 SELECT e/ehr_id/value
 FROM EHR e
 LIMIT 100</textarea
                             >
                         </div>
+                        <div id="aql-suggestions" class="aql-suggestions" hidden>
+                            <p id="aql-suggestion-help">
+                                Paths from the inspected model · use ↑ ↓ and Enter, or click. Escape closes suggestions.
+                            </p>
+                            <div id="aql-suggestion-list" role="listbox" aria-label="Model path suggestions"></div>
+                        </div>
                         <p id="aql-editor-help">
-                            Validate and format without an AI connection. Run sends the query only to your selected CDR.
+                            After inspecting a model, type its root alias followed by / for path suggestions, or press
+                            Ctrl+Space. Validate and format without an AI connection. Run sends the query only to your
+                            selected CDR.
                         </p>
                         <details>
                             <summary>Parameters and pagination</summary>
@@ -1174,14 +1195,16 @@ LIMIT 100</textarea
                             <li>Open <strong>AQL workspace</strong>. Choose the CDR environment you want to query.</li>
                             <li>
                                 Expand <strong>Model paths and template validation</strong> to load a model from your
-                                repository, your computer or the selected CDR. OET and ADL templates need their exact
-                                archetype dependencies; an OPT is already compiled.
+                                repository, your computer or the selected CDR. Repository templates load their saved
+                                archetypes automatically. For local templates, select their archetype files too.
                             </li>
                             <li>
                                 Press <strong>Inspect paths</strong>. Select the fields you need and press
-                                <strong>Generate query</strong>, or write your own AQL. Use <strong>Validate</strong> to
-                                check syntax and the selected template's paths. An incomplete check tells you what still
-                                needs review.
+                                <strong>Generate query</strong>. You can also describe the result you need and press
+                                <strong>Ask assistant to write AQL</strong>. In the editor, type the root alias followed
+                                by / to choose a path from the inspected model. Use <strong>Validate</strong> to check
+                                syntax and the selected template's paths. An incomplete check tells you what still needs
+                                review.
                             </li>
                             <li>
                                 Press <strong>Run query</strong>. View the returned rows as a table, JSON or the raw
@@ -1191,8 +1214,10 @@ LIMIT 100</textarea
                         </ol>
                         <p>
                             Formatting, inspection and validation do not need a Codex or Claude connection. Query
-                            execution needs a CDR connection with permission to read data. A valid path does not prove
-                            that a query is clinically appropriate or supported by every CDR.
+                            execution needs a CDR connection with permission to read data. Only you can run a query; the
+                            AI assistant cannot execute it, see its results or read your query history and saved
+                            queries. Do not paste patient information into chat. A valid path does not prove that a
+                            query is clinically appropriate or supported by every CDR.
                         </p>
                         <p>
                             Saved queries and history contain query text, not results. Keep patient identifiers in

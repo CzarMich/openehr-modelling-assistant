@@ -11,6 +11,7 @@ import { CdrClient, CDR_OPERATIONS } from "./cdr.mjs";
 import { readModels } from "./models.mjs";
 import { PersonalConnections } from "./personal-connections.mjs";
 import { TemplatePackages } from "./template-packages.mjs";
+import { RepositoryModels } from "./repository-models.mjs";
 import { Attachments, UPLOAD_LIMIT } from "./attachments.mjs";
 import { Shares } from "./shares.mjs";
 import { repositoryFolder } from "./repository-paths.mjs";
@@ -316,13 +317,29 @@ export function createApplication(
             if (path.startsWith("/chat/api/aql-repository/")) {
                 if (req.method !== "POST") throw Object.assign(new Error("Read-only model access."), { status: 405 });
                 const operation = path.slice("/chat/api/aql-repository/".length);
-                const input = await body(req, ["repository", "path"]);
-                const signal = AbortSignal.timeout(30000);
-                if (operation === "list")
-                    return json(res, 200, await connections.listRepository(identity, input, signal));
-                if (operation === "get")
-                    return json(res, 200, await connections.readRepository(identity, input, signal));
-                throw Object.assign(new Error("Not found."), { status: 404 });
+                if (!["list", "get", "package"].includes(operation))
+                    throw Object.assign(new Error("Not found."), { status: 404 });
+                const input = await body(req, ["repository", "path", "ref"]);
+                const count = modelReads.get(identity) || 0;
+                if (count >= 2 || [...modelReads.values()].reduce((a, b) => a + b, 0) >= 16)
+                    throw Object.assign(new Error("Repository requests are busy. Please retry shortly."), {
+                        status: 429,
+                    });
+                modelReads.set(identity, count + 1);
+                const controller = new AbortController();
+                const closed = () => controller.abort();
+                res.once("close", closed);
+                const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(120000)]);
+                try {
+                    const models = new RepositoryModels(connections, identity, signal);
+                    return json(res, 200, await models[operation](input));
+                } finally {
+                    controller.abort();
+                    res.off("close", closed);
+                    const remaining = (modelReads.get(identity) || 1) - 1;
+                    if (remaining) modelReads.set(identity, remaining);
+                    else modelReads.delete(identity);
+                }
             }
             if (path === "/chat/api/reviews" || path.startsWith("/chat/api/reviews/")) {
                 if (!config.reviewEnabled)

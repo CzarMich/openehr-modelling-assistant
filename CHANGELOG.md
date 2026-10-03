@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- CDR patient-data guards restrict execution and query-library access to the user’s AQL workspace.
+
+- AQL loads repository template packages automatically and offers exact-path completion and grounded assistant query drafting.
+
 - Template saves bundle exact archetype dependencies and a hash manifest in one repository commit.
 
 - Chat identifies GitHub token and branch restrictions and guides users through restoring repository access.

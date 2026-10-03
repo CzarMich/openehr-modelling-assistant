@@ -78,15 +78,21 @@ async function workspaceFetch(path, input) {
     const response = await fetch(
         "/chat/api/" + path,
         input === undefined
-            ? {}
+            ? { signal: AbortSignal.timeout(125000) }
             : {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrf },
                   body: JSON.stringify(input),
+                  signal: AbortSignal.timeout(125000),
               },
     );
     if (response.status === 401) document.dispatchEvent(new Event("workspace:session-expired"));
-    const data = await response.json();
+    let data;
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error("The model source returned an incomplete response. Reload the source and retry.");
+    }
     if (identityGeneration !== generation || !session?.authenticated)
         throw new Error("The sign-in session changed. Please retry.");
     if (!response.ok) throw new Error(data.error || "The model source is unavailable.");
@@ -227,6 +233,7 @@ function controls() {
         "aql-generate",
         "aql-files",
         "aql-model",
+        "aql-dependencies",
         "aql-source",
         "aql-project",
         "aql-connection",
@@ -238,6 +245,7 @@ function controls() {
     $("aql-parameters").readOnly = busy;
     $("aql-cancel").hidden = !job;
     $("aql-progress").hidden = !busy;
+    $("aql-ask-assistant").disabled = !ready || busy || !model || !["personal", "enterprise"].includes(model.source);
     $("cdr-new").disabled = !ready;
 }
 async function work(label, action) {
@@ -291,7 +299,95 @@ function changed() {
         $("aql-result-summary").textContent =
             "Previous query results · the query or environment has changed. Run again to refresh.";
 }
-$("aql-editor").oninput = changed;
+$("aql-editor").oninput = () => {
+    changed();
+    suggestPaths();
+};
+let completions = [],
+    completionIndex = 0,
+    completionRange = null;
+function hideSuggestions() {
+    completions = [];
+    completionRange = null;
+    $("aql-suggestions").hidden = true;
+    $("aql-suggestion-list").replaceChildren();
+    $("aql-editor").removeAttribute("aria-activedescendant");
+}
+function chooseSuggestion(index) {
+    if (!completionRange || !completions[index] || busy) return;
+    const editor = $("aql-editor");
+    editor.setRangeText(completions[index], completionRange.start, completionRange.end, "end");
+    hideSuggestions();
+    changed();
+    editor.focus();
+}
+function selectSuggestion(index) {
+    completionIndex = (index + completions.length) % completions.length;
+    for (const [i, option] of [...$("aql-suggestion-list").children].entries())
+        option.setAttribute("aria-selected", String(i === completionIndex));
+    $("aql-editor").setAttribute("aria-activedescendant", "aql-suggestion-" + completionIndex);
+    $("aql-suggestion-" + completionIndex)?.scrollIntoView({ block: "nearest" });
+}
+function suggestPaths(force = false) {
+    hideSuggestions();
+    if (!model || busy) return;
+    const editor = $("aql-editor"),
+        caret = editor.selectionStart;
+    if (caret !== editor.selectionEnd) return;
+    const before = editor.value.slice(0, caret);
+    // Only complete a root-model alias. Nested CONTAINS aliases need relative
+    // paths and must not be given incorrect composition-relative suggestions.
+    const root = model.inspection.inspection.paths.find((path) => path.path === "/")?.rm_type;
+    const alias =
+        editor.value.match(
+            new RegExp("\\b(?:FROM|CONTAINS)\\s+" + root + "\\s+([A-Za-z_][A-Za-z0-9_]*)\\b", "i"),
+        )?.[1] || (/\b(?:FROM|CONTAINS)\b/i.test(editor.value) ? null : "m");
+    const token = before.match(/([A-Za-z_][A-Za-z0-9_]*)(\/[^\s,;()]*)?$/);
+    if (!token || token[1] !== alias || (!token[2] && !force)) return;
+    // Do not offer model paths inside quoted literals or line comments.
+    const withoutLiterals = before.replace(/'(?:''|\\.|[^'])*'|"(?:""|\\.|[^"])*"|--[^\n]*/g, " ");
+    if (/["']/.test(withoutLiterals) || /--[^\n]*$/.test(before)) return;
+    const prefix = token[2] || "/";
+    completions = [...new Set(model.inspection.inspection.paths.map((path) => path.path))]
+        .filter((path) => path !== "/" && path.toLowerCase().startsWith(prefix.toLowerCase()))
+        .slice(0, 12)
+        .map((path) => alias + path);
+    if (!completions.length) return;
+    completionRange = { start: caret - token[0].length, end: caret };
+    completions.forEach((path, index) => {
+        const label = model.inspection.inspection.paths.find((item) => alias + item.path === path)?.label;
+        const option = el("div", (label ? label + " · " : "") + path);
+        option.id = "aql-suggestion-" + index;
+        option.setAttribute("role", "option");
+        option.onmousedown = (event) => {
+            event.preventDefault();
+            chooseSuggestion(index);
+        };
+        $("aql-suggestion-list").append(option);
+    });
+    $("aql-suggestions").hidden = false;
+    selectSuggestion(0);
+}
+$("aql-editor").addEventListener("keydown", (event) => {
+    if (event.ctrlKey && event.code === "Space") {
+        event.preventDefault();
+        suggestPaths(true);
+        return;
+    }
+    if (!completions.length) return;
+    if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+        event.preventDefault();
+        selectSuggestion(completionIndex + (event.key === "ArrowDown" ? 1 : -1));
+    } else if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        chooseSuggestion(completionIndex);
+    } else if (event.key === "Escape") {
+        event.preventDefault();
+        hideSuggestions();
+    } else if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) hideSuggestions();
+});
+$("aql-editor").addEventListener("blur", hideSuggestions);
+$("aql-editor").addEventListener("click", () => suggestPaths());
 $("aql-editor").onscroll = highlight;
 $("aql-parameters").oninput = changed;
 $("aql-connection").onchange = () => {
@@ -578,10 +674,14 @@ function resetModel() {
     $("aql-use-template").disabled = true;
     $("aql-path-controls").hidden = true;
     $("aql-model-status").textContent = "";
+    hideSuggestions();
     changed();
 }
 function setModelFiles(files) {
     resetModel();
+    files = [...files].sort(
+        (a, b) => Number(/\.(adl|adls|adlf)$/i.test(a.path)) - Number(/\.(adl|adls|adlf)$/i.test(b.path)),
+    );
     modelFiles = files;
     $("aql-model").replaceChildren(new Option("Choose a model", ""));
     $("aql-dependencies").replaceChildren();
@@ -658,7 +758,7 @@ $("aql-source-refresh").onclick = () =>
                                 item.type === "blob" &&
                                 /\.(opt(?:\.xml)?|oet|adlt|adl|adls|adlf|xml)$/i.test(item.path),
                         )
-                        .map((item) => ({ ...item, source: "personal", repository: source })),
+                        .map((item) => ({ ...item, ref: data.ref, source: "personal", repository: source })),
                 );
                 if (data.windowed)
                     notice(
@@ -667,7 +767,7 @@ $("aql-source-refresh").onclick = () =>
             }
         }),
     );
-async function readModel(file) {
+async function readModel(file, includePackage = false) {
     if (file.content !== undefined) return file;
     if (file.source === "remote")
         return { ...file, ...(await api("templates", { id: file.connection, identifier: file.identifier })) };
@@ -683,10 +783,14 @@ async function readModel(file) {
                     encodeURIComponent(file.revision),
             )),
         };
-    const data = await workspaceFetch("aql-repository/get", { repository: file.repository, path: file.path });
+    const data = await workspaceFetch("aql-repository/" + (includePackage ? "package" : "get"), {
+        repository: file.repository,
+        path: file.path,
+        ref: file.ref,
+    });
     if (!data.exists) throw new Error("The selected file no longer exists. Reload the source.");
     // Git tree revisions identify blobs; the read response identifies the pinned bytes independently.
-    return { ...file, ...data, source: "personal" };
+    return { ...file, ...data, repository: file.repository, source: "personal" };
 }
 function dependencyIdentifier(content) {
     const match = content.match(/\bopenEHR-[A-Za-z0-9_.-]+/);
@@ -697,10 +801,15 @@ $("aql-inspect").onclick = () =>
     safely(() =>
         work("Inspecting exact model paths…", async () => {
             if ($("aql-model").value === "") throw new Error("Choose a model first.");
-            const source = await readModel(modelFiles[Number($("aql-model").value)]);
+            const source = await readModel(modelFiles[Number($("aql-model").value)], true);
             if (typeof source.content !== "string") throw new Error("The source did not return a text model.");
-            const dependencies = [];
-            for (const option of $("aql-dependencies").selectedOptions) {
+            const dependencies = (source.dependencies || []).map(({ identifier, content }) => ({
+                identifier,
+                content,
+            }));
+            // A manifest is authoritative. Manual choices are for local models
+            // and older layouts that do not have a saved dependency package.
+            for (const option of dependencies.length ? [] : $("aql-dependencies").selectedOptions) {
                 if (option.value === $("aql-model").value) continue;
                 const dep = await readModel(modelFiles[Number(option.value)]);
                 dependencies.push({ identifier: dependencyIdentifier(dep.content), content: dep.content });
@@ -708,8 +817,19 @@ $("aql-inspect").onclick = () =>
             let content = source.content,
                 format;
             const xml = /^\s*(?:<\?xml[^>]*>\s*)?</.test(content);
-            const template = /\.oet$|\.adlt$/i.test(source.path) || /^\s*template\b/i.test(content);
+            const template =
+                /\.oet(?:\.xml)?$|\.adlt$/i.test(source.path) ||
+                /^\s*template\b/i.test(content) ||
+                (xml &&
+                    new DOMParser().parseFromString(content, "application/xml").documentElement.namespaceURI ===
+                        "openEHR/v1/Template");
             if (template) {
+                if (!dependencies.length && source.source === "local_file") {
+                    for (const file of modelFiles.filter((item) => /\.(adl|adls|adlf)$/i.test(item.path)))
+                        dependencies.push({ identifier: dependencyIdentifier(file.content), content: file.content });
+                }
+                $("aql-progress-text").textContent =
+                    "Compiling template with " + dependencies.length + " exact archetypes…";
                 const compiled = await api("compile", { content, dependencies });
                 if (!compiled.valid || !compiled.output) {
                     renderReport(compiled);
@@ -740,7 +860,13 @@ $("aql-inspect").onclick = () =>
                 (source.source === "remote" ? "Remote CDR model" : "Model") +
                 " · " +
                 source.path +
-                (source.revision ? " · revision " + source.revision : "") +
+                (source.ref
+                    ? " · commit " + source.ref.slice(0, 12)
+                    : source.revision
+                      ? " · revision " + source.revision
+                      : "") +
+                (template ? " · " + dependencies.length + " archetypes loaded" : "") +
+                (source.dependencySource === "verified_manifest" ? " · package hashes verified" : "") +
                 " · SHA-256 " +
                 inspection.content_sha256;
             $("aql-use-template").checked = model.template;
@@ -754,7 +880,9 @@ function renderPaths() {
     if (!model) return;
     const filter = $("aql-path-filter").value.toLowerCase(),
         matches = model.inspection.inspection.paths.filter((path) =>
-            (path.path + " " + path.rm_type).toLowerCase().includes(filter),
+            (path.path + " " + path.rm_type + " " + (path.label || "") + " " + (path.description || ""))
+                .toLowerCase()
+                .includes(filter),
         );
     $("aql-paths").append(el("p", matches.length + " matching paths · " + selectedPaths.size + " selected"));
     for (const path of matches.slice(0, 300)) {
@@ -771,7 +899,10 @@ function renderPaths() {
             }
             check.checked ? selectedPaths.add(path.path) : selectedPaths.delete(path.path);
         };
-        label.append(check, document.createTextNode(path.path + " · " + path.rm_type));
+        label.append(
+            check,
+            document.createTextNode((path.label ? path.label + " · " : "") + path.path + " · " + path.rm_type),
+        );
         row.append(
             label,
             button("Insert", () => {
@@ -799,6 +930,26 @@ $("aql-path-filter").oninput = renderPaths;
 $("aql-clear-paths").onclick = () => {
     selectedPaths.clear();
     renderPaths();
+};
+$("aql-ask-assistant").onclick = () => {
+    if (!model || busy || !["personal", "enterprise"].includes(model.source)) return;
+    const context =
+        model.source === "personal"
+            ? { repository: model.repository, path: model.path, ref: model.ref, tool: "personal_repository_aql" }
+            : { project: model.project, path: model.path, revision: model.revision };
+    $("tab-chat").click();
+    document.dispatchEvent(
+        new CustomEvent("workspace:discuss", {
+            detail: {
+                prompt:
+                    "Help me write AQL for this exact repository model: " +
+                    JSON.stringify(context) +
+                    ". Requested result: " +
+                    ($("aql-intent").value.trim() || "suggest useful fields from this template") +
+                    ". Inspect the real model paths and dependencies, generate the query, and validate it against this same template. Include parameter values. Explain any requested fields that are missing; do not invent paths. Do not execute it or change repository files.",
+            },
+        }),
+    );
 };
 $("aql-generate").onclick = () =>
     safely(() =>
@@ -830,7 +981,8 @@ async function load() {
             const current = $("aql-source").value;
             for (const option of [...$("aql-source").options])
                 if (!["local", "enterprise", "remote"].includes(option.value)) option.remove();
-            for (const item of sources) $("aql-source").append(new Option(item.name || item.url, item.id));
+            for (const item of sources)
+                $("aql-source").append(new Option(item.label || item.name || item.url, item.id));
             if ([...$("aql-source").options].some((option) => option.value === current))
                 $("aql-source").value = current;
         } catch {
@@ -872,6 +1024,8 @@ function updateSession(value) {
         $("aql-model-status").textContent = "";
         $("aql-model").replaceChildren(new Option("Choose a model", ""));
         $("aql-dependencies").replaceChildren();
+        $("aql-intent").value = "";
+        hideSuggestions();
         $("aql-project").replaceChildren();
         $("aql-files").value = "";
         $("aql-use-template").checked = false;

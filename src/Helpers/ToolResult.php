@@ -40,6 +40,7 @@ final class ToolResult
                     'INVALID_INPUT' => 'Input does not meet the documented operation constraints.',
                     'REVISION_CONFLICT' => 'The artefact changed. Read the current revision before retrying.',
                     'WRITES_DISABLED' => 'Repository writes are disabled by deployment configuration.',
+                    'CDR_BROWSER_ONLY' => 'Patient-data protection: execution, query history and saved query contents are available only in the AQL workspace. The assistant can draft and validate queries; use Run query yourself.',
                     default => 'The operation could not be completed. Check the identifier, configuration and dependency availability.',
                 }, 'retryable' => $code === 'OPERATION_FAILED']];
         }

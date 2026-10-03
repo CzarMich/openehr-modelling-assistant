@@ -48,7 +48,7 @@ final readonly class CdrTools
     public function explain(#[Schema(minLength: 1, maxLength: 65536)] string $query,
         #[Schema(items: self::MODEL, maxItems: 8)] array $templates = []): array { return ToolResult::run(fn (): array => $this->aql->explain($query, $templates)); }
 
-    /** Execute read-only AQL on a configured connection. Returns count/timing only; patient rows are never sent to the assistant. Use Run in the AQL workspace to see results. Bounds are rejected, not clamped; AQL LIMIT must be 1..1000 and excludes API pagination.
+    /** Browser-only operation: execution is denied to MCP/AI callers. Generate and validate AQL from models, then ask the user to select Run query in the AQL workspace. This prevents patient-data access and query-based inference by an assistant.
      *
      * @param array<string, mixed> $parameters
      * @return array<string, mixed> */
@@ -59,28 +59,34 @@ final readonly class CdrTools
         #[Schema(type: 'object', additionalProperties: ['type' => ['string', 'number', 'boolean', 'null']])] array $parameters = [],
         #[Schema(minimum: 1, maximum: 1000)] int $fetch = 100,
         #[Schema(minimum: 0, maximum: 1000000)] int $offset = 0): array
-    { return ToolResult::run(fn (): array => $this->cdr->execute($connection_id, $query, $parameters, $fetch, $offset)); }
+    { return $this->browserOnly(); }
 
-    /** List up to 100 executions for this caller, with query text and metadata; no result rows or parameter values.
+    /** Browser-only operation: query history can contain patient identifiers in literals. The assistant cannot read it. Use History in the AQL workspace.
      *
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'aql_history', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
-    public function history(): array { return ToolResult::run(fn (): array => $this->cdr->history()); }
+    public function history(): array { return $this->browserOnly(); }
 
-    /** List this caller's saved query text. Query results are never stored with saved queries.
+    /** Browser-only operation: saved query names and text may contain patient identifiers. The assistant cannot read them. Use Saved queries in the AQL workspace.
      *
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'aql_saved_list', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
-    public function saved(): array { return ToolResult::run(fn (): array => $this->cdr->saved()); }
+    public function saved(): array { return $this->browserOnly(); }
 
-    /** Read one of this caller's saved queries by ID.
+    /** Browser-only operation: saved query text may contain patient identifiers. The assistant cannot read it. Use Saved queries in the AQL workspace.
      *
      * @return array<string, mixed> */
     #[Schema(additionalProperties: false)]
     #[McpTool(name: 'aql_saved_get', annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false), outputSchema: ToolResult::SCHEMA)]
-    public function get(#[Schema(minLength: 32, maxLength: 32)] string $id): array { return ToolResult::run(fn (): array => $this->cdr->saved($id)); }
+    public function get(#[Schema(minLength: 32, maxLength: 32)] string $id): array { return $this->browserOnly(); }
+
+    /** @return array<string, mixed> */
+    private function browserOnly(): array
+    {
+        return ToolResult::run(static function (): array { throw new \DomainException('CDR_BROWSER_ONLY'); });
+    }
 
     /** Save query text privately for this caller; no results or credentials. Avoid patient identifiers in saved query literals; use parameters.
      *

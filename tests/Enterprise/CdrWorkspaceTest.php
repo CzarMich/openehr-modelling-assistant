@@ -14,6 +14,7 @@ use OpenEHR\Assistant\Domain\Modelling\OpenEhrEngine;
 use OpenEHR\Assistant\Integrations\Cdr\CdrConnection;
 use OpenEHR\Assistant\Integrations\Cdr\CdrHttp;
 use OpenEHR\Assistant\Integrations\Cdr\EncryptedCdrStore;
+use OpenEHR\Assistant\Tools\CdrTools;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 
@@ -88,6 +89,21 @@ final class CdrWorkspaceTest extends TestCase
         self::assertStringNotContainsString('synthetic-result-never-persist', $state); self::assertStringNotContainsString('synthetic-parameter-never-persist', $state);
         $browser = $this->workspace->execute($id, 'SELECT e FROM EHR e LIMIT 10', includeResults: true);
         self::assertSame([['synthetic-result-never-persist']], $browser['rows']); self::assertNull($this->calls[1]['fetch']); self::assertNull($this->calls[1]['offset']);
+    }
+    public function test_ai_tools_cannot_execute_or_read_patient_literals_from_query_libraries(): void
+    {
+        $id = $this->connection()['id'];
+        $saved = $this->workspace->saveQuery('Synthetic patient name', "SELECT e FROM EHR e WHERE e/ehr_id/value = 'synthetic-patient-id'");
+        $tools = new CdrTools($this->workspace, new AqlWorkbench($this->models));
+        foreach ([$tools->execute($id, 'SELECT e FROM EHR e'), $tools->history(), $tools->saved(), $tools->get($saved['id'])] as $denial) {
+            self::assertFalse($denial['success']);
+            self::assertSame('CDR_BROWSER_ONLY', $denial['error']['code']);
+            self::assertNull($denial['result']);
+            self::assertStringNotContainsString('synthetic-patient-id', json_encode($denial));
+            self::assertStringNotContainsString('Synthetic patient name', json_encode($denial));
+        }
+        self::assertSame([], $this->calls);
+        self::assertSame($saved, $this->workspace->saved($saved['id']));
     }
     public function test_query_syntax_bounds_and_pagination_fail_before_remote_call(): void
     {
