@@ -91,7 +91,7 @@ The engine accepts at most 2 MiB per model, 64 dependencies, 8 MiB combined requ
 
 - ADL 2.0, 2.0.0, 2.0.5 and 2.0.6 declarations; AOM 2 with bundled openEHR RM profiles 1.0.2, 1.0.3, 1.0.4 and 1.1.0. Fixtures exercise RM 1.0.4; other bundled releases require model-specific acceptance before a deployment claims support for its model catalogue.
 - Nested referenced archetypes are expanded and checked with their local terminology scopes. The OPT checker requires embedded root terminology in the template's language; it does not invent missing translations. Original source bytes and compiler serialization are preserved.
-- AQL parsing uses openEHR SDK 2.35.0. Syntax validity does not prove path validity, model compatibility or successful query execution; those checks remain explicitly unexecuted.
+- AQL parsing uses openEHR SDK 2.35.0. Optional exact OPT inputs enable structural path validation; unsupported or unresolved paths remain INCOMPLETE. Syntax-only validation does not establish model compatibility. Read-only execution is a separate [CDR workspace](CDR_WORKSPACE.md) operation, never a compiler or validation side effect.
 - External terminology membership, clinical suitability, comprehensive rule execution, composition validation and production release qualification are separate checks. A mechanically valid OPT is not an approved clinical model.
 - Legacy OET-to-OPT 1.4 compilation uses a [separate bounded profile](LEGACY_OPT_COMPILATION.md); complete OET coverage, Designer import acceptance and full semantic cross-compiler comparison remain separate work. `.t.json` remains a distinct authoring artefact. See [Designer compatibility](ARCHETYPE_DESIGNER_COMPATIBILITY.md).
 

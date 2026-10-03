@@ -909,3 +909,93 @@ test("personal save discovery explains readiness and enforces the folder before 
     assert.match(workspace.saveStatus().reason, /disabled/);
     assert.doesNotMatch(JSON.stringify(workspace.saveStatus()), /private-test-token/);
 });
+
+test("GitHub save refusals explain token permissions, persist privately and clear on an explicit access update", async (t) => {
+    const f = setup(t, async (url, options) =>
+        options.method
+            ? {
+                  status: 403,
+                  text: JSON.stringify({ message: "Resource not accessible by personal access token private-secret" }),
+              }
+            : { status: 404, text: "{}" },
+    );
+    const connection = f.connections.add("alice", github).connection;
+    const args = {
+        repository: connection.id,
+        path: "AKI/templates/oet/draft.oet",
+        content: "<template/>",
+        message: "Draft",
+        expectedRevision: null,
+    };
+    await assert.rejects(
+        f.connections.publish("alice", args),
+        (error) =>
+            error.accessCode === "GITHUB_CONTENTS_WRITE_REQUIRED" &&
+            /Contents: Read and write/.test(error.message) &&
+            !error.message.includes("private-secret"),
+    );
+    const workspace = new WorkspaceTools(
+        {},
+        f.connections,
+        f.attachments,
+        "alice",
+        { repository: connection.id },
+        new AbortController().signal,
+        true,
+    );
+    assert.equal(workspace.saveStatus().ready, false);
+    assert.match(workspace.saveStatus().reason, /Save connection/);
+    assert.deepEqual(f.connections.list("bob"), []);
+    assert.doesNotMatch(JSON.stringify(f.connections.list("alice")), /private-secret|private-test-token/);
+    const updated = f.connections.add("alice", { ...github, token: undefined });
+    assert.equal(updated.connection.id, connection.id);
+    assert.equal(updated.updated, true);
+    assert.equal(updated.connection.lastWriteError, undefined);
+    assert.equal(f.connections.get("alice", connection.id).token, github.token);
+    assert.equal(workspace.saveStatus().ready, true);
+});
+
+test("GitHub diagnostics separate rate limits, invalid credentials and protected branches without reflecting error bodies", async (t) => {
+    for (const [status, message, pattern, code] of [
+        [401, "Bad credentials private-secret", /valid token/, "GITHUB_TOKEN_INVALID"],
+        [403, "API rate limit exceeded private-secret", /temporarily limited/, undefined],
+        [
+            422,
+            "Changes must be made through a pull request. private-secret",
+            /permitted branch/,
+            "GITHUB_BRANCH_RESTRICTED",
+        ],
+    ]) {
+        const f = setup(t, async () => ({ status, text: JSON.stringify({ message }) }));
+        await assert.rejects(
+            f.connections.remote(
+                { kind: "github", url: "https://api.github.com/repos/alice/models", token: "private-token" },
+                "/contents/draft.oet",
+                { method: "PUT", body: {} },
+            ),
+            (error) =>
+                pattern.test(error.message) && error.accessCode === code && !error.message.includes("private-secret"),
+        );
+    }
+});
+
+test("a failed request using an old token cannot invalidate a concurrently updated connection", async (t) => {
+    let f;
+    f = setup(t, async (url, options) => {
+        if (!options.method) return { status: 404, text: "{}" };
+        f.connections.add("alice", { ...github, token: "replacement-token" });
+        return { status: 403, text: '{"message":"Resource not accessible by personal access token"}' };
+    });
+    const connection = f.connections.add("alice", github).connection;
+    await assert.rejects(
+        f.connections.publish("alice", {
+            repository: connection.id,
+            path: "draft.oet",
+            content: "<template/>",
+            message: "Draft",
+            expectedRevision: null,
+        }),
+    );
+    assert.equal(f.connections.get("alice", connection.id).token, "replacement-token");
+    assert.equal(f.connections.list("alice")[0].lastWriteError, undefined);
+});

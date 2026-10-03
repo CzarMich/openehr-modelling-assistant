@@ -1303,3 +1303,39 @@ test("AQL cancellation and model paths remain separate from chat", async ({ page
     await expect(page.locator("#aql-findings")).toContainText("selected-template paths");
     await page.screenshot({ path: "/tmp/aql-workspace-desktop.png", fullPage: true });
 });
+
+test("repository settings show a specific write refusal and preserve selection while access is repaired", async ({
+    page,
+}) => {
+    let blocked = true;
+    await page.route("**/chat/api/connections", async (route) => {
+        if (route.request().method() === "POST") {
+            blocked = false;
+            return route.continue();
+        }
+        const response = await route.fetch();
+        const data = await response.json();
+        if (blocked)
+            for (const item of data.personal)
+                if (item.kind === "github")
+                    item.lastWriteError = {
+                        code: "GITHUB_CONTENTS_WRITE_REQUIRED",
+                        message: "GitHub refused this token. Grant Contents: Read and write, then Save connection.",
+                    };
+        await route.fulfill({ response, json: data });
+    });
+    await login(page);
+    await addRepository(page);
+    blocked = true;
+    await settings(page);
+    await page.getByLabel("Save artifacts to").selectOption({ label: "My models · main" });
+    await page.getByRole("button", { name: "Save repository selection", exact: true }).click();
+    const selected = await page.getByLabel("Save artifacts to").inputValue();
+    await settings(page);
+    await page.locator("#personal-settings > summary").click();
+    await expect(page.locator("#connection-list")).toContainText("Contents: Read and write");
+    await page.getByRole("button", { name: "Update access for My models", exact: true }).click();
+    await page.getByRole("button", { name: "Save connection", exact: true }).click();
+    await expect(page.locator("#connection-list")).not.toContainText("Last save failed");
+    await expect(page.getByLabel("Save artifacts to")).toHaveValue(selected);
+});

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Chat identifies GitHub token and branch restrictions and guides users through restoring repository access.
+
 - AQL workspace validates template paths and queries private CDR connections with protected credentials.
 
 - Chat allows longer file uploads and explains interrupted server responses.

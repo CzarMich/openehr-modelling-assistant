@@ -1078,13 +1078,14 @@ function renderDestinationStatus() {
             : selected
               ? "Repository unavailable. Choose another destination."
               : "Your organisation's configured repository";
-    $("repository-token-status").hidden = !repository || (repository.authenticated && session?.allowWrites !== false);
+    $("repository-token-status").hidden =
+        !repository || (repository.authenticated && !repository.lastWriteError && session?.allowWrites !== false);
     $("repository-token-status").textContent =
         repository && session?.allowWrites === false
             ? "Repository writes are disabled on this installation. Contact your workspace administrator."
             : repository && !repository.authenticated
               ? "Read-only connection. Use Update access in My sources and repositories to add a token for saving files."
-              : "";
+              : repository?.lastWriteError?.message || "";
 }
 async function loadConnections() {
     const data = await api("api/connections");
@@ -1103,6 +1104,11 @@ async function loadConnections() {
             item.url +
             (item.branch ? " · " + item.branch : "");
         row.append(text);
+        if (item.lastWriteError) {
+            const failure = document.createElement("p");
+            failure.textContent = "Last save failed: " + item.lastWriteError.message;
+            row.append(failure);
+        }
         if (item.scope !== "enterprise") {
             if (item.kind !== "ckm") {
                 const update = document.createElement("button");

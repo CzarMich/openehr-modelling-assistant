@@ -10,6 +10,51 @@ const canonical = (value) => {
 };
 const visible = ({ token, ...connection }) => ({ ...connection, authenticated: !!token });
 
+function githubFailure(response, writing) {
+    let message = "";
+    try {
+        message = String(JSON.parse(response.text).message || "").slice(0, 2000);
+    } catch {}
+    if (response.status === 401)
+        return Object.assign(
+            problem(
+                "GitHub rejected the saved token. Open Settings → My sources and repositories → Update access, enter a valid token and press Save connection.",
+                403,
+            ),
+            { accessCode: "GITHUB_TOKEN_INVALID" },
+        );
+    if (response.status === 429 || (response.status === 403 && /rate limit|secondary rate/i.test(message)))
+        return problem(
+            "GitHub temporarily limited requests. Wait a few minutes, then retry; changing the repository or token is unnecessary.",
+            429,
+        );
+    if (
+        writing &&
+        response.status === 403 &&
+        /resource not accessible by (?:personal access token|integration)/i.test(message)
+    )
+        return Object.assign(
+            problem(
+                "GitHub refused this token's permission to save files. In GitHub token settings, select this repository and grant Contents: Read and write. Then open Settings → My sources and repositories → Update access and press Save connection (enter the new token only if you replaced it).",
+                403,
+            ),
+            { accessCode: "GITHUB_CONTENTS_WRITE_REQUIRED" },
+        );
+    if (
+        writing &&
+        [403, 409, 422].includes(response.status) &&
+        /protected branch|branch protection|repository rule|pull request|GH006|GH013/i.test(message)
+    )
+        return Object.assign(
+            problem(
+                "GitHub requires changes through a permitted branch or pull request. Connect an allowed draft branch in Settings, select it as the save destination, then retry.",
+                403,
+            ),
+            { accessCode: "GITHUB_BRANCH_RESTRICTED" },
+        );
+    return null;
+}
+
 export function unpack(result) {
     if (result?.isError || result?.structuredContent?.success === false)
         throw problem("The modelling service could not list enterprise connections.", 503);
@@ -97,9 +142,10 @@ export class PersonalConnections {
             (item) => item.kind === input.kind && item.url === url && (item.branch || "") === (input.branch || ""),
         );
         if (duplicate) {
-            if (input.kind !== "ckm" && input.token !== undefined) {
-                duplicate.token = input.token;
+            if (input.kind !== "ckm" && (input.token !== undefined || duplicate.lastWriteError)) {
+                if (input.token !== undefined) duplicate.token = input.token;
                 duplicate.label = input.label.trim();
+                delete duplicate.lastWriteError;
                 this.store.set(identity, "workspace", items);
                 return { connection: visible(duplicate), duplicate: true, updated: true };
             }
@@ -131,13 +177,18 @@ export class PersonalConnections {
             token: connection.token,
             allowedHosts: this.config.personalAllowedHosts || [],
         });
-        if (![200, 201, 404].includes(response.status))
+        if (![200, 201, 404].includes(response.status)) {
+            if (connection.kind === "github") {
+                const failure = githubFailure(response, !!options.method && options.method !== "GET");
+                if (failure) throw failure;
+            }
             throw problem(
                 response.status === 409 || response.status === 422
                     ? "Repository changed. Read the current revision and retry."
                     : "The personal connection refused the request. Check the URL, branch and token permissions.",
                 response.status === 409 || response.status === 422 ? 409 : 503,
             );
+        }
         return response;
     }
     async ckm(identity, args, signal) {
@@ -264,6 +315,26 @@ export class PersonalConnections {
     async publish(identity, args, signal) {
         if (!this.config.allowWrites) throw problem("Repository writes are disabled.", 403);
         const repo = this.get(identity, args.repository);
+        try {
+            return await this.publishFile(identity, args, signal, repo);
+        } catch (error) {
+            if (error.accessCode) {
+                const items = this.all(identity),
+                    current = items.find((item) => item.id === repo.id);
+                // A response for an older token must not invalidate a newly updated connection.
+                if (current?.token === repo.token) {
+                    current.lastWriteError = {
+                        code: error.accessCode,
+                        message: error.message,
+                        at: new Date().toISOString(),
+                    };
+                    this.store.set(identity, "workspace", items);
+                }
+            }
+            throw error;
+        }
+    }
+    async publishFile(identity, args, signal, repo) {
         if (repo.kind === "ckm" || !repo.token) throw problem("Choose a repository with a personal write token.");
         const path = this.validatePath(args.path);
         if (
