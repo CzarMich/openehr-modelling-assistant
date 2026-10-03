@@ -32,6 +32,9 @@ export const CDR_TOOLS = new Set([
     "aql_saved_get",
     "aql_saved_save",
 ]);
+// Query libraries may contain patient identifiers in user-entered literals.
+// Keep them, and real execution, exclusively in the authenticated browser UI.
+export const CDR_BROWSER_ONLY_TOOLS = new Set(["aql_execute", "aql_history", "aql_saved_list", "aql_saved_get"]);
 
 export class CdrClient {
     constructor(config, fetcher = fetch) {
@@ -141,6 +144,13 @@ export class CdrClient {
         return result;
     }
     async tool(session, name, args, signal) {
+        if (CDR_BROWSER_ONLY_TOOLS.has(name))
+            throw Object.assign(
+                new Error(
+                    "Patient-data protection: execution, results, query history and saved query contents are available only in the AQL workspace. The assistant can draft and validate queries; use Run query yourself.",
+                ),
+                { status: 403, userSafe: true },
+            );
         const allowed = {
             cdr_connection_list: [],
             cdr_connection_test: ["connection_id"],

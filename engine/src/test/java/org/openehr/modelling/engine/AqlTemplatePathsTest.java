@@ -12,6 +12,16 @@ class AqlTemplatePathsTest {
     static Map<String, Object> check(String query, String opt) {
         return run("validate/aql", query, List.of(dependency(opt, "selected-template")));
     }
+    @Test void pathLabelsComeFromTheExactArchetypeScopeAndExtendToItsValue() throws Exception {
+        var paths = LegacyOptProfile.inspect(legacy()).paths();
+        var element = paths.stream().filter(path -> "ELEMENT".equals(path.get("rm_type"))).findFirst().orElseThrow();
+        assertEquals("Text element", element.get("label"));
+        assertEquals("Synthetic value", element.get("description"));
+        var value = paths.stream().filter(path -> (element.get("path") + "/value").equals(path.get("path"))).findFirst().orElseThrow();
+        assertEquals("Text element", value.get("label"));
+        var data = paths.stream().filter(path -> "ITEM_TREE".equals(path.get("rm_type"))).findFirst().orElseThrow();
+        assertEquals("Data", data.get("label")); // Same at0001 code, different archetype scope.
+    }
     @Test void checksContainmentAndPathsInSelectWhereAndOrderBy() throws Exception {
         String query = "SELECT e/ehr_id/value, x/items[at0001]/value/value FROM EHR e CONTAINS COMPOSITION c CONTAINS CLUSTER x[openEHR-EHR-CLUSTER.engine_fixture.v1] WHERE c/name/value = 'example' ORDER BY c/context/start_time/value";
         var report = check(query, legacy());

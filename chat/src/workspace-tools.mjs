@@ -2,8 +2,9 @@ import { WRITE_TOOLS } from "./mcp.mjs";
 import { problem } from "./personal-http.mjs";
 import { requireFolderPath, artifactPath, ARTIFACT_FOLDERS } from "./repository-paths.mjs";
 import { CHOICE_TOOL } from "./choices.mjs";
-import { CDR_TOOLS } from "./cdr.mjs";
+import { CDR_TOOLS, CDR_BROWSER_ONLY_TOOLS } from "./cdr.mjs";
 import { TemplatePackages, isTemplate, modelResult } from "./template-packages.mjs";
+import { RepositoryModels } from "./repository-models.mjs";
 
 const string = { type: "string" };
 const tool = (name, description, properties, required = Object.keys(properties)) => ({
@@ -18,6 +19,7 @@ export class WorkspaceTools {
         Object.assign(this, { mcp, connections, attachments, identity, conversation, signal, allowWrites, cdr });
         this.packages = new TemplatePackages(connections.config, identity, conversation.id);
         this.prepared = new WeakMap();
+        this.repositoryModels = new RepositoryModels(connections, identity, signal);
     }
     async tools() {
         const core = await this.mcp.tools();
@@ -54,6 +56,26 @@ export class WorkspaceTools {
                 "Read an artifact and its exact Git revision in one of your repositories. Read before proposing an update. A missing file has revision null.",
                 { repository: string, path: string },
             ),
+            tool(
+                "personal_repository_models",
+                "Find templates and archetypes in a private repository, with templates first and one exact Git commit. Use this for AQL instead of guessing paths or relying on the generic 100-entry listing.",
+                { repository: string },
+            ),
+            tool(
+                "personal_repository_aql",
+                "Build AQL from actual repository artefacts. First inspect: loads the template and its exact saved archetypes, verifies package hashes and compiles it; returns real paths, template ID and ref (Git commit). Filter/page paths if needed. Then generate using that ref and selected paths, or validate your own query against that same compiled template. Keep template_id parameters from generation. Never invent clinical paths or claim execution; explain fields the model lacks. No file writes or CDR execution.",
+                {
+                    repository: string,
+                    path: string,
+                    action: { type: "string", enum: ["inspect", "generate", "validate"] },
+                    ref: string,
+                    paths: { type: "array", maxItems: 30, items: string },
+                    query: string,
+                    filter: string,
+                    offset: { type: "integer", minimum: 0, maximum: 20000 },
+                },
+                ["repository", "path", "action"],
+            ),
         ];
         if (this.allowWrites)
             personal.push(
@@ -88,7 +110,9 @@ export class WorkspaceTools {
         return [
             ...core.filter(
                 (t) =>
-                    (!CDR_TOOLS.has(t.name) || this.cdr) && (!this.conversation.repository || !WRITE_TOOLS.has(t.name)),
+                    !CDR_BROWSER_ONLY_TOOLS.has(t.name) &&
+                    (!CDR_TOOLS.has(t.name) || this.cdr) &&
+                    (!this.conversation.repository || !WRITE_TOOLS.has(t.name)),
             ),
             ...personal,
         ];
@@ -162,6 +186,11 @@ export class WorkspaceTools {
         return plan;
     }
     async call(name, args) {
+        if (CDR_BROWSER_ONLY_TOOLS.has(name))
+            throw problem(
+                "Patient-data protection: use the AQL workspace for execution, results and query history. The assistant can generate and validate model-based queries.",
+                403,
+            );
         if (CDR_TOOLS.has(name)) {
             if (!this.cdr) throw problem("CDR connections are unavailable.");
             return this.cdr.client.tool(this.cdr.session, name, args, this.signal);
@@ -214,6 +243,8 @@ export class WorkspaceTools {
             result = await this.connections.listRepository(this.identity, args, this.signal);
         else if (name === "personal_repository_get")
             result = await this.connections.readRepository(this.identity, args, this.signal);
+        else if (name === "personal_repository_models") result = await this.repositoryModels.list(args);
+        else if (name === "personal_repository_aql") result = await this.repositoryModels.aql(args, this.mcp);
         else if (name === PERSONAL_WRITE) {
             this.checkWrite(name, args);
             const plan = await this.prepareWrite(name, args);

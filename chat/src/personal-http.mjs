@@ -34,7 +34,18 @@ export function publicAddress(address) {
 
 // The checked DNS address is the address used by the socket, including IPv6.
 // Redirects are never followed and enterprise credentials never enter this client.
-export function personalRequest(url, { method = "GET", token = "", body, signal, allowedHosts = [] } = {}) {
+export function personalRequest(
+    url,
+    {
+        method = "GET",
+        token = "",
+        body,
+        signal,
+        allowedHosts = [],
+        accept = "application/json",
+        timeoutMs = 20000,
+    } = {},
+) {
     const target = new URL(url);
     httpsUrl(target.origin + target.pathname);
     const explicitlyAllowed = allowedHosts.includes(target.hostname);
@@ -49,7 +60,10 @@ export function personalRequest(url, { method = "GET", token = "", body, signal,
             target,
             {
                 method,
-                signal: AbortSignal.any([signal || new AbortController().signal, AbortSignal.timeout(20000)]),
+                signal: AbortSignal.any([
+                    signal || new AbortController().signal,
+                    AbortSignal.timeout(Math.min(60000, Math.max(1000, timeoutMs))),
+                ]),
                 agent: false,
                 lookup: (host, options, callback) =>
                     lookup(host, { all: true }, (error, addresses) => {
@@ -62,7 +76,7 @@ export function personalRequest(url, { method = "GET", token = "", body, signal,
                         callback(null, options.all ? addresses : addresses[0].address, addresses[0].family);
                     }),
                 headers: {
-                    Accept: "application/json",
+                    Accept: accept,
                     "User-Agent": "openehr-modelling-workspace",
                     ...(token ? { Authorization: "Bearer " + token } : {}),
                     ...(body ? { "Content-Type": "application/json" } : {}),

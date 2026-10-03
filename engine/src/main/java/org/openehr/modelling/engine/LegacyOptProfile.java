@@ -25,7 +25,7 @@ final class LegacyOptProfile {
         LegacyOptSchema.validate(content);
         Element template = parse(content).getDocumentElement();
         var profile = new LegacyOptProfile();
-        profile.node(one(template, "definition", true), "/", null);
+        profile.node(one(template, "definition", true), "/", null, "");
         for (Element ontology : children(template)) if (Set.of("ontology", "component_ontologies").contains(ontology.getLocalName())) {
             String scope = ontology.getAttribute("archetype_id");
             for (Element group : children(ontology, "term_bindings")) for (Element entry : children(group, "items")) {
@@ -39,7 +39,7 @@ final class LegacyOptProfile {
         return new Result(text(one(template, "template_id", true), "value"), List.copyOf(profile.paths), List.copyOf(profile.bindings));
     }
 
-    private void node(Element node, String path, Element scope) {
+    private void node(Element node, String path, Element scope, String parentLabel) {
         if (paths.size() >= 20000) throw new EngineException("ENGINE_NODE_LIMIT");
         String kind = type(node);
         String rmType = text(node, "rm_type_name");
@@ -63,6 +63,14 @@ final class LegacyOptProfile {
         inspected.put("path", path); inspected.put("node_id", nodeId); inspected.put("rm_type", rmType);
         inspected.put("constraint_kind", kind); inspected.put("occurrences", occurrences.toString());
         inspected.put("archetype", text(one(scope, "archetype_id", true), "value"));
+        String label = nodeId.isEmpty() ? parentLabel : "";
+        for (Element term : children(scope, "term_definitions")) if (nodeId.equals(term.getAttribute("code"))) {
+            for (Element item : children(term, "items")) {
+                if ("text".equals(item.getAttribute("id"))) label = item.getTextContent();
+                if ("description".equals(item.getAttribute("id"))) inspected.put("description", item.getTextContent());
+            }
+        }
+        if (!label.isEmpty()) inspected.put("label", label);
         List<Map<String, String>> attributes = new ArrayList<>(); inspected.put("attributes", attributes);
         paths.add(inspected);
         Set<String> names = new HashSet<>();
@@ -92,7 +100,7 @@ final class LegacyOptProfile {
                 if (!childId.isEmpty() && !identities.add(childId)) throw new EngineException("ENGINE_OPT14_PATH_AMBIGUOUS");
                 String childPath = attributePath + (childId.isEmpty() ? "" : "[" + childId + "]");
                 if (!multiple && upper(one(child, "occurrences", true)) > 1) throw new EngineException("ENGINE_MULTIPLICITY_INVALID");
-                node(child, childPath, scope);
+                node(child, childPath, scope, label);
             }
         }
         // Validate local code references independently of labels; do not contact terminology servers.

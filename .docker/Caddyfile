@@ -16,7 +16,8 @@
     request_body @cdr {
         max_size 16777216
     }
-    handle /chat/api/cdr/* {
+    @model_requests path /chat/api/cdr/* /chat/api/aql-repository/*
+    handle @model_requests {
         reverse_proxy chat:8350 {
             transport http {
                 response_header_timeout 180s

@@ -1304,6 +1304,97 @@ test("AQL cancellation and model paths remain separate from chat", async ({ page
     await page.screenshot({ path: "/tmp/aql-workspace-desktop.png", fullPage: true });
 });
 
+test("AQL loads a repository template package, completes exact paths and hands its revision to the assistant", async ({
+    page,
+}) => {
+    const ref = "a".repeat(40),
+        path = "AKI/templates/oet/aki.oet";
+    let compiled = false;
+    await page.route("**/chat/api/cdr/connections", (route) =>
+        route.fulfill({ json: { items: [{ id: "synthetic-cdr", name: "Synthetic CDR", enabled: true }] } }),
+    );
+    await page.route("**/chat/api/cdr/execute", (route) => {
+        expect(route.request().postDataJSON().parameters).toEqual({ ehr: "synthetic-private-parameter" });
+        const result = { columns: [{ name: "patient" }], rows: [["synthetic-private-result"]] };
+        return route.fulfill({
+            json: { ...result, json: result, raw: JSON.stringify(result), count: 1, duration_ms: 10, has_more: false },
+        });
+    });
+    await page.route("**/chat/api/aql-repository/list", (route) =>
+        route.fulfill({
+            json: {
+                ref,
+                items: [
+                    { path: "AKI/archetypes/encounter.adl", type: "blob", ref },
+                    { path, type: "blob", ref },
+                ],
+            },
+        }),
+    );
+    await page.route("**/chat/api/aql-repository/package", (route) => {
+        expect(route.request().postDataJSON()).toMatchObject({ path, ref });
+        return route.fulfill({
+            json: {
+                exists: true,
+                path,
+                ref,
+                content: "<template/>",
+                dependencySource: "verified_manifest",
+                dependencies: [{ identifier: "openEHR-EHR-COMPOSITION.encounter.v1", content: "exact fixture ADL" }],
+            },
+        });
+    });
+    await page.route("**/chat/api/cdr/compile", (route) => {
+        expect(route.request().postDataJSON().dependencies).toEqual([
+            { identifier: "openEHR-EHR-COMPOSITION.encounter.v1", content: "exact fixture ADL" },
+        ]);
+        compiled = true;
+        return route.fulfill({ json: { valid: true, output: { format: "opt14_xml", content: "<compiled/>" } } });
+    });
+    await login(page);
+    await addRepository(page);
+    await settings(page, false);
+    await page.getByRole("tab", { name: "AQL workspace" }).click();
+    await page.locator("#aql-model-section summary").click();
+    await expect(page.locator("#aql-source option").filter({ hasText: "My models" })).toHaveCount(1);
+    await page.locator("#aql-source").selectOption({ label: "My models" });
+    await page.getByRole("button", { name: "Load source", exact: true }).click();
+    await expect(page.locator("#aql-model option:checked")).toHaveText(path);
+    await page.getByRole("button", { name: "Inspect paths", exact: true }).click();
+    await expect(page.locator("#aql-model-status")).toContainText("1 archetypes loaded · package hashes verified");
+    expect(compiled).toBe(true);
+    await page.locator("#aql-editor").fill("SELECT m/ FROM COMPOSITION m");
+    await page.locator("#aql-editor").evaluate((node) => {
+        node.focus();
+        node.setSelectionRange(9, 9);
+    });
+    await page.locator("#aql-editor").press("Control+Space");
+    await expect(page.getByRole("option", { name: "m/content[at0001]", exact: true })).toBeVisible();
+    await page.locator("#aql-editor").press("Enter");
+    await expect(page.locator("#aql-editor")).toHaveValue("SELECT m/content[at0001] FROM COMPOSITION m");
+    await expect(page.locator("#aql-suggestions")).toBeHidden();
+    await page.locator("#aql-editor").fill("SELECT m/missing FROM COMPOSITION m");
+    await page.locator("#aql-editor").evaluate((node) => node.setSelectionRange(16, 16));
+    await page.locator("#aql-editor").press("Control+Space");
+    await expect(page.locator("#aql-suggestions")).toBeHidden();
+    await page.locator("#aql-connection").selectOption("synthetic-cdr");
+    await page
+        .locator("#aql-editor")
+        .fill("SELECT m/name/value FROM COMPOSITION m WHERE m/name/value = 'synthetic-private-literal'");
+    await page.getByText("Parameters and pagination", { exact: true }).click();
+    await page.locator("#aql-parameters").fill('{"ehr":"synthetic-private-parameter"}');
+    await page.getByRole("button", { name: "Run query", exact: true }).click();
+    await expect(page.locator("#aql-result-body")).toContainText("synthetic-private-result");
+    await page.locator("#aql-intent").fill("Return body weight and laboratory results");
+    await page.getByRole("button", { name: "Ask assistant to write AQL" }).click();
+    await expect(page.locator("#panel-chat")).toBeVisible();
+    await expect(page.locator("#message")).toHaveValue(new RegExp(ref));
+    await expect(page.locator("#message")).toHaveValue(/personal_repository_aql/);
+    await expect(page.locator("#message")).toHaveValue(/body weight and laboratory results/);
+    await expect(page.locator("#message")).not.toHaveValue(/synthetic-private-/);
+    expect(browserErrors).toEqual([]);
+});
+
 test("repository settings show a specific write refusal and preserve selection while access is repaired", async ({
     page,
 }) => {

@@ -23,7 +23,7 @@ const session = {
 };
 test("CDR assertions bind purpose, actor, operation and body, with no ambient credentials", async () => {
     const client = new CdrClient(config, async (url, request) => {
-        assert.equal(url.href, "https://internal.example/api/v1/cdr/execute-metadata");
+        assert.equal(url.href, "https://internal.example/api/v1/cdr/connection-test");
         const [encodedHeader, encodedClaims, signature] = request.headers.Authorization.slice(7).split(".");
         const header = JSON.parse(Buffer.from(encodedHeader, "base64url")),
             claims = JSON.parse(Buffer.from(encodedClaims, "base64url"));
@@ -39,10 +39,10 @@ test("CDR assertions bind purpose, actor, operation and body, with no ambient cr
         );
         assert.equal(request.redirect, "error");
         assert.equal(request.headers.Cookie, undefined);
-        return Response.json({ count: 3, results_sent_to_ai: false });
+        return Response.json({ ok: true, checks: { authentication: "PASS" } });
     });
-    const result = await client.tool(session, "aql_execute", { connection_id: "dev", query: "SELECT e FROM EHR e" });
-    assert.equal(result.structuredContent.result.count, 3);
+    const result = await client.tool(session, "cdr_connection_test", { connection_id: "dev" });
+    assert.equal(result.structuredContent.result.ok, true);
     assert.equal(result.structuredContent.result.rows, undefined);
 });
 test("CDR client hides raw upstream errors and rejects expired sessions before making requests", async () => {
@@ -94,11 +94,29 @@ test("CDR tools reject inline credentials before making a request", async () => 
         throw new Error("Inline credentials must never reach the transport");
     });
     await assert.rejects(
-        client.tool(session, "aql_execute", {
+        client.tool(session, "cdr_connection_test", {
             connection_id: "dev",
             query: "SELECT e FROM EHR e",
             token: "private-token",
         }),
         /arguments/i,
     );
+});
+
+test("patient-data boundary denies AI execution and query libraries before any CDR or shared MCP call", async () => {
+    const blocked = ["aql_execute", "aql_history", "aql_saved_list", "aql_saved_get"];
+    const never = async () => {
+        throw new Error("Patient data endpoint must not be reached");
+    };
+    const client = new CdrClient(config, never);
+    const mcp = { tools: async () => blocked.map((name) => ({ name })), call: never };
+    const workspace = new WorkspaceTools(mcp, {}, {}, "alice", {}, new AbortController().signal, false, {
+        client,
+        session,
+    });
+    assert(!(await workspace.tools()).some((tool) => blocked.includes(tool.name)));
+    for (const name of blocked) {
+        await assert.rejects(client.tool(session, name, {}), /Patient-data protection/);
+        await assert.rejects(workspace.call(name, {}), /Patient-data protection/);
+    }
 });
