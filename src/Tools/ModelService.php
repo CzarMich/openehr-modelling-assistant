@@ -36,7 +36,7 @@ final readonly class ModelService
         return ToolResult::run(fn (): array => $this->validator->diff($before, $after));
     }
 
-    /** Generate a draft OET from either 1–30 direct ENTRY identifiers or explicit parent-linked nested placements with supplied archetype paths. Drafts are compile-checked when the native engine is configured; this does not certify complete legacy semantics.
+    /** Generate a draft OET from either 1–30 direct ENTRY identifiers or explicit parent-linked nested placements with supplied archetype paths. Returns the exact ADL dependencies and hashes used; save these alongside the OET in the project's archetypes folder. Drafts are compile-checked when the native engine is configured; this does not certify complete legacy semantics.
      *
      * @param list<string> $entries
      * @param list<array<string, mixed>> $placements

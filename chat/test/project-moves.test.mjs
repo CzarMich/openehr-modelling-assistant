@@ -372,3 +372,16 @@ test("move HTTP routes enforce ownership, CSRF, exact confirmation and repeat-re
     assert.equal((await call("move", { id: plan.id })).status, 200);
     assert.equal(f.writes.filter((write) => write.path === "/git/commits").length, 1);
 });
+
+test("moving a template package keeps shared source archetypes available to other templates", async (t) => {
+    const f = fixture(t);
+    f.chat.artifacts.find((item) => item.path.endsWith(".adl")).dependency = true;
+    f.store.save("alice", f.chat);
+    const plan = await f.moves.preview("alice", f.chat, f.project.id);
+    assert.equal(plan.moves.find((item) => item.from.endsWith(".adl")).retainSource, true);
+    const moved = await f.moves.apply("alice", f.chat, plan.id);
+    assert.equal(f.state.files["Old/archetypes/model.adl"].sha, "c".repeat(40));
+    assert.equal(f.state.files["Clinical/AKI/archetypes/model.adl"].sha, "c".repeat(40));
+    assert.equal(moved.artifacts.find((item) => item.path.endsWith(".adl")).dependency, true);
+    assert.equal(f.state.files["Old/templates/model.oet"], undefined);
+});

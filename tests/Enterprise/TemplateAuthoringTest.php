@@ -65,6 +65,11 @@ final class TemplateAuthoringTest extends TestCase
         self::assertFalse($result['clinical_approval']);
         self::assertSame('PASS', $result['native_compile_check']['status']);
         self::assertSame(4, count($result['provenance']));
+        self::assertCount(4, $result['dependencies']);
+        foreach ($result['dependencies'] as $dependency) {
+            self::assertSame('fixture ADL source ' . $dependency['identifier'], $dependency['content']);
+            self::assertSame($result['provenance'][$dependency['identifier']]['sha256'], $dependency['sha256']);
+        }
         $document = ModelValidator::xml($result['content']);
         $xpath = new \DOMXPath($document);
         $xpath->registerNamespace('oet', 'openEHR/v1/Template');
@@ -103,6 +108,7 @@ final class TemplateAuthoringTest extends TestCase
         $result = $service->generateOet('Direct fixture', 'composition', ['evaluation']);
         self::assertSame('PASS', $result['native_compile_check']['status']);
         self::assertSame('direct_entries_only', $result['placements']);
+        self::assertSame(['openEHR-EHR-COMPOSITION.fixture.v1', 'openEHR-EHR-EVALUATION.fixture.v1'], array_column($result['dependencies'], 'identifier'));
         self::assertFalse($result['clinical_approval']);
     }
 

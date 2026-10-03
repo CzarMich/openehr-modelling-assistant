@@ -1339,3 +1339,55 @@ test("repository settings show a specific write refusal and preserve selection w
     await expect(page.locator("#connection-list")).not.toContainText("Last save failed");
     await expect(page.getByLabel("Save artifacts to")).toHaveValue(selected);
 });
+
+test("template package confirmation lists every dependency and escapes source contents", async ({ page }) => {
+    await login(page);
+    let finish;
+    const pending = new Promise((resolve) => {
+        finish = resolve;
+    });
+    await page.route("**/chat/api/conversations/*", async (route) => {
+        if (route.request().method() === "GET") await pending;
+        await route.fallback();
+    });
+    await page.route("**/chat/api/conversations/*/messages", async (route) =>
+        route.fulfill({
+            contentType: "text/event-stream",
+            body:
+                "data: " +
+                JSON.stringify({
+                    type: "approval",
+                    id: "package-review",
+                    tool: "personal_repository_save",
+                    arguments: {
+                        path: "AKI/templates/oet/renal.oet",
+                        package: {
+                            files: [
+                                { path: "AKI/templates/oet/renal.oet", changed: true, content: "<template/>" },
+                                {
+                                    path: "AKI/archetypes/openEHR-EHR-COMPOSITION.encounter.v1.adl",
+                                    changed: false,
+                                    content: "<script>window.packageInjected=true</script>",
+                                },
+                                {
+                                    path: "AKI/data/json/template-packages/renal.oet.json",
+                                    changed: true,
+                                    content: "{}",
+                                },
+                            ],
+                        },
+                    },
+                }) +
+                "\n\ndata: " +
+                JSON.stringify({ type: "done" }) +
+                "\n\n",
+        }),
+    );
+    await send(page, "Save the complete template package");
+    await expect(page.locator(".package-files li")).toHaveCount(3);
+    await expect(page.locator(".package-files")).toContainText("COMPOSITION.encounter.v1.adl · already present");
+    await expect(page.locator(".approval pre")).toContainText("<script>");
+    expect(await page.evaluate(() => window.packageInjected)).toBeUndefined();
+    await expect(page.getByRole("button", { name: "Confirm save", exact: true })).toBeVisible();
+    finish();
+});

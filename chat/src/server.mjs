@@ -10,6 +10,7 @@ import { ReviewClient } from "./reviews.mjs";
 import { CdrClient, CDR_OPERATIONS } from "./cdr.mjs";
 import { readModels } from "./models.mjs";
 import { PersonalConnections } from "./personal-connections.mjs";
+import { TemplatePackages } from "./template-packages.mjs";
 import { Attachments, UPLOAD_LIMIT } from "./attachments.mjs";
 import { Shares } from "./shares.mjs";
 import { repositoryFolder } from "./repository-paths.mjs";
@@ -81,10 +82,12 @@ export function createApplication(
     const projectMoves = new ProjectMoves(store, connections, config.allowWrites);
     store.prune();
     shares.prune();
+    TemplatePackages.prune(config);
     const cleanup = setInterval(() => {
         try {
             store.prune();
             shares.prune();
+            TemplatePackages.prune(config);
         } catch {
             console.error('{"event":"chat_retention_failed"}');
         }
@@ -691,6 +694,7 @@ export function createApplication(
                     throw Object.assign(new Error("Stop the response before deleting this chat."), { status: 409 });
                 shares.revoke(identity, conversation);
                 store.delete(identity, id);
+                new TemplatePackages(config, identity, id).delete();
                 return json(res, 200, { success: true });
             }
             if (action === "stop" && req.method === "POST") {
@@ -865,6 +869,7 @@ export function createApplication(
                             }
                             if (WRITE_TOOLS.has(name) || name === PERSONAL_WRITE) {
                                 workspace.checkWrite(name, args);
+                                const packagePlan = await workspace.prepareWrite(name, args);
                                 const approved = await new Promise((resolve) => {
                                     const approvalId = randomUUID();
                                     let timer;
@@ -884,7 +889,11 @@ export function createApplication(
                                         tool: name,
                                         arguments:
                                             name === PERSONAL_WRITE
-                                                ? { ...args, destination: workspace.destination() }
+                                                ? {
+                                                      ...args,
+                                                      destination: workspace.destination(),
+                                                      ...(packagePlan ? { package: packagePlan } : {}),
+                                                  }
                                                 : args,
                                     });
                                 });
@@ -902,6 +911,12 @@ export function createApplication(
                                 result.structuredContent?.saved
                             ) {
                                 trace.artifact = recordArtifact(conversation, args, result.structuredContent);
+                                for (const file of result.structuredContent.files || [])
+                                    recordArtifact(
+                                        conversation,
+                                        { ...args, path: file.path },
+                                        { ...result.structuredContent, dependency: file.dependency },
+                                    );
                                 store.save(identity, conversation);
                             }
                             emit({ type: "tool", ...trace });
