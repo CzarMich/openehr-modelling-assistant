@@ -1780,6 +1780,11 @@ Help the user model openEHR artefacts in the browser workspace. Use OpenEhrWorks
                             spreadsheets are read by the workspace's source tools.
                         </p>
                         <p>
+                            Do not attach patient-data knowledge sources or CDR connectors to the browser agent. Those
+                            sources are controlled by its Microsoft configuration and cannot be restricted by this
+                            workspace.
+                        </p>
+                        <p>
                             Keep direct MCP connections and other external action connectors on your separately
                             configured Microsoft-channel agent. Actions performed by those connectors run outside this
                             browser's confirmation controls. The browser agent should use the client tool above for
