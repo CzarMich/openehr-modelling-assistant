@@ -987,7 +987,7 @@ export function createApplication(
                                     recordArtifact(
                                         conversation,
                                         { ...args, path: file.path },
-                                        { ...result.structuredContent, dependency: file.dependency },
+                                        { ...result.structuredContent, ...file },
                                     );
                                 store.save(identity, conversation);
                             }

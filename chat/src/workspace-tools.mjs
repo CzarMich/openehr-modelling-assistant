@@ -19,7 +19,6 @@ export class WorkspaceTools {
         Object.assign(this, { mcp, connections, attachments, identity, conversation, signal, allowWrites, cdr });
         this.packages = new TemplatePackages(connections.config, identity, conversation.id);
         this.prepared = new WeakMap();
-        this.repositoryModels = new RepositoryModels(connections, identity, signal);
     }
     async tools() {
         const core = await this.mcp.tools();
@@ -53,8 +52,15 @@ export class WorkspaceTools {
             ),
             tool(
                 "personal_repository_get",
-                "Read an artifact and its exact Git revision in one of your repositories. Read before proposing an update. A missing file has revision null.",
-                { repository: string, path: string },
+                "Read an artifact and its exact Git revision in one of your repositories. Read before proposing an update. A missing file has revision null. Optional ref reads an immutable Git commit; SHA-256 identifies the exact bytes.",
+                { repository: string, path: string, ref: string },
+                ["repository", "path"],
+            ),
+            tool(
+                "personal_repository_history",
+                "Read up to 20 recent Git versions of an artefact at its stable path. Use a returned commit as ref in personal_repository_get to read exact historical bytes and SHA-256. Current reads default to the selected branch; histories are private to this connection.",
+                { repository: string, path: string, ref: string },
+                ["repository", "path"],
             ),
             tool(
                 "personal_repository_models",
@@ -81,7 +87,7 @@ export class WorkspaceTools {
             personal.push(
                 tool(
                     PERSONAL_WRITE,
-                    "Commit a draft artifact to this conversation's selected personal repository and branch after exact-change browser confirmation. Check personal_connections for the active destination and readiness. The repository must be selected in the UI. Use its full repository-relative path within the selected folder; missing directories are created with the file. Use the artifactFolders map in workspace context for every file type, including queries, data, documentation and configuration. Saved artefact metadata contains current paths after moves; use those when linking models and evidence. A separate folder-creation tool is unnecessary. Use personal_repository_get first; supply its revision, or null for a new file. Include source provenance in artifacts. Use model validation tools before proposing the save. This does not record enterprise governance or clinical approval.",
+                    "Commit a draft artifact to this conversation's selected personal repository and branch after exact-change browser confirmation. Check personal_connections for the active destination and readiness. The repository must be selected in the UI. Use its full repository-relative path within the selected folder; missing directories are created with the file. Use the artifactFolders map in workspace context for every file type, including queries, data, documentation and configuration. Saved artefact metadata contains current paths after moves; use those when linking models and evidence. A separate folder-creation tool is unnecessary. Use personal_repository_get first; supply its revision, or null for a new file. Update the same logical filename by default; do not add a hash, timestamp or revision suffix. Changed bytes create a new Git revision; identical bytes are reused. Older versions remain readable through personal_repository_history and personal_repository_get with ref. Template packages pin their exact archetype versions. Keep supplied openEHR identifiers; file revisions do not imply a semantic version change. Include source provenance in artifacts. Use model validation tools before proposing the save. This does not record enterprise governance or clinical approval.",
                     {
                         repository: string,
                         path: string,
@@ -242,9 +248,13 @@ export class WorkspaceTools {
         else if (name === "personal_repository_list")
             result = await this.connections.listRepository(this.identity, args, this.signal);
         else if (name === "personal_repository_get")
-            result = await this.connections.readRepository(this.identity, args, this.signal);
-        else if (name === "personal_repository_models") result = await this.repositoryModels.list(args);
-        else if (name === "personal_repository_aql") result = await this.repositoryModels.aql(args, this.mcp);
+            result = await new RepositoryModels(this.connections, this.identity, this.signal).get(args);
+        else if (name === "personal_repository_history")
+            result = await new RepositoryModels(this.connections, this.identity, this.signal).history(args);
+        else if (name === "personal_repository_models")
+            result = await new RepositoryModels(this.connections, this.identity, this.signal).list(args);
+        else if (name === "personal_repository_aql")
+            result = await new RepositoryModels(this.connections, this.identity, this.signal).aql(args, this.mcp);
         else if (name === PERSONAL_WRITE) {
             this.checkWrite(name, args);
             const plan = await this.prepareWrite(name, args);

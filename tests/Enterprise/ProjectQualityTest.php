@@ -211,7 +211,7 @@ final class ProjectQualityTest extends TestCase
             'dependencies' => $manifest, 'engine' => $engine, 'output_sha256' => hash('sha256', $output)];
         $build = $identity + ['id' => hash('sha256', json_encode($this->canonicalEvidence($identity), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
             'format' => 'opt14_xml', 'report' => $report];
-        $artifact = $repository->saveArtifact('project', 'templates/compiled/synthetic.opt', $output,
+        $artifact = $repository->saveArtifact('project', 'templates/opt/synthetic.opt', $output,
             ['kind' => 'compiled_opt14', 'build' => $build], null);
 
         $result = self::service($repository)->evaluate('project', $source['path'], $source['revision']);

@@ -1407,6 +1407,23 @@ function renderArtifacts() {
             item.append(destination);
             actions.prepend(link);
             actions.append(copyButton("Copy link", link.href));
+            const history = document.createElement("a");
+            history.textContent = "Version history";
+            history.href =
+                repo.url +
+                (repo.kind === "github" ? "/commits/" : "/-/commits/") +
+                encodeURIComponent(repo.branch) +
+                "/" +
+                artifact.path.split("/").map(encodeURIComponent).join("/");
+            history.target = "_blank";
+            history.rel = "noopener noreferrer";
+            actions.append(history);
+            if (/^[a-f0-9]{64}$/.test(artifact.sha256 || "")) {
+                const fingerprint = document.createElement("small");
+                fingerprint.textContent = "Saved SHA-256: " + artifact.sha256.slice(0, 12);
+                fingerprint.title = artifact.sha256;
+                item.append(fingerprint);
+            }
             if (/^[a-f0-9]{40,64}$/.test(artifact.commit || "")) {
                 const version = document.createElement("a");
                 version.textContent = "Saved version";

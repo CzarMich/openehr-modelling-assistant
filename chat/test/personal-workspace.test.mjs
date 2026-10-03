@@ -166,12 +166,12 @@ for (const kind of ["github", "gitlab"])
         const write = calls.at(-1);
         assert.equal(write.token, "private-test-token");
         assert.equal(write.body.branch, "draft/renal");
-        assert.equal(kind === "github" ? write.body.sha : write.body.last_commit_id, revision);
+        assert.equal(kind === "github" ? write.body.sha : write.body.actions[0].last_commit_id, revision);
         assert.match(
             write.url,
             kind === "github"
                 ? /api.github.com\/repos\/alice\/models\/contents\/templates\/kidney.oet$/
-                : /api\/v4\/projects\/team%2Fsubgroup%2Fmodels\/repository\/files\/templates%2Fkidney.oet$/,
+                : /api\/v4\/projects\/team%2Fsubgroup%2Fmodels\/repository\/commits$/,
         );
         for (const path of [
             "../bad.xml",
@@ -1042,7 +1042,7 @@ test("template package confirmation covers all files and records every dependenc
         assert.equal(identity, "alice");
         return {
             base: "b".repeat(40),
-            files: files.map((file) => ({ ...file, dependency: !!file.identicalOnly, changed: true })),
+            files: files.map((file) => ({ ...file, dependency: !!file.dependency, changed: true })),
         };
     };
     f.connections.publish = async (identity, args, signal, plan) => {
@@ -1081,4 +1081,84 @@ test("template package confirmation covers all files and records every dependenc
     assert.equal(saved.artifacts.length, 3);
     assert.equal(saved.artifacts.find((item) => item.path.endsWith(".adl")).dependency, true);
     assert.doesNotMatch(JSON.stringify(saved.messages), /exact fixture ADL/);
+});
+
+for (const kind of ["github", "gitlab"])
+    test(`${kind} an identical standalone artefact returns its hash without writing a new version`, async (t) => {
+        let writes = 0;
+        const f = setup(t, async (url, options) => {
+            if (options.method) writes++;
+            return {
+                status: 200,
+                text: JSON.stringify({
+                    type: "file",
+                    encoding: "base64",
+                    content: Buffer.from("same archetype").toString("base64"),
+                    sha: "a".repeat(40),
+                    last_commit_id: "a".repeat(40),
+                }),
+            };
+        });
+        const repo = f.connections.add("alice", {
+            ...github,
+            kind,
+            url: kind === "github" ? github.url : "https://gitlab.com/alice/models",
+        }).connection;
+        const result = await f.connections.publish("alice", {
+            repository: repo.id,
+            path: "archetypes/model.adl",
+            content: "same archetype",
+            expectedRevision: "a".repeat(40),
+            message: "No change",
+        });
+        assert.equal(result.changed, false);
+        assert.equal(result.change, "unchanged");
+        assert.equal(result.sha256, createHash("sha256").update("same archetype").digest("hex"));
+        assert.equal(writes, 0);
+        await assert.rejects(
+            f.connections.publish("alice", {
+                repository: repo.id,
+                path: "archetypes/model.adl",
+                content: "same archetype",
+                expectedRevision: "b".repeat(40),
+                message: "Stale revision",
+            }),
+            /changed/,
+        );
+    });
+
+test("large GitHub OPTs update the same path when the Contents API omits their body", async (t) => {
+    const content = "<template>" + "x".repeat(1080000) + "</template>";
+    const revision = createHash("sha1")
+        .update("blob " + Buffer.byteLength(content) + "\0" + content)
+        .digest("hex");
+    let writes = 0;
+    const f = setup(t, async (url, options) => {
+        if (options.method) {
+            writes++;
+            assert.equal(options.body.sha, revision);
+            return { status: 200, text: JSON.stringify({ commit: { sha: "c".repeat(40) } }) };
+        }
+        if (url.includes("/git/ref/"))
+            return { status: 200, text: JSON.stringify({ object: { sha: "a".repeat(40) } }) };
+        if (url.includes("/git/blobs/")) return { status: 200, text: content };
+        return {
+            status: 200,
+            text: JSON.stringify({ type: "file", encoding: "none", sha: revision, size: Buffer.byteLength(content) }),
+        };
+    });
+    const repo = f.connections.add("alice", github).connection;
+    const args = {
+        repository: repo.id,
+        path: "templates/opt/large.opt",
+        content: content.replace("xxx", "yyy"),
+        message: "Update compiled draft",
+        expectedRevision: revision,
+    };
+    const saved = await f.connections.publish("alice", args);
+    assert.equal(saved.commit, "c".repeat(40));
+    assert.equal(saved.path, args.path);
+    assert.equal(saved.previousSha256, createHash("sha256").update(content).digest("hex"));
+    assert.notEqual(saved.sha256, saved.previousSha256);
+    assert.equal(writes, 1);
 });

@@ -194,9 +194,12 @@ final class GitModelRepository implements HostedGitRepository, OriginalRepositor
         return $this->locked(true, function () use ($project, $path, $content, $metadata, $expectedRevision): array {
             $this->activeProject($project);
             $fullPath = $this->storagePath($project, $path);
-            $current = isset($this->tree[$fullPath]) ? $this->artifact($project, $path, $this->requiredHead())['revision'] : null;
-            if ($current !== $expectedRevision) {
+            $current = isset($this->tree[$fullPath]) ? $this->artifact($project, $path, $this->requiredHead()) : null;
+            if (($current['revision'] ?? null) !== $expectedRevision) {
                 throw new \RuntimeException('REVISION_CONFLICT');
+            }
+            if ($current !== null && $current['content'] === $content && $current['metadata'] === $metadata) {
+                return $current;
             }
             $this->commit([$fullPath => $content, $this->metadataPath($project, $path) => $this->json(['metadata' => $metadata])], 'Save model artifact ' . $path);
             return $this->artifact($project, $path, $this->requiredHead());

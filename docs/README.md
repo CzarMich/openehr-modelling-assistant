@@ -11,6 +11,7 @@
 ## Modelling and storage
 
 - [CKM sources](CKM_SOURCES.md) and [model imports](MODEL_IMPORTS.md)
+- [Artefact versions](ARTEFACT_VERSIONING.md)
 - [Model repository](MODEL_REPOSITORY.md), [hosted Git](HOSTED_REPOSITORIES.md) and [SharePoint](SHAREPOINT_REPOSITORY.md)
 - [Native validation and compilation](OPT_COMPILATION.md), [legacy OET/OPT support](LEGACY_OPT_COMPILATION.md) and [project QA](VALIDATION_AND_QA.md)
 - [Terminology](TERMINOLOGY.md), [catalogues](TERMINOLOGY_CATALOGUE.md) and [binding plans](TERMINOLOGY_BINDING_PLANS.md)

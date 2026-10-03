@@ -186,7 +186,8 @@ final readonly class ProjectQuality
         if (!is_string($content) || !is_string($sha) || !hash_equals($sha, hash('sha256', $content))
             || !hash_equals((string) ($build['output_sha256'] ?? ''), $sha)
             || !$validKind || !$validFormat || !$formatKindMatches || !is_string($build['id'] ?? null) || !is_array($report)
-            || ($artifact['status'] ?? null) !== 'DRAFT' || !str_starts_with((string) ($artifact['path'] ?? ''), 'templates/compiled/')
+            || ($artifact['status'] ?? null) !== 'DRAFT'
+            || (!str_starts_with((string) ($artifact['path'] ?? ''), 'templates/compiled/') && !str_starts_with((string) ($artifact['path'] ?? ''), 'templates/opt/'))
             || ($build['schema'] ?? null) !== 1 || ($build['project'] ?? null) !== $project
             || ($report['operation'] ?? null) !== 'compile/template' || ($report['valid'] ?? null) !== true
             || ($report['status'] ?? null) !== 'PASS' || ($report['content_sha256'] ?? null) !== $source['sha256']

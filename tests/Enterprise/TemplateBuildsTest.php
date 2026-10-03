@@ -78,6 +78,37 @@ final class TemplateBuildsTest extends TestCase
         $service->compile('default', $source['path'], $source['revision'], $deps);
     }
 
+    #[DataProvider('providers')]
+    public function test_changed_builds_keep_the_filename_and_preserve_exact_previous_versions(string $provider, string $format): void
+    {
+        $settings = new Settings(['MODEL_REPOSITORY_PROVIDER' => $provider, 'MODEL_REPOSITORY_PATH' => $this->root,
+            'MODEL_REPOSITORY_WRITE_ENABLED' => 'true']);
+        $repository = RepositoryFactory::create($settings);
+        $repository->createProject('default', 'Synthetic', '');
+        $source = $repository->saveArtifact('default', 'templates/oet/renal.oet', 'first source', [], null);
+        $port = $this->createMock(OpenEhrEngine::class);
+        $port->expects(self::exactly(3))->method('compile')->willReturnCallback(static function (string $content) use ($format): array {
+            $report = NativeEngineTest::report($content, 'compile/template');
+            $output = 'compiled ' . $content;
+            $report['output'] = ['content' => $output, 'format' => $format, 'sha256' => hash('sha256', $output)];
+            return $report;
+        });
+        $service = new TemplateBuilds(new NativeModels($port), $repository, new AccessPolicy($settings), new Actor('fixture-service', 'shared', ['modeller']));
+        $first = $service->compile('default', $source['path'], $source['revision'], []);
+        $updated = $repository->saveArtifact('default', $source['path'], 'second source', [], $source['revision']);
+        $second = $service->compile('default', $updated['path'], $updated['revision'], []);
+        self::assertSame('templates/opt/renal.opt', $second['artifact']['path']);
+        self::assertSame($first['artifact']['path'], $second['artifact']['path']);
+        self::assertNotSame($first['build_id'], $second['build_id']);
+        self::assertNotSame($first['artifact']['sha256'], $second['artifact']['sha256']);
+        self::assertSame('compiled second source', $repository->getArtifact('default', $second['artifact']['path'])['content']);
+        self::assertSame('compiled first source', $repository->getArtifact('default', $first['artifact']['path'], $first['artifact']['revision'])['content']);
+        self::assertCount(2, $repository->history('default', $second['artifact']['path']));
+        $repeat = $service->compile('default', $updated['path'], $updated['revision'], []);
+        self::assertFalse($repeat['changed']);
+        self::assertSame($second['artifact']['revision'], $repeat['artifact']['revision']);
+    }
+
     public function test_failed_compilation_saves_nothing_and_write_permission_is_required(): void
     {
         $settings = new Settings(['MODEL_REPOSITORY_PATH' => $this->root, 'MODEL_REPOSITORY_WRITE_ENABLED' => 'true']);

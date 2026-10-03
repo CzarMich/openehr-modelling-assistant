@@ -88,6 +88,9 @@ class SnapshotRepository implements ModelRepository, OriginalRepository
             if (($current['revision'] ?? null) !== $expectedRevision) {
                 throw new RuntimeException('REVISION_CONFLICT');
             }
+            if ($current !== null && $current['status'] !== 'DELETED' && $current['content'] === $content && $current['metadata'] === $metadata) {
+                return [$state, $current];
+            }
             $artifact = ['path' => $path, 'content' => $content, 'metadata' => $metadata, 'status' => 'DRAFT',
                 'revision' => bin2hex(random_bytes(16)), 'sha256' => hash('sha256', $content),
                 'updated_at' => gmdate(DATE_ATOM), 'provider' => $this->provider];

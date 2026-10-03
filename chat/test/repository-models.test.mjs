@@ -59,6 +59,7 @@ function fixture(t, kind = "github") {
             state.requests.push(target);
             if (target.pathname.includes("/git/ref/") || target.pathname.includes("/repository/branches/"))
                 return reply({ object: { sha: state.ref }, commit: { id: state.ref } });
+            if (target.pathname.endsWith("/commits")) return reply([{ sha: ref, id: ref }]);
             const tree = Object.keys(state.files).map((path) => ({
                 path,
                 type: "blob",

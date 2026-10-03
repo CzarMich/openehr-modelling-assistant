@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PersonalConnections } from "../src/personal-connections.mjs";
 import { WorkspaceTools, PERSONAL_WRITE } from "../src/workspace-tools.mjs";
+import { RepositoryModels } from "../src/repository-models.mjs";
 import { TemplatePackages } from "../src/template-packages.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
@@ -19,7 +20,18 @@ function fixture(t, kind = "github") {
     const directory = mkdtempSync(join(tmpdir(), "template-packages-"));
     t.after(() => rmSync(directory, { recursive: true, force: true }));
     const config = { dataDir: directory, providerEncryptionKey: "ab".repeat(32), allowWrites: true };
-    const state = { head: "a".repeat(40), files: {}, writes: [], race: false, fail: "", valid: true };
+    const state = {
+        snapshots: {},
+        fileRevisions: {},
+        sources: [source],
+        sequence: 0,
+        head: "a".repeat(40),
+        files: {},
+        writes: [],
+        race: false,
+        fail: "",
+        valid: true,
+    };
     const result = (data, status = 200) => ({ status, text: JSON.stringify(data) });
     const connections = new PersonalConnections(config, {
         request: async (url, options) => {
@@ -32,10 +44,13 @@ function fixture(t, kind = "github") {
             }
             if (path.includes("/git/ref/heads/") || path.includes("/repository/branches/"))
                 return result({ object: { sha: state.head }, commit: { id: state.head } });
+            const requestedRef =
+                new URL(url).searchParams.get("ref") || path.split("/git/trees/")[1]?.split("?")[0] || state.head;
+            const files = requestedRef === state.head ? state.files : state.snapshots[requestedRef];
             if (path.includes("/contents/") || path.includes("/repository/files/")) {
-                assert.equal(new URL(url).searchParams.get("ref"), state.head);
+                assert(files, "Exact historical snapshot must exist");
                 const name = decodeURIComponent(path.split(kind === "github" ? "/contents/" : "/repository/files/")[1]);
-                const file = state.files[name];
+                const file = files[name];
                 return file === undefined
                     ? result({}, 404)
                     : result({
@@ -43,43 +58,54 @@ function fixture(t, kind = "github") {
                           encoding: "base64",
                           content: Buffer.from(file).toString("base64"),
                           sha: "b".repeat(40),
-                          last_commit_id: "b".repeat(40),
+                          last_commit_id: state.fileRevisions[name] || "b".repeat(40),
                       });
             }
+            if (path.endsWith("/commits") && !options.method)
+                return result([{ sha: state.historyCommit || state.head, id: state.historyCommit || state.head }]);
             if (path.includes("/git/commits/") && !options.method) return result({ tree: { sha: "c".repeat(40) } });
             if (path.includes("/git/trees/") && !options.method)
                 return result({
-                    tree: Object.entries(state.files).map(([path, content]) => ({
+                    tree: Object.entries(files).map(([path, content]) => ({
                         path,
                         type: "blob",
                         mode: "100644",
                         sha: gitHash(content),
                     })),
                 });
-            if (path.includes("/git/blobs/") && !options.method)
+            if ((path.includes("/git/blobs/") || path.includes("/repository/blobs/")) && !options.method)
                 return {
                     status: 200,
-                    text: Object.values(state.files).find((content) => gitHash(content) === path.split("/").at(-1)),
+                    text: [state.files, ...Object.values(state.snapshots)]
+                        .flatMap((files) => Object.values(files))
+                        .find((content) => gitHash(content) === path.split("/blobs/")[1].split("/")[0]),
                 };
             if (path.endsWith("/git/trees")) {
                 state.pending = options.body.tree;
                 return result({ sha: "d".repeat(40) }, 201);
             }
             if (path.endsWith("/git/commits")) {
-                assert.deepEqual(options.body.parents, ["a".repeat(40)]);
-                return result({ sha: "e".repeat(40) }, 201);
+                assert.deepEqual(options.body.parents, [state.head]);
+                state.next = hash(state.head + JSON.stringify(state.pending) + ++state.sequence).slice(0, 40);
+                return result({ sha: state.next }, 201);
             }
             if (path.includes("/git/refs/heads/")) {
                 assert.equal(options.body.force, false);
                 if (state.race) return result({}, 422);
+                state.snapshots[state.head] = { ...state.files };
                 for (const file of state.pending) state.files[file.path] = file.content;
                 state.head = options.body.sha;
                 return result({ object: { sha: state.head } });
             }
             if (path.endsWith("/repository/commits")) {
                 if (state.race) return result({}, 409);
-                for (const file of options.body.actions) state.files[file.file_path] = file.content;
-                state.head = "e".repeat(40);
+                state.snapshots[state.head] = { ...state.files };
+                const next = hash(state.head + JSON.stringify(options.body.actions) + ++state.sequence).slice(0, 40);
+                for (const file of options.body.actions) {
+                    state.files[file.file_path] = file.content;
+                    state.fileRevisions[file.file_path] = next;
+                }
+                state.head = next;
                 return result({ id: state.head }, 201);
             }
             throw new Error("Unexpected request " + path);
@@ -102,10 +128,13 @@ function fixture(t, kind = "github") {
                     dependencies: [{ ...source, sha256: hash(source.content) }],
                 });
             assert.equal(name, "template_compile");
-            assert.deepEqual(args.dependencies, [source]);
+            assert.deepEqual(args.dependencies, state.sources);
             return envelope({
                 valid: state.valid,
-                dependencies: [{ identifier: source.identifier, sha256: hash(source.content) }],
+                dependencies: state.sources.map((item) => ({
+                    identifier: item.identifier,
+                    sha256: hash(item.content),
+                })),
                 profile: "fixture",
                 output: { sha256: "f".repeat(64) },
                 ...(state.generated
@@ -138,7 +167,7 @@ function fixture(t, kind = "github") {
 }
 
 for (const kind of ["github", "gitlab"])
-    test(`${kind} saves linked form outputs in separate folders without overwriting earlier builds`, async (t) => {
+    test(`${kind} saves linked form outputs at stable paths in separate folders`, async (t) => {
         const f = fixture(t, kind);
         f.state.generated = {
             opt: "<template>" + "x".repeat(1080000) + "</template>",
@@ -214,7 +243,7 @@ test("generated exact dependencies survive turns encrypted and isolated by profi
     assert.deepEqual(readdirSync(join(f.directory, "template-packages")), []);
 });
 
-test("missing, duplicate, changed or unvalidated dependencies never write an OET", async (t) => {
+test("missing, duplicate or unvalidated dependencies never write an OET", async (t) => {
     const f = fixture(t),
         workspace = f.makeWorkspace();
     await workspace.tools();
@@ -225,9 +254,6 @@ test("missing, duplicate, changed or unvalidated dependencies never write an OET
         workspace.call(PERSONAL_WRITE, { ...f.args, dependencies: [source] }),
         /could not be compiled/,
     );
-    f.state.valid = true;
-    f.state.files["AKI/archetypes/" + source.identifier + ".adl"] = "another revision";
-    await assert.rejects(workspace.call(PERSONAL_WRITE, { ...f.args, dependencies: [source] }), /different contents/);
     assert.equal(f.state.writes.length, 0);
 });
 
@@ -283,3 +309,123 @@ test("MCP text envelopes retain generator sources and compile dependencies witho
     f.mcp.call = async () => ({ content: [{ type: "text", text: JSON.stringify({ success: false, result: null }) }] });
     await assert.rejects(f.makeWorkspace().prepareWrite(PERSONAL_WRITE, { ...f.args }), /could not be compiled/);
 });
+
+for (const kind of ["github", "gitlab"])
+    test(`${kind} changed hashes advance stable artefacts while exact older templates retain their dependency versions`, async (t) => {
+        const f = fixture(t, kind);
+        f.state.generated = { opt: "compiled first", web: '{"version":1}' };
+        const args = { ...f.args, dependencies: [source] };
+        const firstWorkspace = f.makeWorkspace();
+        await firstWorkspace.tools();
+        const first = (await firstWorkspace.call(PERSONAL_WRITE, args)).structuredContent;
+        const archetype = "AKI/archetypes/" + source.identifier + ".adl";
+        const opt = "AKI/templates/opt/renal.opt";
+        const web = "AKI/data/json/web-templates/renal.webtemplate.json";
+        assert.equal(f.state.files[opt], "compiled first");
+        const firstManifest = JSON.parse(f.state.files["AKI/data/json/template-packages/renal.oet.json"]);
+        assert.equal(firstManifest.archetypes[0].git_blob.sha1, gitHash(source.content));
+        // Another template already uses this same archetype generation.
+        f.state.files["AKI/templates/oet/other.oet"] = f.args.content;
+        f.state.files["AKI/data/json/template-packages/other.oet.json"] = JSON.stringify({
+            ...firstManifest,
+            template: { ...firstManifest.template, path: "templates/oet/other.oet" },
+        });
+        const changedSource = { ...source, content: "revised ADL source bytes\n" };
+        f.state.sources = [changedSource];
+        f.state.generated = { opt: "compiled second", web: '{"version":2}' };
+        const expectedRevision = kind === "github" ? gitHash(f.args.content) : first.commit;
+        const secondArgs = {
+            ...args,
+            content: '<template changed="true"/>',
+            dependencies: [changedSource],
+            expectedRevision,
+        };
+        const next = f.makeWorkspace();
+        await next.tools();
+        const plan = await next.prepareWrite(PERSONAL_WRITE, secondArgs);
+        assert.equal(plan.files.find((file) => file.path === archetype).change, "updated");
+        assert.equal(plan.files.find((file) => file.path === archetype).previousSha256, hash(source.content));
+        const second = (await next.call(PERSONAL_WRITE, secondArgs)).structuredContent;
+        assert.notEqual(second.commit, first.commit);
+        assert.equal(f.state.files[archetype], changedSource.content);
+        assert.equal(f.state.files[opt], "compiled second");
+        assert.equal(f.state.files[web], '{"version":2}');
+        assert.equal(f.state.snapshots[first.commit][archetype], source.content);
+        assert.equal(f.state.snapshots[first.commit][opt], "compiled first");
+        const old = await new RepositoryModels(f.connections, "alice").package({
+            repository: f.repo.id,
+            path: "AKI/templates/oet/other.oet",
+        });
+        assert.equal(
+            old.dependencies[0].content,
+            source.content,
+            "An unchanged template retains its exact older archetype",
+        );
+        const current = await new RepositoryModels(f.connections, "alice").package({
+            repository: f.repo.id,
+            path: args.path,
+        });
+        assert.equal(current.dependencies[0].content, changedSource.content);
+        const before = f.state.writes.length;
+        const repeat = f.makeWorkspace();
+        await repeat.tools();
+        const same = (
+            await repeat.call(PERSONAL_WRITE, {
+                ...secondArgs,
+                expectedRevision: kind === "github" ? gitHash(secondArgs.content) : second.commit,
+            })
+        ).structuredContent;
+        assert.equal(same.changed, false);
+        assert.equal(same.commit, second.commit);
+        assert.equal(f.state.writes.length, before, "Identical package creates no new Git commit");
+        await assert.rejects(
+            f.connections.prepareBundle("alice", secondArgs, [
+                { path: args.path, content: "stale", expectedRevision },
+                { path: opt, content: "stale" },
+            ]),
+            /changed/,
+        );
+        assert.equal(f.state.files[opt], "compiled second");
+    });
+
+for (const kind of ["github", "gitlab"])
+    test(`${kind} pre-versioning manifests recover exact dependencies from their recorded Git history`, async (t) => {
+        const f = fixture(t, kind);
+        const workspace = f.makeWorkspace();
+        await workspace.tools();
+        const first = (await workspace.call(PERSONAL_WRITE, { ...f.args, dependencies: [source] })).structuredContent;
+        const manifestPath = "AKI/data/json/template-packages/renal.oet.json";
+        const manifest = JSON.parse(f.state.files[manifestPath]);
+        manifest.schema = "openehr-template-package/1";
+        delete manifest.archetypes[0].git_blob;
+        f.state.files[manifestPath] = JSON.stringify(manifest);
+        f.state.snapshots[first.commit] = { ...f.state.files };
+        f.state.historyCommit = first.commit;
+        f.state.head = "f".repeat(40);
+        f.state.files["AKI/archetypes/" + source.identifier + ".adl"] = "newer shared archetype";
+        const loaded = await new RepositoryModels(f.connections, "alice").package({
+            repository: f.repo.id,
+            path: f.args.path,
+        });
+        assert.equal(loaded.dependencies[0].content, source.content);
+        const history = await new RepositoryModels(f.connections, "alice").history({
+            repository: f.repo.id,
+            path: manifestPath,
+        });
+        assert.equal(history.versions[0].commit, first.commit);
+        const old = await new RepositoryModels(f.connections, "alice").get({
+            repository: f.repo.id,
+            path: f.args.path,
+            ref: first.commit,
+        });
+        assert.equal(old.sha256, hash(f.args.content));
+        // A forged history entry must never justify different manifest bytes.
+        f.state.snapshots[first.commit][manifestPath] = "{}";
+        f.state.head = "9".repeat(40);
+        // A separate profile avoids cached immutable test fixtures; real Git objects cannot mutate.
+        f.connections.store.set("carol", "workspace", f.connections.all("alice"));
+        await assert.rejects(
+            new RepositoryModels(f.connections, "carol").package({ repository: f.repo.id, path: f.args.path }),
+            /history does not match/,
+        );
+    });

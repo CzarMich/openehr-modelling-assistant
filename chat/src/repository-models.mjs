@@ -141,32 +141,64 @@ export class RepositoryModels {
             entry.size > 2097152
         )
             throw problem("The selected repository model is not a regular file or exceeds 2 MiB.", 413);
-        // Raw Git blobs avoid base64 expansion and keep large archetype reads
-        // small. Verify the Git object hash as well as any package SHA-256.
-        const content = await this.cached(repo, entry.sha, "blob", "", async () => {
+        const content = await this.readBlob(repo, entry.sha);
+        return { exists: true, revision: entry.sha, path, repository, content };
+    }
+    async readBlob(repo, objectId) {
+        if (!revision(objectId)) throw problem("Invalid archetype Git object.", 409);
+        await this.authorise(repo);
+        return this.cached(repo, objectId, "blob", "", async () => {
             const response = await this.retry(() =>
-                this.connections.remote(this.connections.repoApi(repo), "/git/blobs/" + entry.sha, {
-                    signal: this.signal,
-                    accept: "application/vnd.github.raw+json",
-                    timeoutMs: 45000,
-                }),
+                this.connections.remote(
+                    this.connections.repoApi(repo),
+                    repo.kind === "github" ? "/git/blobs/" + objectId : "/repository/blobs/" + objectId + "/raw",
+                    {
+                        signal: this.signal,
+                        accept: repo.kind === "github" ? "application/vnd.github.raw+json" : "text/plain",
+                        timeoutMs: 45000,
+                    },
+                ),
             );
             if (response.status !== 200) throw problem("The model blob is unavailable at this revision.", 404);
             const content = response.text;
             if (Buffer.byteLength(content) > 2097152) throw problem("The repository model exceeds 2 MiB.", 413);
-            const objectHash = createHash(entry.sha.length === 40 ? "sha1" : "sha256")
-                .update("blob " + Buffer.byteLength(content) + "\0")
-                .update(content)
+            const actual = createHash(objectId.length === 40 ? "sha1" : "sha256")
+                .update("blob " + Buffer.byteLength(content) + "\0" + content)
                 .digest("hex");
-            if (objectHash !== entry.sha)
+            if (actual !== objectId)
                 throw problem("The downloaded model did not match its Git revision. Reload the source and retry.", 503);
             return content;
         });
-        return { exists: true, revision: entry.sha, path, repository, content };
+    }
+    async history(args) {
+        const { repo, ref } = await this.source(args);
+        const path = this.connections.validatePath(args.path);
+        const versions = await this.cached(repo, ref, "history", path, async () => {
+            const query = new URLSearchParams({
+                path,
+                per_page: "20",
+                [repo.kind === "github" ? "sha" : "ref_name"]: ref,
+            });
+            const rows = await this.retry(() =>
+                this.git.remote(repo, (repo.kind === "github" ? "/commits?" : "/repository/commits?") + query),
+            );
+            if (!Array.isArray(rows) || rows.length > 20) throw problem("Invalid repository version history.", 503);
+            return rows.map((row) => {
+                const commit = repo.kind === "github" ? row.sha : row.id;
+                if (!revision(commit)) throw problem("Invalid repository version history.", 503);
+                return {
+                    commit,
+                    message: String(row.commit?.message || row.message || "").slice(0, 200),
+                    date: String(row.commit?.committer?.date || row.committed_date || "").slice(0, 40),
+                };
+            });
+        });
+        return { path, ref, versions, windowed: versions.length === 20 };
     }
     async get(args) {
         const { ref } = await this.source(args);
-        return { ...(await this.read(args, ref)), ref };
+        const file = await this.read(args, ref);
+        return { ...file, ref, ...(file.exists ? { sha256: digest(file.content) } : {}) };
     }
     async package(args) {
         const { repo, ref } = await this.source(args);
@@ -180,7 +212,7 @@ export class RepositoryModels {
         const folder = location[1];
         const manifestPath = folder + "data/json/template-packages/" + location[2] + ".json";
         const saved = await this.read({ repository: repo.id, path: manifestPath }, ref);
-        let dependencies;
+        let dependencies, manifestRevision;
         if (saved.exists) {
             let manifest;
             try {
@@ -189,7 +221,7 @@ export class RepositoryModels {
                 throw problem("The template package manifest is not valid JSON. Save the template package again.", 409);
             }
             if (
-                manifest?.schema !== "openehr-template-package/1" ||
+                !["openehr-template-package/1", "openehr-template-package/2"].includes(manifest?.schema) ||
                 manifest.template?.path !== args.path.slice(folder.length) ||
                 manifest.template.sha256 !== digest(primary.content) ||
                 !Array.isArray(manifest.archetypes)
@@ -210,7 +242,18 @@ export class RepositoryModels {
                     !/^[a-f0-9]{64}$/.test(dep.sha256)
                 )
                     throw problem("The template package contains an invalid archetype entry.", 409);
-                return { ...dep, path: this.connections.validatePath(folder + dep.path) };
+                if (
+                    manifest.schema === "openehr-template-package/2" &&
+                    (!dep.git_blob ||
+                        !/^[a-f0-9]{40}$/.test(dep.git_blob.sha1 || "") ||
+                        !/^[a-f0-9]{64}$/.test(dep.git_blob.sha256 || ""))
+                )
+                    throw problem("The template package contains an invalid archetype version.", 409);
+                return {
+                    ...dep,
+                    git_blob: manifest.schema === "openehr-template-package/2" ? dep.git_blob : undefined,
+                    path: this.connections.validatePath(folder + dep.path),
+                };
             });
             result.dependencySource = "verified_manifest";
         } else {
@@ -245,7 +288,25 @@ export class RepositoryModels {
         for (let i = 0; i < dependencies.length; i += 2) {
             const loaded = await Promise.all(
                 dependencies.slice(i, i + 2).map(async (dep) => {
-                    const file = await this.read({ repository: repo.id, path: dep.path }, ref);
+                    const blob = dep.git_blob?.[ref.length === 40 ? "sha1" : "sha256"];
+                    let file = blob
+                        ? { exists: true, content: await this.readBlob(repo, blob), revision: blob }
+                        : await this.read({ repository: repo.id, path: dep.path }, ref);
+                    // Legacy manifests predate blob pins. Recover only from the exact
+                    // commit that wrote their bytes, never from a guessed CKM version.
+                    if (!blob && dep.sha256 && (!file.exists || digest(file.content) !== dep.sha256)) {
+                        manifestRevision ||= (async () => {
+                            const history = await this.history({ repository: repo.id, path: manifestPath, ref });
+                            const originalRef = history.versions[0]?.commit;
+                            if (!originalRef)
+                                throw problem("The archetype package has no recoverable version history.", 409);
+                            const original = await this.read({ repository: repo.id, path: manifestPath }, originalRef);
+                            if (!original.exists || original.content !== saved.content)
+                                throw problem("The archetype package history does not match its manifest.", 409);
+                            return originalRef;
+                        })();
+                        file = await this.read({ repository: repo.id, path: dep.path }, await manifestRevision);
+                    }
                     if (!file.exists)
                         throw problem(
                             "A required archetype is missing: " +
@@ -268,6 +329,7 @@ export class RepositoryModels {
                         content: file.content,
                         path: dep.path,
                         sha256: digest(file.content),
+                        ...(blob ? { git_blob: blob } : {}),
                     };
                 }),
             );

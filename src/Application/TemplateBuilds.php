@@ -66,22 +66,34 @@ final readonly class TemplateBuilds
             'terminology_validation' => 'NOT_EXECUTED', 'clinical_approval' => false,
             'evidence_trust' => 'Repository build evidence; not a signed attestation or a clinical approval.']];
         ArtifactMetadata::validate($metadata);
-        $target = 'templates/compiled/' . $buildId . '.opt';
+        $relative = (string) preg_replace('~^templates/(?:oet/|adl/)?~', '', $path);
+        $name = (string) preg_replace('~\.(?:oet(?:\.xml)?|adlt|xml)$~i', '', $relative);
+        $target = 'templates/opt/' . $name . '.opt';
+        $current = null;
         try {
-            $artifact = $this->repository->saveArtifact($project, $target, $output['content'], $metadata, null);
+            $current = $this->repository->getArtifact($project, $target);
         } catch (\RuntimeException $error) {
-            if ($error->getMessage() !== 'REVISION_CONFLICT') {
-                throw $error;
-            }
-            $artifact = $this->repository->getArtifact($project, $target);
-            if ($artifact['content'] !== $output['content'] || ($artifact['metadata']['build']['id'] ?? null) !== $buildId
-                || ($artifact['metadata']['build']['source'] ?? null) !== $identity['source']
-                || ($artifact['metadata']['build']['dependencies'] ?? null) !== $manifest
-                || ($artifact['metadata']['build']['report'] ?? null) !== $report) {
+            if ($error->getMessage() !== 'ARTIFACT_NOT_FOUND') { throw $error; }
+        }
+        if ($current !== null) {
+            $previous = $current['metadata']['build'] ?? [];
+            // A stable output belongs to one source path. Never silently replace a
+            // manually imported OPT or another template's independently owned output.
+            if (($previous['source']['path'] ?? null) !== $path
+                || ($previous['output_sha256'] ?? null) !== $current['sha256']) {
                 throw new \RuntimeException('ENGINE_BUILD_CONFLICT');
             }
+            if ($current['status'] !== 'DELETED' && ($previous['id'] ?? null) === $buildId) {
+                if ($current['content'] !== $output['content'] || ($previous['report'] ?? null) !== $report
+                    || ($previous['source'] ?? null) !== $identity['source'] || ($previous['dependencies'] ?? null) !== $manifest) {
+                    throw new \RuntimeException('ENGINE_BUILD_CONFLICT');
+                }
+                return ['saved' => true, 'changed' => false, 'build_id' => $buildId,
+                    'artifact' => $this->reference($current), 'build' => $previous, 'clinical_approval' => false];
+            }
         }
-        return ['saved' => true, 'build_id' => $buildId, 'artifact' => $this->reference($artifact),
+        $artifact = $this->repository->saveArtifact($project, $target, $output['content'], $metadata, $current['revision'] ?? null);
+        return ['saved' => true, 'changed' => true, 'build_id' => $buildId, 'artifact' => $this->reference($artifact),
             'build' => $artifact['metadata']['build'], 'clinical_approval' => false];
     }
 
