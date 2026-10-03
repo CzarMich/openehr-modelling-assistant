@@ -6,6 +6,16 @@ import { artifactKind } from "./repository-paths.mjs";
 import { problem } from "./personal-http.mjs";
 
 const hash = (content) => createHash("sha256").update(content).digest("hex");
+const canonical = (value) =>
+    Array.isArray(value)
+        ? value.map(canonical)
+        : value && typeof value === "object"
+          ? Object.fromEntries(
+                Object.keys(value)
+                    .sort()
+                    .map((key) => [key, canonical(value[key])]),
+            )
+          : value;
 const gitBlobs = (content) =>
     Object.fromEntries(
         ["sha1", "sha256"].map((algorithm) => [
@@ -194,7 +204,7 @@ export class TemplatePackages {
                     "data/json/template-packages/" +
                     relative.replace(/^templates\/(?:oet|adl)\//, "") +
                     ".json",
-                content: JSON.stringify(manifest, null, 2) + "\n",
+                content: JSON.stringify(canonical(manifest), null, 2) + "\n",
             },
         ];
     }

@@ -136,6 +136,7 @@ function fixture(t, kind = "github") {
                     sha256: hash(item.content),
                 })),
                 profile: "fixture",
+                checks: state.checks || { oet_application: "PASS", adl14_parse: "PASS" },
                 output: { sha256: "f".repeat(64) },
                 ...(state.generated
                     ? {
@@ -367,6 +368,8 @@ for (const kind of ["github", "gitlab"])
         });
         assert.equal(current.dependencies[0].content, changedSource.content);
         const before = f.state.writes.length;
+        // Native workers can emit Map entries in a different order per process.
+        f.state.checks = { adl14_parse: "PASS", oet_application: "PASS" };
         const repeat = f.makeWorkspace();
         await repeat.tools();
         const same = (
