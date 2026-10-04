@@ -2,7 +2,7 @@
 
 The working directory, repository name, Composer identity, PHP namespaces, MCP server identity, Compose services and documentation now use openEHR Modelling Assistant. Product name, vendor, description, links and icon are deployment settings. Core code has no required model-provider SDK, client plugin, hosted upstream service or CDR.
 
-At the original migration, the root MIT notice was unchanged. That notice is now preserved verbatim in THIRD_PARTY_NOTICES.md, and LICENSE is scoped to Michael Anywar's original work; existing upstream rights remain intact. Clinical guides, 14 prompts, specification data, examples and legacy tool contracts remain available. The former install test requiring an upstream hosted URL was replaced with an independent-deployment contract; this intentional product change is recorded in ADR-0008.
+The project retains the MIT License, with upstream copyright and permission notices preserved in LICENSE and THIRD_PARTY_NOTICES.md alongside attribution for Michael Anywar's original work. Clinical guides, 14 prompts, specification data, examples and legacy tool contracts remain available. The former install test requiring an upstream hosted URL was replaced with an independent-deployment contract; this intentional product change is recorded in ADR-0008.
 
 Remaining upstream-name occurrences are limited to these purposes:
 

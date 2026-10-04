@@ -27,14 +27,18 @@ final class InstallDocContractTest extends TestCase
         $root = __DIR__ . '/../..';
         $terms = (string) file_get_contents($root . '/LICENSE');
         $notices = (string) file_get_contents($root . '/THIRD_PARTY_NOTICES.md');
-        self::assertStringContainsString("Copyright © 2026 Michael Anywar.\nAll rights reserved.", $terms);
-        self::assertStringContainsString('does not revoke, narrow or relicense', $terms);
+        self::assertStringContainsString("Copyright © 2026 Michael Anywar.\n", $terms);
         self::assertSame(1, preg_match('/```text\n(.*?)```/s', $notices, $match));
         // Exact upstream LICENSE bytes at the inherited baseline, including all MIT conditions.
         self::assertSame('4b0d2a1d19b17fe92b1e68a85a6e538f0207bc9047af5301738f1040c3049607', hash('sha256', $match[1]));
+        self::assertSame($match[1], str_replace("Copyright © 2026 Michael Anywar.\n", '', $terms));
         $package = json_decode((string) file_get_contents($root . '/composer.json'), true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame('proprietary', $package['license']);
+        self::assertSame('MIT', $package['license']);
         self::assertSame(['Michael Anywar'], array_column($package['authors'], 'name'));
+        $chat = json_decode((string) file_get_contents($root . '/chat/package.json'), true, 512, JSON_THROW_ON_ERROR);
+        $lock = json_decode((string) file_get_contents($root . '/chat/package-lock.json'), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('MIT', $chat['license']);
+        self::assertSame($chat['license'], $lock['packages']['']['license']);
     }
 
 }

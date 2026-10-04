@@ -4,11 +4,9 @@ Independently maintained and developed by Michael Anywar.
 
 Copyright © 2026 Michael Anywar.
 
-All rights reserved.
-
-This statement covers Michael Anywar's original material only. Incorporated or
-derived third-party components retain their respective licenses. See the
-[product terms](../LICENSE) and [third-party notices](../THIRD_PARTY_NOTICES.md).
+Licensed under the [MIT License](../LICENSE). Separately licensed third-party
+material retains its respective terms; see the
+[third-party notices](../THIRD_PARTY_NOTICES.md).
 
 ## Setup and use
 

@@ -5,7 +5,7 @@
   <name>openEHR Modelling Assistant — native engine</name>
   <description>Original product work by Michael Anywar; third-party dependencies retain their own licenses.</description>
   <url>https://github.com/CzarMich/openehr-modelling-assistant</url>
-  <licenses><license><name>Proprietary — original work only; see LICENSE and THIRD_PARTY_NOTICES.md</name><url>https://github.com/CzarMich/openehr-modelling-assistant/blob/main/LICENSE</url><distribution>repo</distribution></license></licenses>
+  <licenses><license><name>MIT License</name><url>https://github.com/CzarMich/openehr-modelling-assistant/blob/main/LICENSE</url><distribution>repo</distribution></license></licenses>
   <developers><developer><name>Michael Anywar</name><roles><role>Owner and maintainer of the current product</role></roles></developer></developers>
   <properties>
     <maven.compiler.release>21</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

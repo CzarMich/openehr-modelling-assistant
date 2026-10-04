@@ -4,7 +4,7 @@ Independently maintained and developed by Michael Anywar.
 
 Copyright © 2026 Michael Anywar.
 
-All rights reserved.
+Licensed under the [MIT License](LICENSE).
 
 A self-hosted MCP server for openEHR modelling. Search CKMs, retrieve modelling
 guidance, work with archetypes and templates, check ADL and AQL, and keep model
@@ -109,11 +109,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes.
 
 ## Licensing
 
-The current product contains original work by Michael Anywar, covered by the
-reserved-rights statement in [LICENSE](LICENSE). Certain components incorporate
-or derive from third-party open-source software and remain governed by their
-respective licenses. Required third-party notices are contained in
+The project is licensed under the [MIT License](LICENSE), with copyright notices
+for the upstream authors and Michael Anywar's original work. Separately licensed
+third-party material retains its respective terms. Required notices are contained in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-The product statement applies only to Michael Anywar's original work; it does not
-claim upstream authorship or revoke earlier license grants.

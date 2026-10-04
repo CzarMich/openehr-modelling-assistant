@@ -10,7 +10,7 @@ RUN addgroup -g 10001 engine && adduser -D -u 10001 -G engine engine
 WORKDIR /app
 LABEL org.opencontainers.image.authors="Michael Anywar" \
       org.opencontainers.image.vendor="Michael Anywar" \
-      org.opencontainers.image.licenses="LicenseRef-Proprietary"
+      org.opencontainers.image.licenses="MIT"
 COPY --from=build /build/engine/target/engine-1.2.0.jar ./engine.jar
 COPY --from=build /build/engine/target/lib ./lib
 COPY --from=build /build/engine/target/bom.json ./sbom.json
