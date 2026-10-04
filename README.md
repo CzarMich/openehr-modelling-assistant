@@ -116,6 +116,4 @@ respective licenses. Required third-party notices are contained in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 The product statement applies only to Michael Anywar's original work; it does not
-claim upstream authorship or revoke earlier license grants. See the
-[licensing audit](docs/LICENSING_AUDIT.md) for scope, provenance and outstanding
-source-license questions.
+claim upstream authorship or revoke earlier license grants.
