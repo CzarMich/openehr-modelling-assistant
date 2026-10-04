@@ -1,4 +1,15 @@
-# Documentation
+# openEHR Modelling Assistant documentation
+
+Independently maintained and developed by Michael Anywar.
+
+Copyright © 2026 Michael Anywar.
+
+All rights reserved.
+
+This statement covers Michael Anywar's original material only. Incorporated or
+derived third-party components retain their respective licenses. See the
+[product terms](../LICENSE), [third-party notices](../THIRD_PARTY_NOTICES.md) and
+[licensing audit](LICENSING_AUDIT.md).
 
 ## Setup and use
 

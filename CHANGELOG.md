@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Licensing distinguishes Michael Anywar’s original product work from preserved third-party material.
+
 - Add Copilot Studio browser connections with private Microsoft sign-in and workspace tools.
 
 - Artefacts use stable filenames with automatic revision history and exact template dependency versions.

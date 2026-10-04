@@ -16,4 +16,4 @@ chat/test-results
 chat/playwright-report
 
 .secrets
-engine
+engine/target

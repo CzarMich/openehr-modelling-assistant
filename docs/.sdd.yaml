@@ -1,6 +1,6 @@
 # docs/.sdd.yaml — the project descriptor for Specification-Driven Development.
 # Declares this repo's SDD conventions so tooling (and the sdd-* skills) stay
-# repo-agnostic. Schema: cadasto/sdd references/traceability-schema.md.
+# repo-agnostic. The local traceability contract is documented in docs/traceability.md.
 #
 # This repo runs a deliberately *lightweight* rung-2 (spec-anchored) SDD: the
 # requirements index and the design narrative carry the normative prose; the

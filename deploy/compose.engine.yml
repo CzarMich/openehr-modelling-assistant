@@ -10,7 +10,8 @@ services:
   engine:
     image: ${MODELLING_ENGINE_IMAGE:-openehr-modelling-engine:local}
     build:
-      context: ./engine
+      context: .
+      dockerfile: engine/Dockerfile
     network_mode: service:app
     depends_on:
       app:

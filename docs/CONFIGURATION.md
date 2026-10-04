@@ -10,7 +10,7 @@ The executable source of truth is `src/Configuration/Settings.php`. `.env.exampl
 | `APP_ENV` | `development` | development, testing or production; production HTTP requires authentication. |
 | `PRODUCT_NAME` | `openEHR Modelling Assistant` | Human product name in instructions. |
 | `PRODUCT_SHORT_NAME` | `openEHR Modelling Assistant` | Brand metadata reserved for client/UI presentation; not rendered by a server UI. |
-| `PRODUCT_VENDOR` | `EY` | Deployment branding metadata; not an authorship/licence replacement. |
+| `PRODUCT_VENDOR` | `Michael Anywar` | Deployment branding metadata; does not change product ownership or third-party rights. |
 | `PRODUCT_DESCRIPTION` | `AI-assisted openEHR modelling and knowledge services` | MCP server description. |
 | `PRODUCT_URL` | empty | Optional HTTPS MCP website URL. |
 | `PRODUCT_SUPPORT_URL` | empty | Optional branding metadata for integrators. |

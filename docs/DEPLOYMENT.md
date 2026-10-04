@@ -20,7 +20,7 @@ operations need access to their configured services. Bundled resources work offl
 Container verification uses Linux amd64, PHP 8.4 and Docker Compose. macOS/Windows
 Docker Desktop and Kubernetes deployments are architecture-compatible but not tested
 unless listed in execution evidence. No cloud-provider-specific deployment is required.
-A production organisation review is still required; this repository is not an EY-approved deployment.
+A production organisation review is still required; deployment does not imply approval by that organisation.
 
 ## Source build and local startup
 
