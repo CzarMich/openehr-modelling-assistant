@@ -2,7 +2,7 @@
     "name": "openehr/modelling-assistant",
     "description": "openEHR Modelling Assistant, independently maintained and developed by Michael Anywar.",
     "type": "project",
-    "license": "proprietary",
+    "license": "MIT",
     "authors": [
         {
             "name": "Michael Anywar",

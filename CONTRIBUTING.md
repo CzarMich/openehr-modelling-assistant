@@ -17,11 +17,10 @@ below, so each has a single source of truth.
 
 ## Rights in contributions
 
-Michael Anywar maintains and develops the current product. Its original material
-is covered by [LICENSE](LICENSE); third-party components retain their own terms
-in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Do not assume the product is
-offered under MIT. Agree any necessary rights for a new contribution explicitly
-with the maintainer before incorporation; submitting a patch alone does not
+Michael Anywar maintains and develops the current product, which is licensed
+under the [MIT License](LICENSE). Contributions should be compatible with that
+license; third-party components retain their own terms in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Submitting a patch does not
 transfer copyright. Preserve authorship, source notices and existing grants.
 
 ## Code of Conduct

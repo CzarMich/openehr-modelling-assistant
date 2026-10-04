@@ -11,11 +11,11 @@ User-facing documentation and UI use **terminology server**, **server**, and **C
 ## Ownership and third-party material
 
 The current product is independently maintained and developed by Michael Anywar.
-Use `Copyright © 2026 Michael Anywar.` and `All rights reserved.` only for his
-original material. See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-and [the audit](docs/LICENSING_AUDIT.md). Preserve upstream notices, source-model
-credits, dependency metadata and historical commits; do not add blanket ownership
-headers to inherited or mixed files.
+Keep the project under the MIT License. Use `Copyright © 2026 Michael Anywar.`
+only for his original material. See [LICENSE](LICENSE) and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Preserve upstream notices, source-model credits, dependency metadata and historical
+commits; do not add blanket ownership headers to inherited or mixed files.
 
 ## Project Overview
 

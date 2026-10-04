@@ -37,7 +37,7 @@ jobs:
           labels: |
             org.opencontainers.image.authors=Michael Anywar
             org.opencontainers.image.vendor=Michael Anywar
-            org.opencontainers.image.licenses=LicenseRef-Proprietary
+            org.opencontainers.image.licenses=MIT
           tags: |
             type=ref,event=tag
             type=raw,value=latest

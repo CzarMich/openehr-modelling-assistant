@@ -64,7 +64,7 @@ RUN composer dump-autoload --no-dev --no-scripts --classmap-authoritative
 FROM base AS runtime
 LABEL org.opencontainers.image.authors="Michael Anywar" \
       org.opencontainers.image.vendor="Michael Anywar" \
-      org.opencontainers.image.licenses="LicenseRef-Proprietary"
+      org.opencontainers.image.licenses="MIT"
 COPY --from=vendor-builder /app/public ./public
 COPY --from=vendor-builder /app/src ./src
 COPY --from=vendor-builder /app/vendor ./vendor

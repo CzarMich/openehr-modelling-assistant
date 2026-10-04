@@ -14,7 +14,7 @@ CMD ["node", "entrypoint.mjs"]
 FROM dependencies AS chat
 LABEL org.opencontainers.image.authors="Michael Anywar" \
       org.opencontainers.image.vendor="Michael Anywar" \
-      org.opencontainers.image.licenses="LicenseRef-Proprietary"
+      org.opencontainers.image.licenses="MIT"
 RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap \
     && rm -rf /var/lib/apt/lists/* \
     && npm install --global --ignore-scripts @openai/codex@0.157.1
@@ -28,7 +28,7 @@ USER node
 FROM dependencies AS reviews
 LABEL org.opencontainers.image.authors="Michael Anywar" \
       org.opencontainers.image.vendor="Michael Anywar" \
-      org.opencontainers.image.licenses="LicenseRef-Proprietary"
+      org.opencontainers.image.licenses="MIT"
 COPY chat/src ./src
 COPY chat/entrypoint.mjs ./entrypoint.mjs
 COPY public/chat /app/public/chat
