@@ -1,12 +1,21 @@
 # AGENTS.md
 
-Instructions for AI agents (Claude Code, Cursor, and others) working in the **openEHR Modelling Assistant** repository.
+Instructions for AI coding agents working in the **openEHR Modelling Assistant** repository.
 
 ## Autonomous execution
 
 Follow the user's [Autonomous Execution Policy](docs/AUTONOMOUS_EXECUTION_POLICY.md). Routine implementation, testing, debugging, configuration, documentation, commits, pushes, CI monitoring and deployment recovery are already authorized. Continue through the user's entire objective without routine permission questions. Preserve user work and data; investigate safely before escalating a genuine external-access or irreversible-action blocker. Higher-priority environment security controls still apply.
 
 User-facing documentation and UI use **terminology server**, **server**, and **CDR**, without deployment-specific product names. Keep exact technical identifiers only where needed for reproducible setup.
+
+## Ownership and third-party material
+
+The current product is independently maintained and developed by Michael Anywar.
+Use `Copyright © 2026 Michael Anywar.` and `All rights reserved.` only for his
+original material. See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+and [the audit](docs/LICENSING_AUDIT.md). Preserve upstream notices, source-model
+credits, dependency metadata and historical commits; do not add blanket ownership
+headers to inherited or mixed files.
 
 ## Project Overview
 

@@ -23,7 +23,7 @@ services:
     security_opt: [no-new-privileges:true]
   engine:
     image: openehr-modelling-engine:test
-    build: {context: '${ENGINE_TEST_REPO:?}/engine'}
+    build: {context: '${ENGINE_TEST_REPO:?}', dockerfile: engine/Dockerfile}
     network_mode: service:app
     volumes: ['${ENGINE_TEST_KEY:?}:/run/secrets/engine-key:ro']
     read_only: true

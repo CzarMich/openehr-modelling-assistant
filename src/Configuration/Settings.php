@@ -11,7 +11,7 @@ final class Settings
 {
     public const array DEFAULTS = [
         'APP_ENV' => 'development', 'PRODUCT_NAME' => 'openEHR Modelling Assistant',
-        'PRODUCT_SHORT_NAME' => 'openEHR Modelling Assistant', 'PRODUCT_VENDOR' => 'EY',
+        'PRODUCT_SHORT_NAME' => 'openEHR Modelling Assistant', 'PRODUCT_VENDOR' => 'Michael Anywar',
         'PRODUCT_DESCRIPTION' => 'AI-assisted openEHR modelling and knowledge services',
         'PRODUCT_URL' => '', 'PRODUCT_SUPPORT_URL' => '', 'PRODUCT_DOCUMENTATION_URL' => '',
         'PRODUCT_LOGO_URL' => '', 'MCP_SERVER_NAME' => 'openehr-modelling-assistant',

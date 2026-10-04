@@ -13,6 +13,17 @@ cleanup() { "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || t
 trap cleanup EXIT
 "${compose[@]}" up -d --build --wait
 "${compose[@]}" cp engine:/app/sbom.json "$ENGINE_TEST_REPO/docs/evidence/engine-sbom.json"
+"${compose[@]}" cp engine:/app/engine.jar "$engine_test_dir/engine.jar"
+python3 - "$engine_test_dir/engine.jar" "$ENGINE_TEST_REPO" <<'PYNOTICE'
+import pathlib, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as jar:
+    for notice in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+        assert jar.read('META-INF/' + notice) == (pathlib.Path(sys.argv[2]) / notice).read_bytes(), notice
+print('Engine JAR preserves the canonical product and third-party notices.')
+PYNOTICE
+for notice in LICENSE THIRD_PARTY_NOTICES.md; do
+  "${compose[@]}" exec -T engine cat "/app/$notice" | cmp "$ENGINE_TEST_REPO/$notice" -
+done
 "${compose[@]}" exec -T app php /probe.php
 address=$("${compose[@]}" port ingress 8343)
 python3 "$ENGINE_TEST_REPO/scripts/engine-fixture-smoke.py" --url "http://$address/mcp" --writes --catalogue "$ENGINE_TEST_REPO/docs/evidence/tool-catalogue.json" \

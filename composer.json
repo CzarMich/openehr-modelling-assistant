@@ -1,12 +1,12 @@
 {
     "name": "openehr/modelling-assistant",
-    "description": "A Model Context Protocol (MCP) Server to assist end-user on various openEHR related tasks and APIs.",
+    "description": "openEHR Modelling Assistant, independently maintained and developed by Michael Anywar.",
     "type": "project",
-    "license": "MIT",
+    "license": "proprietary",
     "authors": [
         {
-            "name": "Sebastian Iancu",
-            "email": "sebastian-iancu@users.noreply.github.com"
+            "name": "Michael Anywar",
+            "role": "Owner and maintainer of the current product"
         }
     ],
     "require": {

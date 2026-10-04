@@ -42,7 +42,7 @@ body:
       description: Any relevant environment details
       placeholder: |
         - MCP client/host: Claude, Cursor, LibreChat, etc
-        - Environment: Cadasto/local/Docker
+        - Environment: local Docker / hosted deployment
         - Transport: streamable-http/stdio
     validations:
       required: true

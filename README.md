@@ -1,5 +1,11 @@
 # openEHR Modelling Assistant
 
+Independently maintained and developed by Michael Anywar.
+
+Copyright © 2026 Michael Anywar.
+
+All rights reserved.
+
 A self-hosted MCP server for openEHR modelling. Search CKMs, retrieve modelling
 guidance, work with archetypes and templates, check ADL and AQL, and keep model
 revisions and review history in a shared repository.
@@ -101,11 +107,15 @@ Run PHP and Composer in Docker. `make ci` checks traceability, PHPStan and PHPUn
 Browser checks and optional integration probes are documented in [testing](docs/testing.md).
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes.
 
-## Licence
+## Licensing
 
-[MIT](LICENSE). Upstream copyright and [third-party notices](THIRD_PARTY_NOTICES.md)
-are retained. Deployment branding is configurable.
+The current product contains original work by Michael Anywar, covered by the
+reserved-rights statement in [LICENSE](LICENSE). Certain components incorporate
+or derive from third-party open-source software and remain governed by their
+respective licenses. Required third-party notices are contained in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-### Acknowledgements
-
-This fork was inspired by the work started by [Sebastian Iancu](https://github.com/sebastian-iancu). Thanks to [Lars Fuhrmann](https://github.com/larfuma) for bringing forward the idea for this work, and to [John Meredith](https://github.com/johnmeredith) for being a supportive manager.
+The product statement applies only to Michael Anywar's original work; it does not
+claim upstream authorship or revoke earlier license grants. See the
+[licensing audit](docs/LICENSING_AUDIT.md) for scope, provenance and outstanding
+source-license questions.

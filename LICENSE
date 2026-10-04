@@ -1,21 +1,26 @@
-MIT License
+openEHR Modelling Assistant
 
-Copyright (c) 2025 Cadasto B.V.
+Copyright © 2026 Michael Anywar.
+All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Michael Anywar independently maintains and develops the current product.
+This statement applies only to original code, documentation and other material
+in which Michael Anywar owns the copyright, including his original additions
+to modified files. It does not claim authorship or ownership of third-party
+material or the contributions of other authors.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Except where a separate applicable license, prior grant or law permits it,
+no permission to use, reproduce, modify or distribute Michael Anywar's
+reserved-rights material is granted by this notice. Obtain the copyright
+holder's permission for those uses.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Third-party and upstream portions remain governed by their respective
+licenses. Their copyright, permission, attribution and warranty notices are
+preserved in THIRD_PARTY_NOTICES.md and, where applicable, in the material
+itself or its accompanying distribution. In a mixed file, these reserved-rights
+terms do not replace the license applicable to the upstream portions.
+
+This notice does not revoke, narrow or relicense rights already granted under
+an earlier release's license, including any earlier MIT grant. Historical
+versions and third-party source retain their applicable terms. Repository
+history records authorship and is not altered by this notice.

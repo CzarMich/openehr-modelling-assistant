@@ -12,17 +12,25 @@ CMD ["node", "entrypoint.mjs"]
 
 # Opt in to the provider adapter only when conversational chat is enabled.
 FROM dependencies AS chat
+LABEL org.opencontainers.image.authors="Michael Anywar" \
+      org.opencontainers.image.vendor="Michael Anywar" \
+      org.opencontainers.image.licenses="LicenseRef-Proprietary"
 RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap \
     && rm -rf /var/lib/apt/lists/* \
     && npm install --global --ignore-scripts @openai/codex@0.157.1
 COPY chat/src ./src
 COPY chat/entrypoint.mjs ./entrypoint.mjs
 COPY public/chat /app/public/chat
+COPY LICENSE THIRD_PARTY_NOTICES.md /app/
 USER node
 
 # Default browser workspace supports human review without a model-provider runtime.
 FROM dependencies AS reviews
+LABEL org.opencontainers.image.authors="Michael Anywar" \
+      org.opencontainers.image.vendor="Michael Anywar" \
+      org.opencontainers.image.licenses="LicenseRef-Proprietary"
 COPY chat/src ./src
 COPY chat/entrypoint.mjs ./entrypoint.mjs
 COPY public/chat /app/public/chat
+COPY LICENSE THIRD_PARTY_NOTICES.md /app/
 USER node

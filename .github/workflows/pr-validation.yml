@@ -56,6 +56,11 @@ jobs:
           set -euo pipefail
           cp .env.example .env
           docker compose up -d --build --wait
+          for service in app chat; do
+            for notice in LICENSE THIRD_PARTY_NOTICES.md; do
+              docker compose exec -T "$service" cat "/app/$notice" | cmp "$notice" -
+            done
+          done
           curl --fail --silent --output /tmp/modelling-workspace.html http://127.0.0.1:8343/
           grep -q 'role="tablist"' /tmp/modelling-workspace.html
           python3 scripts/mcp-smoke.py --evidence docs/evidence/ci-http-smoke.json

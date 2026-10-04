@@ -26,5 +26,7 @@
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.58.2",
     "prettier": "3.8.1"
-  }
+  },
+  "author": "Michael Anywar",
+  "license": "UNLICENSED"
 }

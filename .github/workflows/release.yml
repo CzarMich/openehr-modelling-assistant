@@ -34,6 +34,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          labels: |
+            org.opencontainers.image.authors=Michael Anywar
+            org.opencontainers.image.vendor=Michael Anywar
+            org.opencontainers.image.licenses=LicenseRef-Proprietary
           tags: |
             type=ref,event=tag
             type=raw,value=latest
