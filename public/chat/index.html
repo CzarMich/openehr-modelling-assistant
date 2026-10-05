@@ -798,9 +798,26 @@
                             </form>
                             <section id="mfa-enrollment" class="identity-form" hidden>
                                 <h2>Set up multi-factor authentication</h2>
-                                <p>Add this secret to an authenticator app, then enter its six-digit code.</p>
-                                <a id="otp-auth-link" class="secondary-button" href="#">Open authenticator app</a>
-                                <p>Manual setup secret: <code id="totp-secret"></code></p>
+                                <p>In your phone’s authenticator app, choose Add account, then Scan QR code.</p>
+                                <img
+                                    id="mfa-qr"
+                                    class="mfa-qr"
+                                    width="288"
+                                    height="288"
+                                    alt="Scan this QR code with your authenticator app to add your workspace account"
+                                    hidden
+                                />
+                                <p id="mfa-qr-error" role="status" hidden>
+                                    The QR code could not load. Open your authenticator app below or enter the key
+                                    manually.
+                                </p>
+                                <p>Setting up on this phone? <a id="otp-auth-link">Open authenticator app</a></p>
+                                <details id="mfa-manual">
+                                    <summary>Can’t scan? Enter the key manually</summary>
+                                    <p>Add a time-based account named openEHR Modelling Assistant using this key:</p>
+                                    <code id="totp-secret"></code>
+                                </details>
+                                <p>Enter the six-digit code shown in your authenticator app to finish setup.</p>
                                 <form id="mfa-form">
                                     <label for="mfa-code">Authenticator code</label
                                     ><input
@@ -1449,6 +1466,12 @@ LIMIT 100</textarea
                     </nav>
                     <section class="help-topic" aria-labelledby="help-accounts">
                         <h2 id="help-accounts" tabindex="-1">Accounts and shared connections</h2>
+                        <p>
+                            When setting up your authenticator, choose Add account in the app on your phone and scan the
+                            QR code. Enter the six-digit code here, then save your recovery codes somewhere private. On
+                            the same phone, use Open authenticator app. If scanning is unavailable, expand Can’t scan?
+                            Enter the key manually.
+                        </p>
                         <p>
                             The first platform owner completes setup before anyone can create an account. New accounts
                             require an authenticator and receive recovery codes. Keep the codes somewhere safe outside

@@ -5,10 +5,26 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
 import test from "node:test";
+import sharp from "sharp";
+import jsQR from "jsqr";
 import { Auth } from "../src/auth.mjs";
 import { loadConfig } from "../src/config.mjs";
 import { createApplication } from "../src/server.mjs";
 import { Store } from "../src/store.mjs";
+
+async function scanEnrollment(response) {
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "image/png");
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("cross-origin-resource-policy"), "same-origin");
+    const { data, info } = await sharp(Buffer.from(await response.arrayBuffer()))
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+    const decoded = jsQR(new Uint8ClampedArray(data), info.width, info.height);
+    assert.ok(decoded, "An independent scanner must decode the enrollment PNG");
+    return decoded.data;
+}
 
 const password = "A-long-http-test-password-2026!";
 function totp(secret) {
@@ -80,6 +96,7 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
         rmSync(directory, { recursive: true, force: true });
     });
 
+    assert.equal((await request("/chat/auth/mfa-qr")).status, 401);
     const initial = await (await request("/chat/api/session")).json();
     assert.equal(initial.identitySetupRequired, true);
     assert.doesNotMatch(JSON.stringify(initial), /synthetic-workspace-mcp-key/);
@@ -103,8 +120,13 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
     assert.equal(setupStatus.authenticated, false);
     assert.equal(setupStatus.mfaSetupRequired, true);
     assert.equal((await request("/chat/api/conversations")).status, 403);
-    const ownerMfa = await request("/chat/auth/mfa", "POST", { code: totp(owner.totpSecret) });
+    const ownerQr = await scanEnrollment(await request("/chat/auth/mfa-qr"));
+    assert.equal(ownerQr, owner.otpAuthUrl);
+    const scannedSecret = new URL(ownerQr).searchParams.get("secret");
+    assert.equal(scannedSecret, owner.totpSecret);
+    const ownerMfa = await request("/chat/auth/mfa", "POST", { code: totp(scannedSecret) });
     assert.equal(ownerMfa.status, 200);
+    assert.equal((await request("/chat/auth/mfa-qr")).status, 403);
     const ownerRecovery = await ownerMfa.json();
     const ownerSession = auth.session({ headers: { cookie }, socket: {} });
     csrf = ownerSession.csrf;
@@ -136,6 +158,9 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
     assert.equal(accepted.status, 201);
     const member = await accepted.json();
     csrf = member.csrf;
+    const memberQr = await scanEnrollment(await request("/chat/auth/mfa-qr"));
+    assert.equal(memberQr, member.otpAuthUrl);
+    assert.notEqual(memberQr, ownerQr);
     assert.equal((await request("/chat/api/conversations")).status, 403);
     assert.equal((await request("/chat/auth/mfa", "POST", { code: totp(member.totpSecret) })).status, 200);
     const memberSession = auth.session({ headers: { cookie }, socket: {} });
@@ -243,5 +268,11 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
         password: "Reset-http-password-2026!",
     });
     assert.equal(recover.status, 200);
-    assert.equal((await recover.json()).mfaSetupRequired, true);
+    const recovered = await recover.json();
+    assert.equal(recovered.mfaSetupRequired, true);
+    const recoveredQr = await scanEnrollment(await request("/chat/auth/mfa-qr"));
+    assert.equal(recoveredQr, recovered.otpAuthUrl);
+    assert.notEqual(recoveredQr, created.otpAuthUrl);
+    auth.identityStore.revokeSession(cookie.split("=")[1]);
+    assert.equal((await request("/chat/auth/mfa-qr")).status, 401);
 });

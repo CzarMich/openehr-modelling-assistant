@@ -1673,3 +1673,55 @@ test("native sign-in exposes signup, failure counts and email-free recovery on m
     await expect(page.locator("#mfa-enrollment")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+for (const failedImage of [false, true]) {
+    test(`authenticator enrollment offers a private QR and manual fallback (image failure: ${failedImage})`, async ({
+        page,
+    }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.route("**/chat/api/session", (route) =>
+            route.fulfill({
+                json: {
+                    authenticated: false,
+                    enabled: true,
+                    identityEnabled: true,
+                    mfaSetupRequired: true,
+                    csrf: "synthetic-csrf",
+                    totpSecret: "JBSWY3DPEHPK3PXP",
+                    otpAuthUrl: "otpauth://totp/test?secret=JBSWY3DPEHPK3PXP",
+                    providers: [],
+                },
+            }),
+        );
+        await page.route("**/chat/auth/mfa-qr", (route) => {
+            expect(new URL(route.request().url()).search).toBe("");
+            return failedImage
+                ? route.fulfill({ status: 503, body: "Unavailable" })
+                : route.fulfill({ contentType: "image/png", body: imagePng });
+        });
+        await page.route("**/chat/auth/mfa", (route) => {
+            expect(route.request().postDataJSON()).toEqual({ code: "123456" });
+            return route.fulfill({ json: { csrf: "next-csrf", recoveryCodes: ["synthetic-recovery"] } });
+        });
+        await page.goto("/chat/");
+        await expect(page.locator("#mfa-enrollment")).toBeVisible();
+        if (failedImage) {
+            await expect(page.locator("#mfa-qr-error")).toBeVisible();
+            await expect(page.locator("#mfa-qr")).toBeHidden();
+        } else {
+            await expect(page.locator("#mfa-qr")).toBeVisible();
+            await expect.poll(() => page.locator("#mfa-qr").evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+            await expect(page.locator("#totp-secret")).toBeHidden();
+            await page.locator("#mfa-manual summary").click();
+        }
+        await expect(page.locator("#totp-secret")).toHaveText("JBSWY3DPEHPK3PXP");
+        await expect(page.locator("#totp-secret")).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        await page.locator("#mfa-code").fill("123456");
+        await page.locator("#mfa-form button").click();
+        await expect(page.locator("#recovery-codes")).toBeVisible();
+        await expect(page.locator("#mfa-qr")).not.toHaveAttribute("src");
+        await expect(page.locator("#otp-auth-link")).not.toHaveAttribute("href");
+        await expect(page.locator("#totp-secret")).toBeEmpty();
+    });
+}

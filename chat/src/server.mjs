@@ -1,5 +1,6 @@
 import { GLOBAL_IDENTITY, workspaceAccess, identityCanUseGlobal } from "./access.mjs";
 import http from "node:http";
+import QRCode from "qrcode";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
@@ -234,6 +235,26 @@ export function createApplication(
                     "Invalid invitation request.",
                 );
                 return json(res, 201, auth.acceptInvite(input, res));
+            }
+            if (req.method === "GET" && path === "/chat/auth/mfa-qr") {
+                const pending = auth.require(req, false, true);
+                if (!pending.mfaSetupRequired || !pending.otpAuthUrl)
+                    throw Object.assign(new Error("Authenticator setup is not pending."), { status: 403 });
+                const png = await QRCode.toBuffer(pending.otpAuthUrl, {
+                    type: "png",
+                    width: 288,
+                    margin: 4,
+                    errorCorrectionLevel: "M",
+                });
+                // Enrollment or recovery may finish while the PNG is being generated.
+                const current = auth.require(req, false, true);
+                if (!current.mfaSetupRequired || current.otpAuthUrl !== pending.otpAuthUrl)
+                    throw Object.assign(new Error("Authenticator setup is no longer pending."), { status: 403 });
+                res.writeHead(200, {
+                    "Content-Type": "image/png",
+                    "Cross-Origin-Resource-Policy": "same-origin",
+                });
+                return res.end(png);
             }
             if (req.method === "POST" && path === "/chat/auth/mfa") {
                 auth.require(req, true, true);

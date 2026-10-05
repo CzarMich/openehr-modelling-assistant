@@ -829,3 +829,28 @@ body:not([data-section="chat"]) .sidebar-label {
 body:not([data-section="chat"]) #toggle-sidebar {
     display: none;
 }
+
+.mfa-qr {
+    display: block;
+    width: 288px;
+    max-width: 100%;
+    height: auto;
+    margin: 1rem 0;
+    background: #fff;
+    border: 1px solid var(--border, #d5dfeb);
+    border-radius: 8px;
+}
+#mfa-manual {
+    margin: 1rem 0;
+}
+#mfa-manual summary {
+    cursor: pointer;
+}
+#totp-secret {
+    display: block;
+    padding: 0.75rem;
+    overflow-wrap: anywhere;
+    user-select: all;
+    background: var(--surface, #f4f7fb);
+    border-radius: 6px;
+}

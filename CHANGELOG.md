@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Authenticator setup offers a private QR code with same-phone and manual-key fallbacks.
+
 - Browser workspaces gain owner-managed shared connections, native signup and email-free lockout recovery.
 - Chat settings and continuation controls improve, with a twenty-minute modelling budget.
 

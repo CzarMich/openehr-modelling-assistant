@@ -34,7 +34,23 @@ async function adminRequest(path, method = "GET", data = undefined) {
     if (!response.ok) throw new Error(result.error || "The request could not be completed.");
     return result;
 }
+function clearMfaSetup() {
+    $("mfa-qr").removeAttribute("src");
+    $("mfa-qr").hidden = true;
+    $("mfa-qr-error").hidden = true;
+    $("mfa-manual").open = false;
+    $("otp-auth-link").removeAttribute("href");
+    $("totp-secret").textContent = "";
+    $("mfa-code").value = "";
+}
+$("mfa-qr").addEventListener("error", () => {
+    if (!$("mfa-qr").hasAttribute("src")) return;
+    $("mfa-qr").hidden = true;
+    $("mfa-qr-error").hidden = false;
+    $("mfa-manual").open = true;
+});
 function showOnly(formId) {
+    if (formId !== "mfa-enrollment") clearMfaSetup();
     for (const id of [
         "local-login",
         "signup-form",
@@ -50,6 +66,11 @@ function showOnly(formId) {
 }
 function setupMfa(result) {
     authCsrf(result.csrf);
+    if ($("otp-auth-link").getAttribute("href") !== result.otpAuthUrl) {
+        clearMfaSetup();
+        $("mfa-qr").hidden = false;
+        $("mfa-qr").src = "/chat/auth/mfa-qr";
+    }
     $("otp-auth-link").href = result.otpAuthUrl;
     $("totp-secret").textContent = result.totpSecret;
     showOnly("mfa-enrollment");
@@ -293,6 +314,8 @@ function update(value) {
         setupMfa(value);
         return;
     }
+    clearMfaSetup();
+    $("mfa-enrollment").hidden = true;
     if (value.authenticated) {
         $("login-panel").hidden = true;
         if (admin && document.body.dataset.section === "accounts") loadAdmin();
