@@ -35,7 +35,8 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
     const directory = mkdtempSync(join(tmpdir(), "identity-http-"));
     const config = {
         ...loadConfig(),
-        enabled: false,
+        enabled: true,
+        providerEncryptionKey: "ab".repeat(32),
         reviewEnabled: false,
         identityEnabled: true,
         identityEncryptionKey: "cd".repeat(32),
@@ -45,7 +46,11 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
         mcpKey: "synthetic-workspace-mcp-key",
     };
     const auth = new Auth(config);
-    const server = createApplication(config, { auth, store: new Store(join(directory, "conversations")) });
+    const server = createApplication(config, {
+        auth,
+        store: new Store(join(directory, "conversations")),
+        mcpFactory: () => ({ call: async () => ({ sources: {} }), close: async () => {} }),
+    });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
     const origin = `http://127.0.0.1:${server.address().port}`;
@@ -151,4 +156,92 @@ test("native owner bootstrap, MFA gate, user administration, invitation and pers
     const loginResult = await login.json();
     csrf = loginResult.csrf;
     assert.equal((await request("/chat/api/identity/users")).status, 200);
+    const ownerCookie = cookie,
+        ownerCsrf = csrf;
+    const sharedKey = "sk-ant-" + "s".repeat(40);
+    assert.equal((await request("/chat/api/providers/claude?scope=global", "POST", { apiKey: sharedKey })).status, 200);
+    const sharedRepo = await (
+        await request("/chat/api/connections?scope=global", "POST", {
+            kind: "github",
+            label: "Team",
+            url: "https://github.com/example/models",
+            branch: "main",
+            token: "synthetic-token",
+        })
+    ).json();
+    const signup = await request("/chat/auth/signup", "POST", {
+        username: "new.member",
+        displayName: "New Member",
+        password,
+    });
+    assert.equal(signup.status, 201);
+    const created = await signup.json();
+    csrf = created.csrf;
+    const enrolled = await request("/chat/auth/mfa", "POST", { code: totp(created.totpSecret) });
+    assert.equal(enrolled.status, 200);
+    const recovery = await enrolled.json();
+    let memberStatus = await (await request("/chat/api/session")).json();
+    csrf = memberStatus.csrf;
+    const memberId = memberStatus.user.id;
+    assert.equal(memberStatus.access.owner, false);
+    assert.deepEqual(memberStatus.access.permissions, []);
+    assert.equal(memberStatus.providers.find((item) => item.id === "claude").connected, false);
+    assert.equal((await request("/chat/api/providers/claude?scope=global", "POST", { apiKey: sharedKey })).status, 403);
+    assert.equal((await request("/chat/api/providers?scope=global")).status, 403);
+    assert.equal(
+        (
+            await request("/chat/api/connections?scope=global", "POST", {
+                kind: "github",
+                label: "bad",
+                url: "https://github.com/example/other",
+            })
+        ).status,
+        403,
+    );
+    assert.equal((await request("/chat/api/identity/signup", "PUT", { enabled: false })).status, 403);
+    const oldMemberCookie = cookie;
+    cookie = ownerCookie;
+    csrf = ownerCsrf;
+    assert.equal(
+        (
+            await request("/chat/api/identity/users/" + memberId + "/permissions", "PUT", {
+                permissions: ["use-global-connections"],
+            })
+        ).status,
+        200,
+    );
+    cookie = oldMemberCookie;
+    assert.equal((await request("/chat/api/conversations")).status, 401);
+    cookie = "";
+    csrf = "";
+    const signin = await request("/chat/auth/local", "POST", {
+        username: "new.member",
+        password,
+        recoveryCode: recovery.recoveryCodes[0],
+    });
+    assert.equal(signin.status, 200);
+    csrf = (await signin.json()).csrf;
+    memberStatus = await (await request("/chat/api/session")).json();
+    assert.equal(memberStatus.providers.find((item) => item.id === "claude").scope, "global");
+    assert.doesNotMatch(JSON.stringify(memberStatus), /ssssssssss/);
+    const repos = await (await request("/chat/api/connections")).json();
+    assert.equal(repos.personal.find((item) => item.id === sharedRepo.connection.id).scope, "global");
+    assert.doesNotMatch(JSON.stringify(repos), /synthetic-token/);
+    assert.equal((await request("/chat/api/connections/" + sharedRepo.connection.id, "DELETE")).status, 404);
+    assert.equal(
+        (await request("/chat/api/connections/" + sharedRepo.connection.id + "?scope=global", "DELETE")).status,
+        403,
+    );
+    for (let attempt = 1; attempt <= 5; attempt++) {
+        const failed = await request("/chat/auth/local", "POST", { username: "new.member", password: "wrong" });
+        assert.equal(failed.status, 401);
+        assert.equal((await failed.json()).login.remainingAttempts, 5 - attempt);
+    }
+    const recover = await request("/chat/auth/recovery-code", "POST", {
+        username: "new.member",
+        recoveryCode: recovery.recoveryCodes[1],
+        password: "Reset-http-password-2026!",
+    });
+    assert.equal(recover.status, 200);
+    assert.equal((await recover.json()).mfaSetupRequired, true);
 });

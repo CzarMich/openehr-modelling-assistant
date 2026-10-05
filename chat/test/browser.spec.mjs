@@ -1160,7 +1160,7 @@ test("settings gear opens an accessible overlay and leaves the composer unobstru
         await expect(page.getByLabel("Save artifacts to")).toBeHidden();
         const before = await page.locator("#message").boundingBox();
         await gear.click();
-        const overlay = page.getByRole("dialog", { name: "Chat settings", exact: true });
+        const overlay = page.getByRole("dialog", { name: "Workspace settings", exact: true });
         await expect(overlay).toBeVisible();
         await expect(overlay.getByLabel("Save artifacts to")).toBeVisible();
         await expect(overlay.locator("#provider-settings > summary")).toBeVisible();
@@ -1619,4 +1619,57 @@ test("session renewal follows user activity rather than an idle open tab", async
     await page.clock.fastForward(60000);
     await expect.poll(() => renewals).toBe(2);
     await expect(page.locator("#message")).toHaveValue("Still working");
+});
+
+test("native sign-in exposes signup, failure counts and email-free recovery on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route("**/chat/api/session", (route) =>
+        route.fulfill({
+            json: {
+                authenticated: false,
+                enabled: true,
+                identityEnabled: true,
+                identitySetupRequired: false,
+                signupEnabled: true,
+                oidcEnabled: false,
+                providers: [],
+            },
+        }),
+    );
+    await page.route("**/chat/auth/local", (route) =>
+        route.fulfill({
+            status: 401,
+            json: {
+                error: "Sign-in failed. 1 of 5 attempts used; 4 attempts remain. Check your username, password and authenticator code, or use account recovery.",
+                login: { failedAttempts: 1, remainingAttempts: 4, locked: false },
+            },
+        }),
+    );
+    await page.route("**/chat/auth/recovery-code", async (route) => {
+        expect(route.request().postDataJSON().username).toBe("member");
+        await route.fulfill({
+            json: {
+                mfaSetupRequired: true,
+                csrf: "synthetic",
+                totpSecret: "SYNTHETIC",
+                otpAuthUrl: "otpauth://totp/synthetic",
+            },
+        });
+    });
+    await page.goto("/chat/#chat");
+    await expect(page.locator("#show-signup")).toBeVisible();
+    await page.locator("#show-signup").click();
+    await expect(page.locator("#signup-form")).toBeVisible();
+    await page.locator("#back-to-signin").click();
+    await page.locator("#local-username").fill("member");
+    await page.locator("#local-password").fill("incorrect-password");
+    await page.locator("#local-login button[type=submit]").click();
+    await expect(page.locator("#identity-auth-notice")).toContainText("4 attempts remain");
+    await page.locator("#show-code-recovery").click();
+    await expect(page.locator("#code-recovery-username")).toHaveValue("member");
+    await page.locator("#code-recovery-code").fill("saved-synthetic-code");
+    await page.locator("#code-recovery-password").fill("A-new-password-2026!");
+    await page.locator("#code-recovery-form button[type=submit]").click();
+    await expect(page.locator("#mfa-enrollment")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

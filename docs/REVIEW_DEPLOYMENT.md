@@ -43,6 +43,7 @@ Invitations, password resets and account recovery produce one-time links for del
 |---|---|---|
 | `CHAT_REVIEW_ENABLED` | `false` | Enable `/chat/reviews` and its authenticated backend |
 | `CHAT_LOCAL_IDENTITY_ENABLED` | `false` | Enable local usernames, passwords and required TOTP MFA alongside or instead of OIDC |
+| `CHAT_SIGNUP_ENABLED` | `true` | Allow native signup after owner MFA setup; owner may close registration in Accounts |
 | `CHAT_LOCAL_IDENTITY_ISSUER` | `<browser-origin>/identity/local` | Stable local identity issuer; must match core governance configuration |
 | `CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY` | empty | Dedicated 32-byte hex key for encrypted local MFA seeds; required when local identity is enabled |
 | `CHAT_REVIEW_SIGNING_KEY` | empty | The dedicated active review key, kept server-side |
@@ -140,3 +141,7 @@ An authenticated account without a mapped governance role receives `403 GOVERNAN
 See [PostgreSQL and cache deployment](POSTGRES_AND_CACHE.md) for the private service stack, restricted database role, migration preserving audit hashes, immutable-revision cache keys, outage fallback and backup/recovery procedure. `GOVERNANCE_DATABASE_PATH` is used only with the legacy SQLite driver. Authorization and clinical decisions always use authoritative state.
 
 The [unified browser workspace](BROWSER_WORKSPACE.md) provides Chat, Models and Governance in one window. Model browsing reads the configured filesystem, Git or SharePoint repository and carries the selected revision into chat.
+
+### Owner recovery without email
+
+The owner should use a saved recovery code from **Forgot password or locked out?**. If every factor has been lost, a trusted server operator can run `docker compose exec chat node src/bootstrap-identity.mjs --recover-owner`. This creates a single-use 15-minute link in `/data/chat/owner-recovery.url` (mode 0600), logs only its path, and audits `OWNER_RECOVERY_ISSUED` as `server_operator`. Retrieve that file through an approved private operator channel, open the link, choose a new password and enroll MFA again. Remove the file after use. Issuing another link invalidates the previous owner reset links. This command requires access to the server's identity storage and encryption key; it is never exposed as an HTTP or AI tool. It preserves the original owner ID and private workspace.

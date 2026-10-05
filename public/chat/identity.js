@@ -37,6 +37,8 @@ async function adminRequest(path, method = "GET", data = undefined) {
 function showOnly(formId) {
     for (const id of [
         "local-login",
+        "signup-form",
+        "code-recovery-form",
         "owner-bootstrap",
         "invite-accept",
         "password-reset",
@@ -57,7 +59,8 @@ function authCsrf(value) {
     session = { ...(session || {}), csrf: value };
 }
 function clearTokenFromUrl() {
-    history.replaceState(null, "", location.pathname + location.hash);
+    for (const key of ["invite", "reset", "recovery"]) query.delete(key);
+    history.replaceState(null, "", location.pathname + "#chat");
 }
 function field(label, type, value = "") {
     const wrapper = document.createElement("label");
@@ -90,6 +93,8 @@ function revealOneTimeValue(value, label) {
 async function loadAdmin() {
     try {
         const data = await adminRequest("users");
+        $("owner-signup-settings").hidden = !session?.access?.owner;
+        $("allow-signup").checked = data.signupEnabled !== false;
         renderUsers(data.users);
         renderServices(data.serviceAccounts || []);
         renderAudit(data.audit?.events || []);
@@ -106,9 +111,12 @@ function renderUsers(users) {
         const heading = document.createElement("div");
         heading.className = "identity-user-heading";
         const title = document.createElement("strong");
-        title.textContent = user.displayName + " · " + user.username;
+        title.textContent = user.displayName + " · " + user.username + (user.isOwner ? " · Platform owner" : "");
         const state = document.createElement("span");
-        state.textContent = user.status + (user.mfaEnabled ? " · MFA" : " · MFA setup pending");
+        state.textContent =
+            user.status +
+            (user.loginLocked ? " · Sign-in locked" : "") +
+            (user.mfaEnabled ? " · MFA" : " · MFA setup pending");
         heading.append(title, state);
         const email = document.createElement("p");
         email.textContent = user.email || "No email address";
@@ -125,6 +133,41 @@ function renderUsers(users) {
             checkbox.checked = selectedRoles.has(role);
             item.append(checkbox, document.createTextNode(" " + label));
             fieldset.append(item);
+        }
+        row.append(heading, email, fieldset);
+        if (!session?.access?.owner && (user.isOwner || user.permissions?.length)) fieldset.disabled = true;
+        if (session?.access?.owner && !user.isOwner) {
+            const permissions = document.createElement("fieldset");
+            const legend = document.createElement("legend");
+            legend.textContent = "Shared workspace permissions";
+            permissions.append(legend);
+            for (const [value, title] of [
+                ["use-global-connections", "Use shared AI connections and repositories"],
+                ["manage-global-providers", "Manage shared AI connections"],
+                ["manage-global-repositories", "Manage shared repositories and sources"],
+            ]) {
+                const label = document.createElement("label"),
+                    input = document.createElement("input");
+                input.type = "checkbox";
+                input.value = value;
+                input.checked = user.permissions?.includes(value);
+                label.append(input, document.createTextNode(" " + title));
+                permissions.append(label);
+            }
+            permissions.append(
+                button("Save shared permissions", async () => {
+                    try {
+                        await adminRequest("users/" + user.id + "/permissions", "PUT", {
+                            permissions: [...permissions.querySelectorAll("input:checked")].map((input) => input.value),
+                        });
+                        notice("Permissions saved. The user must sign in again.", true);
+                        await loadAdmin();
+                    } catch (error) {
+                        notice(error.message, true);
+                    }
+                }),
+            );
+            row.append(permissions);
         }
         const actions = document.createElement("div");
         actions.className = "identity-actions";
@@ -178,7 +221,7 @@ function renderUsers(users) {
                 }
             }),
         );
-        if (user.status === "active")
+        if (user.status === "active" && !user.isOwner)
             actions.append(
                 button("Disable user", async () => {
                     try {
@@ -190,7 +233,9 @@ function renderUsers(users) {
                     }
                 }),
             );
-        row.append(heading, email, fieldset, actions);
+        if (!session?.access?.owner && (user.isOwner || user.permissions?.length))
+            for (const control of actions.querySelectorAll("button")) control.disabled = true;
+        row.append(actions);
         root.append(row);
     }
 }
@@ -235,6 +280,9 @@ function update(value) {
     const admin = value.authenticated && identityEnabled && value.user?.roles?.includes("modelling-administrator");
     $("tab-accounts").hidden = !admin;
     $("oidc-login").hidden = !identityEnabled || !value.oidcEnabled;
+    $("show-signup").hidden = value.authenticated || !value.signupEnabled || value.mfaSetupRequired;
+    $("signup-form").hidden = true;
+    $("code-recovery-form").hidden = true;
     $("local-login").hidden = true;
     $("owner-bootstrap").hidden = true;
     $("invite-accept").hidden = true;
@@ -397,3 +445,59 @@ fetch("/chat/api/session")
     .then((response) => response.json())
     .then(update)
     .catch(() => {});
+
+$("show-signup").onclick = () => {
+    showOnly("signup-form");
+    $("show-signup").hidden = true;
+    $("signup-name").focus();
+};
+$("back-to-signin").onclick = () => update(session);
+$("signup-form").onsubmit = async (event) => {
+    event.preventDefault();
+    try {
+        const result = await post("auth/signup", {
+            username: $("signup-username").value,
+            displayName: $("signup-name").value,
+            password: $("signup-password").value,
+        });
+        $("signup-password").value = "";
+        setupMfa(result);
+    } catch (error) {
+        notice(error.message);
+    }
+};
+$("save-signup-settings").onclick = async () => {
+    try {
+        await adminRequest("signup", "PUT", { enabled: $("allow-signup").checked });
+        notice("Registration setting saved.", true);
+    } catch (error) {
+        notice(error.message, true);
+    }
+};
+
+$("show-code-recovery").onclick = () => {
+    showOnly("code-recovery-form");
+    $("show-signup").hidden = true;
+    $("code-recovery-username").value = $("local-username").value;
+    $("code-recovery-code").focus();
+    notice("");
+};
+$("recovery-back-to-signin").onclick = () => {
+    notice("");
+    update(session);
+};
+$("code-recovery-form").onsubmit = async (event) => {
+    event.preventDefault();
+    try {
+        const result = await post("auth/recovery-code", {
+            username: $("code-recovery-username").value,
+            recoveryCode: $("code-recovery-code").value.trim(),
+            password: $("code-recovery-password").value,
+        });
+        $("code-recovery-code").value = "";
+        $("code-recovery-password").value = "";
+        setupMfa(result);
+    } catch (error) {
+        notice(error.message);
+    }
+};

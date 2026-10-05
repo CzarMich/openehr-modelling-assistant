@@ -252,3 +252,60 @@ test("Claude receives actionable local save errors but never raw exception detai
         else assert.match(result.content, /not executed/);
     }
 });
+
+test("shared providers require explicit access, prefer private credentials and never copy shared secrets", async (t) => {
+    const { GLOBAL_IDENTITY } = await import("../src/access.mjs");
+    const { store } = fixture(t);
+    const keys = [];
+    const providers = new Providers({}, { store, claude: (key) => ({ run: async () => keys.push(key) }) });
+    providers.canUseGlobal = (identity) => identity === "allowed";
+    providers.connectClaude(GLOBAL_IDENTITY, "sk-ant-" + "s".repeat(30));
+    await assert.rejects(providers.run({ identity: "stranger", provider: "claude" }), /Connect your provider/);
+    await providers.run({ identity: "allowed", provider: "claude" });
+    assert.equal(store.get("allowed", "claude"), null);
+    assert.equal(providers.status("allowed")[1].scope, "global");
+    providers.connectClaude("allowed", "sk-ant-" + "p".repeat(30));
+    await providers.run({ identity: "allowed", provider: "claude" });
+    assert.deepEqual(keys, ["sk-ant-" + "s".repeat(30), "sk-ant-" + "p".repeat(30)]);
+    providers.disconnect("allowed", "claude");
+    assert.ok(store.get(GLOBAL_IDENTITY, "claude"));
+    providers.canUseGlobal = () => false;
+    assert.throws(() => providers.assertConnected("allowed", "claude"), /Connect your provider/);
+});
+
+test("shared Codex API keys use concurrent isolated runtimes without copying credentials", async (t) => {
+    const { GLOBAL_IDENTITY } = await import("../src/access.mjs");
+    const { store } = fixture(t);
+    const homes = new Set();
+    let started = 0,
+        release;
+    const barrier = new Promise((resolve) => {
+        release = resolve;
+    });
+    const key = "sk-proj-" + "s".repeat(40);
+    const providers = new Providers(
+        {},
+        {
+            store,
+            codex: (config) => ({
+                run: async () => {
+                    homes.add(config.codexHome);
+                    assert.equal(JSON.parse(readFileSync(join(config.codexHome, "auth.json"))).OPENAI_API_KEY, key);
+                    if (++started === 2) release();
+                    await barrier;
+                    return "completed";
+                },
+            }),
+        },
+    );
+    providers.canUseGlobal = () => true;
+    providers.connectCodexKey(GLOBAL_IDENTITY, key);
+    const results = await Promise.all(
+        ["alice", "bob"].map((identity) => providers.run({ identity, provider: "codex" })),
+    );
+    assert.deepEqual(results, ["completed", "completed"]);
+    assert.equal(homes.size, 2);
+    for (const home of homes) assert.throws(() => statSync(home), { code: "ENOENT" });
+    assert.equal(store.get("alice", "codex"), null);
+    assert.equal(store.get("bob", "codex"), null);
+});

@@ -1,3 +1,4 @@
+import { GLOBAL_IDENTITY } from "./access.mjs";
 import { randomUUID, createHash } from "node:crypto";
 import { join } from "node:path";
 import { ProviderStore } from "./provider-store.mjs";
@@ -84,10 +85,19 @@ export class PersonalConnections {
         return this.store?.get(identity, "workspace")?.credential || [];
     }
     list(identity) {
-        return this.all(identity).map(visible);
+        return [
+            ...this.all(identity).map(visible),
+            ...(identity !== GLOBAL_IDENTITY && this.canUseGlobal?.(identity)
+                ? this.all(GLOBAL_IDENTITY).map((item) => ({ ...visible(item), scope: "global" }))
+                : []),
+        ];
     }
     get(identity, id, kind) {
-        const item = this.all(identity).find((c) => c.id === id && (!kind || c.kind === kind));
+        let item = this.all(identity).find((c) => c.id === id && (!kind || c.kind === kind));
+        if (!item && identity !== GLOBAL_IDENTITY && this.canUseGlobal?.(identity)) {
+            const shared = this.all(GLOBAL_IDENTITY).find((c) => c.id === id && (!kind || c.kind === kind));
+            if (shared) item = { ...shared, scope: "global" };
+        }
         if (!item) throw problem("Personal connection not found.", 404);
         return item;
     }
@@ -165,7 +175,7 @@ export class PersonalConnections {
         return { connection: visible(connection), duplicate: false };
     }
     remove(identity, id) {
-        this.get(identity, id);
+        if (!this.all(identity).some((item) => item.id === id)) throw problem("Personal connection not found.", 404);
         this.store.set(
             identity,
             "workspace",
@@ -337,7 +347,8 @@ export class PersonalConnections {
                 : await this.publishFile(identity, args, signal, repo);
         } catch (error) {
             if (error.accessCode) {
-                const items = this.all(identity),
+                const owner = repo.scope === "global" ? GLOBAL_IDENTITY : identity;
+                const items = this.all(owner),
                     current = items.find((item) => item.id === repo.id);
                 // A response for an older token must not invalidate a newly updated connection.
                 if (current?.token === repo.token) {
@@ -346,7 +357,7 @@ export class PersonalConnections {
                         message: error.message,
                         at: new Date().toISOString(),
                     };
-                    this.store.set(identity, "workspace", items);
+                    this.store.set(owner, "workspace", items);
                 }
             }
             throw error;

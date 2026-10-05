@@ -1,3 +1,4 @@
+import { GLOBAL_PERMISSIONS } from "./access.mjs";
 import {
     createCipheriv,
     createDecipheriv,
@@ -173,6 +174,9 @@ export class IdentityStore {
                 throw new Error("IDENTITY_AUDIT_CHAIN_INVALID");
             previous = recorded;
         }
+        // Existing installations retain their original bootstrap owner.
+        state.ownerId ||= state.bootstrap?.consumed ? state.users[0]?.id : null;
+        for (const user of state.users) user.isOwner = user.id === state.ownerId;
         return state;
     }
 
@@ -203,12 +207,13 @@ export class IdentityStore {
             state.resets = state.resets.filter((entry) => entry.expires > now());
             const result = callback(state);
             const previous = state.audit.at(-1)?.hash || "0".repeat(64);
-            if (action) {
+            const eventAction = typeof action === "function" ? action(result) : action;
+            if (eventAction) {
                 const event = {
                     sequence: state.audit.length + 1,
                     timestamp: new Date().toISOString(),
                     actor,
-                    action,
+                    action: eventAction,
                     details,
                     previous,
                 };
@@ -262,6 +267,8 @@ export class IdentityStore {
                 "modelling-approver",
                 "modelling-publisher",
             ]);
+            state.ownerId = user.id;
+            user.isOwner = true;
             user.mfaSecret = this.encrypt(secret);
             user.mfaPending = true;
             state.users.push(user);
@@ -269,6 +276,73 @@ export class IdentityStore {
             state.sessions.push(session.record);
             return { user: this.publicUser(user), sessionToken: session.raw, csrf: session.csrf, totpSecret: secret };
         });
+    }
+
+    signupAvailable() {
+        const state = this.read();
+        return (
+            state.signupEnabled !== false &&
+            state.users.some(
+                (user) => user.id === state.ownerId && user.status === "active" && user.mfaEnabled && !user.mfaPending,
+            )
+        );
+    }
+
+    signup(username, displayName, password, address) {
+        this.validateIdentityInput(username, displayName, password);
+        const secret = base32(randomBytes(20));
+        return this.mutate("registration", "USER_REGISTERED", { username: username.toLowerCase() }, (state) => {
+            if (!this.signupAvailable()) throw new Error("IDENTITY_SIGNUP_CLOSED");
+            state.registrations = (state.registrations || []).filter((entry) => entry.at > now() - 3600000);
+            const client = hash(address);
+            if (
+                state.registrations.filter((entry) => entry.client === client).length >= 5 ||
+                state.registrations.length >= 100 ||
+                state.users.length >= 1000
+            )
+                throw Object.assign(new Error("Too many registrations. Try again later."), { status: 429 });
+            const user = this.newUser(username, displayName, password, ["modelling-modeller"]);
+            user.permissions = [];
+            user.mfaSecret = this.encrypt(secret);
+            user.mfaPending = true;
+            state.users.push(user);
+            state.registrations.push({ client, at: now() });
+            const session = this.newSession(user, "mfa_setup");
+            state.sessions.push(session.record);
+            return { user: this.publicUser(user), sessionToken: session.raw, csrf: session.csrf, totpSecret: secret };
+        });
+    }
+
+    setSignup(actor, enabled) {
+        if (typeof enabled !== "boolean") throw new Error("IDENTITY_INPUT_INVALID");
+        return this.mutate(actor, "SIGNUP_SETTING_CHANGED", { enabled }, (state) => {
+            if (actor !== state.ownerId || !this.isAdmin(state, actor)) throw new Error("IDENTITY_OWNER_REQUIRED");
+            state.signupEnabled = enabled;
+            return { enabled };
+        });
+    }
+
+    setPermissions(actor, userId, permissions) {
+        if (
+            !Array.isArray(permissions) ||
+            permissions.length > GLOBAL_PERMISSIONS.length ||
+            permissions.some((p) => !GLOBAL_PERMISSIONS.includes(p))
+        )
+            throw new Error("IDENTITY_PERMISSIONS_INVALID");
+        return this.mutate(actor, "USER_PERMISSIONS_CHANGED", { user_id: userId, permissions }, (state) => {
+            if (actor !== state.ownerId || !this.isAdmin(state, actor)) throw new Error("IDENTITY_OWNER_REQUIRED");
+            const user = state.users.find((item) => item.id === userId);
+            if (!user || user.id === state.ownerId) throw new Error("IDENTITY_USER_INPUT_INVALID");
+            user.permissions = [...new Set(permissions)];
+            for (const session of state.sessions) if (session.userId === userId) session.revoked = true;
+            return this.publicUser(user);
+        });
+    }
+
+    protectPrivilegedUser(state, actor, userId) {
+        const user = state.users.find((item) => item.id === userId);
+        if (actor !== state.ownerId && (userId === state.ownerId || user?.permissions?.length))
+            throw new Error("IDENTITY_OWNER_REQUIRED");
     }
 
     invite(actor, email, rolesList, expiresSeconds = 86400) {
@@ -326,13 +400,99 @@ export class IdentityStore {
         });
     }
 
+    failedLogin(username, increment = true) {
+        const digest = hash(String(username).toLowerCase());
+        const failure = this.mutate(
+            "login",
+            (result) => (result.changed ? "USER_LOGIN_FAILED" : null),
+            { username_hash: digest },
+            (state) => {
+                state.loginFailures ||= {};
+                const entry = state.loginFailures[digest] || { count: 0, at: now() };
+                const previousCount = entry.count;
+                if (increment) entry.count = Math.min(5, entry.count + 1);
+                entry.at = now();
+                state.loginFailures[digest] = entry;
+                const user = state.users.find((item) => hash(item.username) === digest);
+                if (user && entry.count >= 5) user.loginLocked = true;
+                // Bound unknown-username counters while retaining real account locks.
+                const known = new Set(state.users.map((item) => hash(item.username)));
+                const unknown = Object.entries(state.loginFailures)
+                    .filter(([key]) => !known.has(key))
+                    .sort((a, b) => a[1].at - b[1].at);
+                for (const [key] of unknown.slice(0, Math.max(0, unknown.length - 4096)))
+                    delete state.loginFailures[key];
+                return { count: entry.count, changed: entry.count !== previousCount };
+            },
+        );
+        const attempts = failure.count;
+        return Object.assign(new Error("IDENTITY_LOGIN_INVALID"), {
+            status: 401,
+            login: { failedAttempts: attempts, remainingAttempts: Math.max(0, 5 - attempts), locked: attempts >= 5 },
+        });
+    }
+
+    clearLoginFailures(state, user) {
+        if (state.loginFailures) delete state.loginFailures[hash(user.username)];
+        user.loginLocked = false;
+        state.resets = state.resets.filter(
+            (entry) => entry.kind !== "rate" || entry.usernameHash !== hash(user.username),
+        );
+    }
+
+    recoverWithCode(username, code, password) {
+        const allowed = this.mutate("recovery_code", null, {}, (state) => {
+            state.recoveryAttempts = (state.recoveryAttempts || []).filter((entry) => entry.at > now() - 900000);
+            const digest = hash(String(username).toLowerCase());
+            if (
+                state.recoveryAttempts.length >= 1000 ||
+                state.recoveryAttempts.filter((entry) => entry.digest === digest).length >= 10
+            )
+                return false;
+            state.recoveryAttempts.push({ digest, at: now() });
+            return true;
+        });
+        if (!allowed)
+            throw Object.assign(
+                new Error("Too many recovery attempts. Wait 15 minutes or contact your administrator."),
+                { status: 429 },
+            );
+        this.validateIdentityInput(username, "Recovery", password);
+        const secret = base32(randomBytes(20));
+        return this.mutate("recovery_code", "ACCOUNT_RECOVERY_CODE_USED", {}, (state) => {
+            const user = state.users.find(
+                (item) => item.username === String(username).toLowerCase() && item.status === "active",
+            );
+            if (!user || typeof code !== "string" || !user.recoveryCodes.some((digest) => this.matches(code, digest)))
+                throw new Error("IDENTITY_RESET_INVALID");
+            user.password = passwordHash(password);
+            this.clearLoginFailures(state, user);
+            user.mfaSecret = this.encrypt(secret);
+            user.mfaEnabled = false;
+            user.mfaPending = true;
+            user.mfaCounter = -1;
+            user.recoveryCodes = user.recoveryCodes.filter((digest) => !this.matches(code, digest));
+            for (const session of state.sessions) if (session.userId === user.id) session.revoked = true;
+            state.resets = state.resets.filter((entry) => entry.userId !== user.id);
+            const session = this.newSession(user, "mfa_setup");
+            state.sessions.push(session.record);
+            return { user: this.publicUser(user), sessionToken: session.raw, csrf: session.csrf, totpSecret: secret };
+        });
+    }
+
     async login(username, password, otp, recoveryCode, remoteKey) {
         const key = hash(String(remoteKey) + "\n" + String(username).toLowerCase());
         const allowed = this.mutate("system", null, {}, (state) => {
             state.resets = state.resets.filter((entry) => entry.kind !== "rate" || entry.expires > now());
             let item = state.resets.find((entry) => entry.kind === "rate" && entry.digest === key);
             if (!item || item.expires < now()) {
-                item = { kind: "rate", digest: key, attempts: 0, expires: now() + 900000 };
+                item = {
+                    kind: "rate",
+                    digest: key,
+                    usernameHash: hash(String(username).toLowerCase()),
+                    attempts: 0,
+                    expires: now() + 900000,
+                };
                 state.resets = state.resets.filter((entry) => entry.kind !== "rate" || entry.digest !== key);
                 const rates = state.resets.filter((entry) => entry.kind === "rate");
                 if (rates.length >= 4096) {
@@ -344,8 +504,10 @@ export class IdentityStore {
             item.attempts++;
             return item.attempts <= 8;
         });
-        if (!allowed) throw new Error("IDENTITY_LOGIN_INVALID");
+        if (!allowed) throw this.failedLogin(username, false);
         const state = this.read();
+        if ((state.loginFailures?.[hash(String(username).toLowerCase())]?.count || 0) >= 5)
+            throw this.failedLogin(username, false);
         const user = state.users.find(
             (entry) => entry.username === String(username).toLowerCase() && entry.status === "active",
         );
@@ -359,27 +521,29 @@ export class IdentityStore {
                 (error, value) => (error ? reject(error) : resolve(value.toString("hex"))),
             ),
         );
-        if (!user || !equal(candidate, user.password.hash) || user.mfaPending)
-            throw new Error("IDENTITY_LOGIN_INVALID");
+        if (!user || !equal(candidate, user.password.hash) || user.mfaPending) throw this.failedLogin(username);
         const response = this.mutate(
             user.id,
-            "USER_LOGIN_SUCCEEDED",
+            (result) => (result.failed ? null : "USER_LOGIN_SUCCEEDED"),
             { user_id: user.id, roles: user.roles },
             (draft) => {
                 const current = draft.users.find((entry) => entry.id === user.id);
                 if (
+                    current.loginLocked ||
                     current.status !== "active" ||
                     current.mfaPending ||
                     !equal(candidate, current.password.hash) ||
                     (current.mfaEnabled && !this.consumeMfa(current, otp, recoveryCode))
                 )
-                    throw new Error("IDENTITY_LOGIN_INVALID");
+                    return { failed: true };
+                this.clearLoginFailures(draft, current);
                 const session = this.newSession(current, "authenticated");
                 draft.sessions.push(session.record);
                 draft.resets = draft.resets.filter((entry) => !(entry.kind === "rate" && entry.digest === key));
                 return { user: this.publicUser(current), sessionToken: session.raw, csrf: session.csrf };
             },
         );
+        if (response.failed) throw this.failedLogin(username);
         return response;
     }
 
@@ -509,6 +673,7 @@ export class IdentityStore {
     revokeUserSessions(actor, userId) {
         return this.mutate(actor, "USER_SESSIONS_REVOKED", { user_id: userId }, (state) => {
             if (!this.isAdmin(state, actor)) throw new Error("IDENTITY_ADMIN_REQUIRED");
+            this.protectPrivilegedUser(state, actor, userId);
             for (const session of state.sessions) if (session.userId === userId) session.revoked = true;
             return true;
         });
@@ -519,6 +684,7 @@ export class IdentityStore {
         if (!this.isAdmin(state, actor)) throw new Error("IDENTITY_ADMIN_REQUIRED");
         return {
             users: state.users.map((user) => this.publicUser(user)),
+            signupEnabled: state.signupEnabled !== false,
             serviceAccounts: state.serviceAccounts.map(({ id, name, scopes, created, revoked }) => ({
                 id,
                 name,
@@ -540,8 +706,11 @@ export class IdentityStore {
         this.assertRoles(rolesList);
         return this.mutate(actor, "USER_ROLES_CHANGED", { user_id: userId, roles: rolesList }, (state) => {
             if (!this.isAdmin(state, actor)) throw new Error("IDENTITY_ADMIN_REQUIRED");
+            this.protectPrivilegedUser(state, actor, userId);
             const user = state.users.find((entry) => entry.id === userId);
             if (!user) throw new Error("IDENTITY_USER_NOT_FOUND");
+            if (user.id === state.ownerId && !rolesList.includes("modelling-administrator"))
+                throw new Error("IDENTITY_LAST_ADMIN_REQUIRED");
             user.roles = [...new Set(rolesList)];
             for (const session of state.sessions) if (session.userId === userId) session.revoked = true;
             this.requireAdmin(state);
@@ -552,8 +721,10 @@ export class IdentityStore {
     disableUser(actor, userId) {
         return this.mutate(actor, "USER_DISABLED", { user_id: userId }, (state) => {
             if (!this.isAdmin(state, actor)) throw new Error("IDENTITY_ADMIN_REQUIRED");
+            this.protectPrivilegedUser(state, actor, userId);
             const user = state.users.find((entry) => entry.id === userId);
             if (!user) throw new Error("IDENTITY_USER_NOT_FOUND");
+            if (user.id === state.ownerId) throw new Error("IDENTITY_LAST_ADMIN_REQUIRED");
             user.status = "disabled";
             for (const session of state.sessions) if (session.userId === userId) session.revoked = true;
             this.requireAdmin(state);
@@ -569,6 +740,7 @@ export class IdentityStore {
             { user_id: userId, expires_in_seconds: expiresSeconds },
             (state) => {
                 if (!this.isAdmin(state, actor)) throw new Error("IDENTITY_ADMIN_REQUIRED");
+                this.protectPrivilegedUser(state, actor, userId);
                 const user = state.users.find((entry) => entry.id === userId && entry.status === "active");
                 if (!user) throw new Error("IDENTITY_USER_NOT_FOUND");
                 state.resets.push({
@@ -590,6 +762,7 @@ export class IdentityStore {
             { user_id: userId, expires_in_seconds: expiresSeconds },
             (state) => {
                 if (!this.isAdmin(state, actor)) throw new Error("IDENTITY_ADMIN_REQUIRED");
+                this.protectPrivilegedUser(state, actor, userId);
                 const user = state.users.find((entry) => entry.id === userId && entry.status === "active");
                 if (!user) throw new Error("IDENTITY_USER_NOT_FOUND");
                 state.resets.push({
@@ -601,6 +774,22 @@ export class IdentityStore {
                 return { token: value, expires: new Date(now() + expiresSeconds * 1000).toISOString() };
             },
         );
+    }
+
+    operatorOwnerRecovery() {
+        const value = token("rec_");
+        return this.mutate("server_operator", "OWNER_RECOVERY_ISSUED", { expires_in_seconds: 900 }, (state) => {
+            const user = state.users.find((entry) => entry.id === state.ownerId && entry.status === "active");
+            if (!user) throw new Error("IDENTITY_USER_NOT_FOUND");
+            state.resets = state.resets.filter((entry) => entry.userId !== user.id);
+            state.resets.push({
+                kind: "account_recovery",
+                userId: user.id,
+                digest: hash(value),
+                expires: now() + 900000,
+            });
+            return value;
+        });
     }
 
     completeAccountRecovery(value, password) {
@@ -615,6 +804,7 @@ export class IdentityStore {
             const user = state.users.find((entry) => entry.id === recovery.userId && entry.status === "active");
             if (!user) throw new Error("IDENTITY_RESET_INVALID");
             user.password = passwordHash(password);
+            this.clearLoginFailures(state, user);
             user.mfaSecret = this.encrypt(secret);
             user.mfaEnabled = false;
             user.mfaPending = true;
@@ -639,6 +829,7 @@ export class IdentityStore {
             const user = state.users.find((entry) => entry.id === reset.userId && entry.status === "active");
             if (!user) throw new Error("IDENTITY_RESET_INVALID");
             user.password = passwordHash(password);
+            this.clearLoginFailures(state, user);
             state.resets = state.resets.filter((entry) => entry !== reset);
             for (const session of state.sessions) if (session.userId === user.id) session.revoked = true;
             return true;
@@ -773,10 +964,13 @@ export class IdentityStore {
             displayName: user.displayName,
             email: user.email,
             roles: [...user.roles],
+            isOwner: !!user.isOwner,
+            permissions: [...(user.permissions || [])],
             status: user.status,
             created: user.created,
             mfaEnabled: user.mfaEnabled,
             mfaPending: user.mfaPending,
+            loginLocked: !!user.loginLocked,
         };
     }
 

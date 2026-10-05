@@ -217,6 +217,24 @@ export class Auth {
         res.setHeader("Set-Cookie", this.cookie("ModellingSession", result.sessionToken, this.config.sessionSeconds));
         return { user: result.user, csrf: result.csrf };
     }
+    signup(input, req, res) {
+        if (!this.identityStore || this.config.signupEnabled === false)
+            throw Object.assign(new Error("Self-registration is unavailable."), { status: 403 });
+        const result = this.identityStore.signup(
+            input.username,
+            input.displayName,
+            input.password,
+            req.socket.remoteAddress || "unknown",
+        );
+        res.setHeader("Set-Cookie", this.cookie("ModellingSession", result.sessionToken, this.config.sessionSeconds));
+        return {
+            user: result.user,
+            csrf: result.csrf,
+            totpSecret: result.totpSecret,
+            otpAuthUrl: this.otpAuthUrl(result.totpSecret, result.user.username),
+            mfaSetupRequired: true,
+        };
+    }
     bootstrap(input, res) {
         if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
         const result = this.identityStore.bootstrap(input.token, input.username, input.displayName, input.password);
@@ -237,6 +255,18 @@ export class Auth {
     acceptInvite(input, res) {
         if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
         const result = this.identityStore.acceptInvite(input.token, input.username, input.displayName, input.password);
+        res.setHeader("Set-Cookie", this.cookie("ModellingSession", result.sessionToken, this.config.sessionSeconds));
+        return {
+            user: result.user,
+            csrf: result.csrf,
+            totpSecret: result.totpSecret,
+            otpAuthUrl: this.otpAuthUrl(result.totpSecret, result.user.username),
+            mfaSetupRequired: true,
+        };
+    }
+    recoverWithCode(input, res) {
+        if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
+        const result = this.identityStore.recoverWithCode(input.username, input.recoveryCode, input.password);
         res.setHeader("Set-Cookie", this.cookie("ModellingSession", result.sessionToken, this.config.sessionSeconds));
         return {
             user: result.user,
