@@ -112,10 +112,18 @@ export class TemplatePackages {
         const content = generated ? result.content : args.content;
         const inputs = generated ? result.dependencies : args.dependencies;
         if (typeof content !== "string" || !inputs?.length) return;
+        const exact = dependencies(inputs);
+        const previous =
+            !generated &&
+            this.entries().find(
+                (item) => item.hash === hash(content) && JSON.stringify(item.dependencies) === JSON.stringify(exact),
+            );
         const entry = {
+            ...(previous || {}),
             hash: hash(content),
-            dependencies: dependencies(inputs),
+            dependencies: exact,
             ...(generated && result.provenance ? { provenance: result.provenance } : {}),
+            ...(generated && result.ckmUpgrades ? { ckmUpgrades: result.ckmUpgrades } : {}),
             expires: Date.now() + this.ttl,
         };
         const entries = [entry, ...this.entries().filter((item) => item.hash !== entry.hash)].slice(0, 16);
@@ -123,9 +131,45 @@ export class TemplatePackages {
         if (this.store) this.store.set(this.identity, "packages", entries);
         else this.memory = entries;
     }
-    async files(args, folder, mcp) {
+    async files(args, folder, mcp, currentArchetypes) {
         const cached = this.entries().find((item) => item.hash === hash(args.content));
-        const inputs = dependencies(args.dependencies || cached?.dependencies);
+        let inputs = dependencies(args.dependencies || cached?.dependencies);
+        const current = currentArchetypes ? await currentArchetypes(inputs.map((item) => item.identifier)) : new Map();
+        const provenance = { ...cached?.provenance };
+        inputs = inputs.map((input) => {
+            const saved = current.get(input.identifier);
+            const upgrade = cached?.ckmUpgrades?.find((item) => item.identifier === input.identifier);
+            if (upgrade) {
+                if (
+                    !cached.dependencies.some(
+                        (item) => item.identifier === input.identifier && item.sha256 === input.sha256,
+                    )
+                )
+                    throw problem(
+                        "CKM upgrade dependencies differ from the verified build inputs. Build the upgrade again before saving.",
+                        409,
+                    );
+                if ((saved?.sha256 || null) !== upgrade.previousSha256 && saved?.sha256 !== input.sha256)
+                    throw problem(
+                        "A repository archetype changed after the CKM upgrade was built. Review the latest source before upgrading. No files were saved.",
+                        409,
+                    );
+                return input;
+            }
+            if (!saved) return input;
+            // Existing designer edits are authoritative, even for a recovered draft.
+            // Compile the draft again against these exact current bytes below.
+            // Preserve unchanged provenance so identical saves remain idempotent.
+            if (saved.sha256 !== input.sha256)
+                provenance[input.identifier] = {
+                    kind: "personal_repository",
+                    repository: args.repository,
+                    path: saved.path,
+                    sha256: saved.sha256,
+                };
+            return { identifier: input.identifier, content: saved.content, sha256: saved.sha256 };
+        });
+        inputs = dependencies(inputs);
         const report = modelResult(
             await mcp.call("template_compile", {
                 content: args.content,
@@ -149,9 +193,10 @@ export class TemplatePackages {
         const prefix = folder ? folder + "/" : "";
         const relative = args.path.slice(prefix.length);
         const sources = inputs.map((item) => ({
-            path: prefix + "archetypes/" + item.identifier + ".adl",
+            path: current.get(item.identifier)?.path || prefix + "archetypes/" + item.identifier + ".adl",
             content: item.content,
             dependency: true,
+            expectedRevision: current.get(item.identifier)?.revision || null,
         }));
         const generated = [];
         // Stable current paths; Git preserves earlier bytes and the package pins
@@ -178,13 +223,12 @@ export class TemplatePackages {
             template: { path: relative, sha256: hash(args.content) },
             archetypes: inputs.map((item) => ({
                 identifier: item.identifier,
-                path: "archetypes/" + item.identifier + ".adl",
+                path:
+                    current.get(item.identifier)?.path.slice(prefix.length) || "archetypes/" + item.identifier + ".adl",
                 sha256: item.sha256,
                 git_blob: gitBlobs(item.content),
-                ...(cached?.dependencies.some(
-                    (source) => source.identifier === item.identifier && source.sha256 === item.sha256,
-                ) && cached.provenance?.[item.identifier]
-                    ? { provenance: cached.provenance[item.identifier] }
+                ...(provenance[item.identifier]?.sha256 === item.sha256
+                    ? { provenance: provenance[item.identifier] }
                     : {}),
             })),
             generated: generated.map(({ kind, path, sha256 }) => ({ kind, path, sha256 })),

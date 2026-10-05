@@ -98,3 +98,5 @@ REQ-F22 links immutable external originals and protected import receipts to repo
 REQ-F23 links personal browser connections, attachment extraction and read-only sharing to isolated HTTP, parser, credential, revision and browser tests in `chat/test/personal-workspace.test.mjs` and `chat/test/browser.spec.mjs`. These tests use synthetic documents and mocked Git/CKM responses, not live user credentials.
 
 REQ-F24 connects private CDR configuration, read-only execution, exact-template AQL checks and browser result handling to PHP service/authentication/contract tests, native path tests and browser privacy/cancellation tests. See [ADR-0024](decisions/0024-cdr-client-and-aql-workspace.md).
+
+Repository-first designer source selection and deliberate CKM upgrades are covered under REQ-F23 by `TemplateAuthoringTest` and `chat/test/template-packages.test.mjs`; see [Artefact versions](ARTEFACT_VERSIONING.md).

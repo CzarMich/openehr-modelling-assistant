@@ -47,6 +47,33 @@ final class TemplateAuthoringTest extends TestCase
         ];
     }
 
+    public function test_supplied_repository_sources_override_ckm_and_reach_native_compilation(): void
+    {
+        $root = self::ARCHETYPES['composition']['id'];
+        $entry = self::ARCHETYPES['evaluation']['id'];
+        $sources = array_map(static fn (string $id): array => ['identifier' => $id, 'content' => "archetype (adl_version=1.4;\n  uid=fixture)\n" . $id . "\n-- designer corrected source\n"], [$root, $entry]);
+        $ckm = $this->createMock(ArchetypeSource::class);
+        $ckm->expects(self::never())->method('fetch');
+        $engine = $this->createMock(OpenEhrEngine::class);
+        $engine->expects(self::once())->method('compile')->with(self::isString(), self::callback(static fn (array $dependencies): bool => array_column($dependencies, 'content') === array_column($sources, 'content')))->willReturn(['valid' => true]);
+        $service = new TemplateAuthoringService($ckm, new ModelValidator(), $engine);
+        $result = $service->generateOet('Designer sources', $root, [$entry], archetypes: $sources);
+        self::assertSame('PASS', $result['native_compile_check']['status']);
+        self::assertSame('supplied_source', $result['provenance'][$root]['kind']);
+        self::assertFalse($result['clinical_approval']);
+    }
+
+    public function test_mismatching_source_identifiers_are_rejected_before_fetch_or_compilation(): void
+    {
+        $ckm = $this->createMock(ArchetypeSource::class);
+        $ckm->expects(self::never())->method('fetch');
+        $service = new TemplateAuthoringService($ckm, new ModelValidator());
+        $this->expectException(\InvalidArgumentException::class);
+        $service->generateOet('Mismatch', 'composition', ['evaluation'], archetypes: [
+            ['identifier' => self::ARCHETYPES['composition']['id'], 'content' => "archetype\n" . self::ARCHETYPES['evaluation']['id'] . "\n"],
+        ]);
+    }
+
     public function test_explicit_nested_placements_preserve_parent_paths_and_compile_check_exact_sources(): void
     {
         $engine = $this->createMock(OpenEhrEngine::class);
