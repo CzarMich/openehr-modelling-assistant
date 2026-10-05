@@ -417,6 +417,8 @@ export function createApplication(
                 if (drafts.has(identity) || drafts.size + active.size >= config.maxConcurrentTurns)
                     throw Object.assign(new Error("An assistant is busy. Please retry shortly."), { status: 429 });
                 const controller = new AbortController();
+                controller.provider = input.provider;
+                controller.credentialIdentity = provider.credentialIdentity?.(identity, input.provider) || identity;
                 const closed = () => controller.abort();
                 res.once("close", closed);
                 drafts.set(identity, controller);
@@ -596,6 +598,10 @@ export function createApplication(
                     throw Object.assign(new Error("The assistant is busy. Please retry shortly."), { status: 429 });
                 provider.assertConnected(connectionOwner("manage-global-providers"), "copilot");
                 const controller = new AbortController();
+                controller.provider = "copilot";
+                controller.credentialIdentity =
+                    provider.credentialIdentity?.(connectionOwner("manage-global-providers"), "copilot") ||
+                    connectionOwner("manage-global-providers");
                 const timer = setTimeout(() => controller.abort(), 60000);
                 const disconnected = () => {
                     if (!res.writableEnded) controller.abort();
@@ -658,6 +664,10 @@ export function createApplication(
                             turn.provider === name
                         )
                             turn.controller.abort();
+                    if (owner === GLOBAL_IDENTITY)
+                        for (const draft of drafts.values())
+                            if (draft.credentialIdentity === GLOBAL_IDENTITY && draft.provider === name)
+                                draft.abort("ACCESS_CHANGED");
                     provider.disconnect(owner, name);
                     recordSharedChange(name, "disconnect");
                     drafts.get(identity)?.abort();

@@ -1,7 +1,7 @@
 # Browser chat
 
-Open `/chat/`, sign in to the modelling workspace, and open the **Chat settings** gear, then **My AI connections**.
-Each user connects their own provider account. Choose **Codex**, **Claude** or **Copilot Studio** before
+Open `/chat/`, sign in to the modelling workspace, and open the **Chat settings** gear, then **AI connections**.
+Use a private provider connection or a shared connection explicitly granted by the platform owner. Choose **Codex**, **Claude** or **Copilot Studio** before
 starting a conversation; a conversation keeps that provider when reopened.
 
 **Sign in** stays at the top right while signed out, including in Help, Models and
@@ -296,12 +296,12 @@ Review settings are documented in [review deployment](REVIEW_DEPLOYMENT.md).
 
 ## Privacy and limits
 
-Both providers receive the conversation and selected tool results. Neither receives
+The selected provider receives the conversation and selected tool results. Neither receives
 the MCP service key. Credentials are encrypted using AES-256-GCM and bound to the
 verified workspace identity and provider. They are never returned by status endpoints.
 Codex receives a private temporary credential directory per operation, removed after
 the process exits. Refreshed credentials cannot restore a disconnected account.
-There is no shared-account fallback.
+Shared provider fallback requires a current native-owner grant; public signup and ordinary administrator roles do not grant it.
 
 Personal connection secrets use the same encryption key in a separate store and
 authenticated namespace. Public HTTPS destinations are resolved and checked at the
