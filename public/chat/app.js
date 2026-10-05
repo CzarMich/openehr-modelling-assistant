@@ -202,7 +202,6 @@ $("chat-settings-dialog").addEventListener("click", (event) => {
 });
 async function loadSession() {
     session = await api("api/session");
-    $("login-panel").hidden = !!session.authenticated || !session.identityEnabled;
     $("sign-out").hidden = !session.authenticated;
     $("sign-in").hidden = !!session.authenticated;
     $("sign-in").href = session.identityEnabled ? "#chat" : "/chat/auth/login";
@@ -262,17 +261,8 @@ setInterval(async () => {
     refreshSession();
 }, 60000);
 $("sign-in").onclick = (event) => {
-    if (!session?.identityEnabled) {
-        $("sign-in").href =
-            document.body.dataset.section === "governance" ? "/chat/auth/login?review=1" : "/chat/auth/login";
-        return;
-    }
     event.preventDefault();
-    $("tab-chat").click();
-    $("welcome").hidden = false;
-    $("thread").hidden = true;
-    $("login-panel").scrollIntoView({ block: "center" });
-    $("login-panel").querySelector("form:not([hidden]) input:not([type=hidden]), a:not([hidden])")?.focus();
+    document.dispatchEvent(new Event("workspace:open-account"));
 };
 $("copilot-copy-url").onclick = () =>
     navigator.clipboard

@@ -42,6 +42,7 @@ test.afterEach(async () => {
 async function login(page) {
     await page.goto("/chat/");
     await page.getByRole("link", { name: "Sign in", exact: true }).click();
+    await page.locator("#oidc-login").click();
     await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
 }
 async function settings(page, open = true) {
@@ -645,6 +646,7 @@ test("provider choice is retained per conversation and connection controls expla
 }) => {
     await page.goto("/chat/");
     await page.getByRole("link", { name: "Sign in", exact: true }).click();
+    await page.locator("#oidc-login").click();
     await settings(page);
     await page.locator("#chat-provider").selectOption("claude");
     await settings(page, false);
@@ -687,6 +689,7 @@ test("disconnected users connect a personal Claude key before chatting", async (
     });
     await page.goto("/chat/");
     await page.getByRole("link", { name: "Sign in", exact: true }).click();
+    await page.locator("#oidc-login").click();
     await settings(page);
     await page.locator("#chat-provider").selectOption("claude");
     await settings(page, false);
@@ -931,6 +934,7 @@ test("signed-out users have a visible header sign-in on every workspace view and
         await expect(page.getByRole("link", { name: /sign in/i })).toHaveCount(1);
     }
     await signIn.click();
+    await page.locator("#oidc-login").click();
     await expect(signIn).toBeHidden();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(signIn).toBeInViewport();
@@ -1657,6 +1661,8 @@ test("native sign-in exposes signup, failure counts and email-free recovery on m
         });
     });
     await page.goto("/chat/#chat");
+    await expect(page.locator("#account-dialog")).toBeHidden();
+    await page.locator("#sign-in").click();
     await expect(page.locator("#show-signup")).toBeVisible();
     await page.locator("#show-signup").click();
     await expect(page.locator("#signup-form")).toBeVisible();
@@ -1717,7 +1723,18 @@ for (const failedImage of [false, true]) {
         await expect(page.locator("#totp-secret")).toHaveText("JBSWY3DPEHPK3PXP");
         await expect(page.locator("#totp-secret")).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        if (!failedImage) {
+            await page.locator("#close-account-dialog").click();
+            await expect(page.locator("#mfa-qr")).not.toHaveAttribute("src");
+            await page.locator("#sign-in").click();
+            await expect(page.locator("#mfa-qr")).toBeVisible();
+        }
         await page.locator("#mfa-code").fill("123456");
+        await page.evaluate(async () => {
+            const detail = await (await fetch("/chat/api/session")).json();
+            document.dispatchEvent(new CustomEvent("workspace:session", { detail }));
+        });
+        await expect(page.locator("#mfa-code")).toHaveValue("123456");
         await page.locator("#mfa-form button").click();
         await expect(page.locator("#recovery-codes")).toBeVisible();
         await expect(page.locator("#mfa-qr")).not.toHaveAttribute("src");
@@ -1725,3 +1742,46 @@ for (const failedImage of [false, true]) {
         await expect(page.locator("#totp-secret")).toBeEmpty();
     });
 }
+
+test("account overlay keeps the workspace clear and offers owner setup without leaving the current tab", async ({
+    page,
+}) => {
+    await page.route("**/chat/api/session", (route) =>
+        route.fulfill({
+            json: {
+                authenticated: false,
+                enabled: true,
+                identityEnabled: true,
+                identitySetupRequired: true,
+                signupEnabled: false,
+                oidcEnabled: true,
+                providers: [],
+            },
+        }),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/chat/#help");
+    await expect(page.locator("#account-dialog")).toBeHidden();
+    await expect(page.locator("#owner-bootstrap")).toBeHidden();
+    await page.locator("#sign-in").click();
+    await expect(page.getByRole("dialog", { name: "Welcome to your workspace", exact: true })).toBeVisible();
+    await expect(page.locator("#oidc-login")).toBeVisible();
+    await expect(page.locator("#signup-prompt")).toBeHidden();
+    await page.locator("#show-owner-setup").click();
+    await expect(page.locator("#owner-bootstrap")).toBeVisible();
+    await expect(page.locator("#oidc-login")).toBeHidden();
+    const { default: AxeBuilder } = await import("@axe-core/playwright");
+    const accessibility = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+        .analyze();
+    expect(accessibility.violations).toEqual([]);
+    await page.locator("#bootstrap-password").fill("Synthetic-private-password");
+    expect(await page.locator("#account-dialog").evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth)).toBe(
+        true,
+    );
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#account-dialog")).toBeHidden();
+    await expect(page.locator("#sign-in")).toBeFocused();
+    await expect(page.locator("#bootstrap-password")).toHaveValue("");
+    await expect(page.locator("#panel-help")).toBeVisible();
+});

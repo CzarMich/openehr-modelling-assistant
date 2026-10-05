@@ -854,3 +854,116 @@ body:not([data-section="chat"]) #toggle-sidebar {
     background: var(--surface, #f4f7fb);
     border-radius: 6px;
 }
+
+.account-dialog {
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    color: var(--ink);
+    background: #fff;
+    box-shadow: 0 24px 80px rgb(16 40 68 / 24%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.account-dialog::backdrop {
+    background: rgb(18 39 62 / 48%);
+    backdrop-filter: blur(4px);
+}
+.account-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.account-dialog-header h2 {
+    margin: 8px 0 0;
+    font-size: 25px;
+    line-height: 1.25;
+}
+.account-close {
+    flex: 0 0 36px;
+    height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: #f5f8fc;
+    color: var(--ink);
+    font: inherit;
+    font-size: 24px;
+    cursor: pointer;
+}
+.account-dialog .login-panel {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+.account-dialog .login-panel p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 12px 0;
+    max-width: none;
+}
+.account-dialog .identity-form {
+    margin: 16px 0 0;
+    padding: 16px 0 0;
+    max-width: none;
+}
+.account-dialog .identity-form h2 {
+    font-size: 17px;
+    margin: 0 0 16px;
+}
+.account-dialog input {
+    box-sizing: border-box;
+    min-height: 44px;
+    font-size: 16px;
+}
+.account-dialog .primary-button,
+.account-dialog .secondary-button {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+    margin-top: 10px;
+    padding: 11px 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+.account-dialog .secondary-button {
+    color: var(--blue, #005eb8);
+    background: #f6f9fd;
+}
+.account-text-button {
+    border: 0;
+    padding: 3px;
+    color: var(--blue, #005eb8);
+    background: transparent;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.account-dialog #signup-prompt {
+    text-align: center;
+    margin-top: 20px;
+}
+.account-dialog .mfa-qr {
+    margin-inline: auto;
+}
+.account-dialog #identity-auth-notice:not(:empty) {
+    padding: 12px;
+    border-radius: 10px;
+    background: #eff5fc;
+}
+@media (max-width: 540px) {
+    .account-dialog {
+        padding: 20px;
+        border-radius: 16px;
+    }
+}
