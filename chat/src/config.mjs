@@ -48,7 +48,7 @@ export function loadConfig(env = process.env) {
         providerEncryptionKey: env.CHAT_PROVIDER_ENCRYPTION_KEY || "",
         codexBinary: env.CHAT_CODEX_BINARY || "codex",
         codexWorkDir: resolve(env.CHAT_CODEX_WORK_DIR || "/workspace"),
-        turnTimeoutMs: Math.min(600, Math.max(30, Number(env.CHAT_TURN_TIMEOUT_SECONDS || 240))) * 1000,
+        turnTimeoutMs: Math.min(1800, Math.max(30, Number(env.CHAT_TURN_TIMEOUT_SECONDS || 600))) * 1000,
         sessionSeconds: 3600,
         retentionDays: 30,
         maxConcurrentTurns: 3,

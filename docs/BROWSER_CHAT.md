@@ -40,7 +40,7 @@ several boxes and press **Use selected options** when multiple answers apply.
 **Write another answer** lets you add your own wording; **Skip question** continues
 without a selection. Submitted answers are saved in your conversation. Choosing an
 option does not approve a repository write or a model for clinical use.
-Questions expire after two minutes or when the response is stopped/disconnected;
+Questions expire after two minutes or when the response is explicitly stopped;
 the assistant receives a skipped answer, never an assumed selection.
 On phones, **Chat settings** opens AI connections, sources, the repository destination
 and sharing controls. These fold away while the assistant replies.
@@ -79,7 +79,7 @@ changed source revision blocks the move. Future saves use the project's folder.
 were not recorded, use **Include older saved artefacts** and enter each repository path.
 The preview never infers paths from the assistant's prose. Up to 200 recorded artefacts can move at once (up to 50 older paths may be included explicitly). Shared package archetypes are copied so templates remaining in the source folder retain their dependencies. The **Models** tab continues to show repository modelling projects.
 
-OET and ADL template saves include exact archetype inputs under `archetypes/` and a project-relative hash manifest under `data/json/template-packages/`, committed atomically with the template. Native compilation of those exact bytes must pass before confirmation. Stable current paths are versioned by default: changed content replaces the current file in a new Git commit, while identical content is reused. Exact Git blob pins keep older templates bound to their own archetype bytes, even when a shared current file changes. See [artefact versions](ARTEFACT_VERSIONING.md). Browser turns retain up to four exact build input sets, encrypted and private to the profile and conversation, for seven days (8 MiB cache; 64 dependencies and 6 MiB inputs per package). Changed or uncached templates require explicit dependency contents. The manifest records compilation scope and limitations; saving does not establish clinical approval. Import an OET together with its archetypes into other modelling tools.
+OET and ADL template saves include exact archetype inputs under `archetypes/` and a project-relative hash manifest under `data/json/template-packages/`, committed atomically with the template. Native compilation of those exact bytes must pass before confirmation. Stable current paths are versioned by default: changed content replaces the current file in a new Git commit, while identical content is reused. Exact Git blob pins keep older templates bound to their own archetype bytes, even when a shared current file changes. See [artefact versions](ARTEFACT_VERSIONING.md). Browser turns retain up to sixteen exact build input sets, encrypted and private to the profile and conversation, for thirty days (16 MiB cache; 64 dependencies and 6 MiB inputs per package). Changed or uncached templates require explicit dependency contents. The manifest records compilation scope and limitations; saving does not establish clinical approval. Import an OET together with its archetypes into other modelling tools.
 Limits are 40 chat projects and the existing 100 conversations per profile. Chat
 retention still applies inside projects; project names persist until removed.
 
@@ -256,6 +256,18 @@ Existing conversations and model data remain intact; each user must connect thei
 own provider before continuing. Old conversations belong to Codex. The old credential
 volume is left untouched by the upgrade and can be retired separately after migration.
 
+## Continue after an interruption
+
+A response continues on the server when its browser stream closes. Reopen the conversation to follow progress and recover any pending confirmation or choice. Use **Stop response** to stop deliberately. A server restart, provider failure or bounded time/tool limit leaves the latest saved message and completed modelling work available; select **Continue from saved progress** to start a new turn from that evidence.
+
+Generated OET drafts, compiled outputs and proposed personal-repository file contents are retained privately before Git publication. **Artefacts and recovered drafts** offers downloads. The assistant sees a metadata inventory and can read historical tool results with `workspace_checkpoint_read`, or save exact bytes using `personal_repository_save` with `draftId`. It must still check the selected repository and current revision and obtain exact-change confirmation. Retention is not proof of a successful Git save. Failed or uncertain writes are never automatically replayed; read the current destination before retrying. Drafts produced before this feature may not be recoverable if their bytes were never retained.
+
+Checkpoints use identity-and-conversation-bound AES-256-GCM storage, separate from message-only shared snapshots. They retain up to 16 drafts (2 MiB each), 40 successful modelling evidence records and 16 MiB total, with a 30-day lifetime; older evidence is evicted first. Deleting a chat removes its checkpoints and dependency cache. Only an explicit modelling/source-read allowlist enters evidence retention. CDR execution, patient results, credentials and live repository-read state never enter this recovery context. Tool results are historical, untrusted evidence, not instructions or current validation claims. Source uploads remain under their existing attachment limits.
+
+Active users renew the workspace's one-hour inactivity expiry through a same-origin, CSRF-protected keepalive; an idle open tab does not renew it. Reauthentication is required after at most eight hours. Organisation sessions persist encrypted across service restarts, using the provider encryption key; local sessions already persist in the identity store. Logout and session revocation remain effective. Renewal does not change the original authentication timestamp used by CDR and governance freshness checks. Those operations may still require a fresh sign-in. Keep the chat volume and encryption keys stable across deployments.
+
+The server saves partial responses every two seconds and after tool events. In-flight provider reasoning cannot be checkpointed; recovery reuses completed evidence and draft bytes in a new provider turn. Logs distinguish time limits, tool limits, user stops and provider/tool failures without recording prompts, credentials or patient data.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -273,7 +285,7 @@ volume is left untouched by the upgrade and can be retired separately after migr
 | `CHAT_ALLOW_WRITES` | `false` | Enable confirmed writes; enterprise saves also require MCP write permission |
 | `CHAT_MODEL` | `gpt-6-sol` | Codex model |
 | `CHAT_CLAUDE_MODEL` | `claude-sonnet-5-5` | Claude model available to the user's API account |
-| `CHAT_TURN_TIMEOUT_SECONDS` | `240` | Turn deadline, bounded to 30–600 seconds |
+| `CHAT_TURN_TIMEOUT_SECONDS` | `600` | Active turn work budget, bounded to 30–1800 seconds; browser confirmation/choice waits are excluded |
 | `CHAT_DATA_DIR` | `/data/chat` | Private identity, conversations and encrypted connections |
 | `CHAT_CODEX_WORK_DIR`, `CHAT_CODEX_BINARY` | `/workspace`, `codex` | Isolated working directory and executable |
 | `CHAT_PORT` | `8350` | Internal HTTP port |
@@ -305,7 +317,7 @@ source checkout or model-storage mount.
 
 Sessions use HttpOnly, SameSite cookies with Secure on HTTPS. Mutations require
 same-origin requests and a session CSRF token. Limits include 100 conversations per
-user, 80 messages per conversation, 8,000 characters per message, 16 tool calls per
+user, 80 messages per conversation, 8,000 characters per message, 64 tool calls per
 turn and three simultaneous turns. A user can run one Codex turn at a time to avoid
 refresh-token races. Up to three device sign-ins can run at once, each for ten minutes.
 

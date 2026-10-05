@@ -430,6 +430,30 @@ export class IdentityStore {
         };
     }
 
+    renewSession(sessionToken) {
+        return this.mutate("local_user", null, {}, (state) => {
+            const session = state.sessions.find(
+                (entry) =>
+                    !entry.revoked &&
+                    entry.kind === "authenticated" &&
+                    this.matches(sessionToken, entry.digest) &&
+                    entry.expires > now(),
+            );
+            const user =
+                session &&
+                state.users.find(
+                    (entry) => entry.id === session.userId && entry.status === "active" && !entry.mfaPending,
+                );
+            if (!user) return null;
+            // Renew inactivity expiry only; never refresh the authentication age
+            // used for CDR/governance decisions, or exceed an eight-hour workday.
+            const expires = Math.min(now() + this.sessionSeconds * 1000, session.created + 8 * 3600000);
+            if (expires <= now()) return null;
+            session.expires = expires;
+            return expires;
+        });
+    }
+
     verifyMfaSetup(sessionToken, code) {
         const result = this.mutate("local_user", null, {}, (state) => {
             const session = state.sessions.find(

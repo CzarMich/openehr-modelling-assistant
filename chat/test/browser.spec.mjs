@@ -1571,3 +1571,52 @@ test("template package confirmation lists every dependency and escapes source co
     await expect(page.getByRole("button", { name: "Confirm save", exact: true })).toBeVisible();
     finish();
 });
+
+test("reload reconnects to pending confirmation without repeating the write", async ({ page }) => {
+    await login(page);
+    await send(page, "save");
+    await expect(page.getByRole("button", { name: "Confirm save", exact: true })).toBeVisible();
+    await page.reload();
+    await page
+        .getByRole("navigation", { name: "Your conversations" })
+        .getByRole("button", { name: "save", exact: true })
+        .click();
+    await expect(page.getByRole("button", { name: "Confirm save", exact: true })).toBeVisible();
+    await expect(page.locator("#chat-form")).toHaveAttribute("aria-busy", "true");
+    await page.getByRole("button", { name: "Confirm save", exact: true }).click();
+    await expect(page.locator(".message.assistant")).toContainText("saved after your confirmation");
+    await expect(page.getByRole("button", { name: "Stop response", exact: true })).toBeHidden();
+    await expect(page.locator(".message.user")).toHaveCount(1);
+});
+
+test("stopped response offers a working continue control", async ({ page }) => {
+    await login(page);
+    await send(page, "wait");
+    await page.getByRole("button", { name: "Stop response", exact: true }).click();
+    const resume = page.getByRole("button", { name: "Continue from saved progress", exact: true });
+    await expect(resume).toBeVisible();
+    await resume.click();
+    await expect(page.locator(".message.assistant").last()).toContainText("default");
+    await expect(page.locator(".message.user").last()).toContainText("retained drafts");
+});
+
+test("session renewal follows user activity rather than an idle open tab", async ({ page }) => {
+    await page.clock.install();
+    await login(page);
+    let renewals = 0;
+    await page.route("**/chat/auth/keepalive", async (route) => {
+        renewals++;
+        expect(route.request().method()).toBe("POST");
+        expect(route.request().headers()["x-csrf-token"]).toBe("test-csrf");
+        await route.fulfill({ json: { expires: Date.now() + 3600000 } });
+    });
+    await page.locator("#message").fill("Unsent work");
+    await page.clock.fastForward(60000);
+    await expect.poll(() => renewals).toBe(1);
+    await page.clock.fastForward(180000);
+    expect(renewals).toBe(1);
+    await page.locator("#message").fill("Still working");
+    await page.clock.fastForward(60000);
+    await expect.poll(() => renewals).toBe(2);
+    await expect(page.locator("#message")).toHaveValue("Still working");
+});

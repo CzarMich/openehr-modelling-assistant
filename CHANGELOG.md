@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Browser conversations recover private drafts and completed work after interruptions, with persistent sessions for active users.
+
 - Retain the MIT project license and third-party attribution.
 
 - Add Copilot Studio browser connections with private Microsoft sign-in and workspace tools.

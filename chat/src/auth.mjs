@@ -1,7 +1,9 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { unlinkSync } from "node:fs";
+import { unlinkSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import * as oidc from "openid-client";
 import { IdentityStore } from "./identity-store.mjs";
+import { ProviderStore } from "./provider-store.mjs";
 
 export function equal(a, b) {
     return (
@@ -26,6 +28,16 @@ export class Auth {
     constructor(config) {
         this.config = config;
         this.sessions = new Map();
+        this.sessionStore = config.providerEncryptionKey
+            ? new ProviderStore(join(config.dataDir, "browser-sessions"), config.providerEncryptionKey, ["session"])
+            : null;
+        if (this.sessionStore) {
+            for (const name of readdirSync(this.sessionStore.directory)) {
+                if (!/^[a-f0-9]{64}-session\.json$/.test(name)) continue;
+                const path = join(this.sessionStore.directory, name);
+                if (statSync(path).mtimeMs < Date.now() - 8 * 3600000) unlinkSync(path);
+            }
+        }
         this.transactions = new Map();
         this.discovery = null;
         this.identityStore = config.identityEnabled
@@ -151,8 +163,10 @@ export class Auth {
             name: String(claims.name || claims.preferred_username || "User").slice(0, 160),
             csrf: token(),
             reviewIdentity,
+            started: Date.now(),
             expires: Date.now() + this.config.sessionSeconds * 1000,
         });
+        this.sessionStore?.set(sessionId, "session", this.sessions.get(sessionId));
         res.setHeader("Set-Cookie", [
             this.cookie("ModellingSession", sessionId, this.config.sessionSeconds),
             this.cookie("ModellingLogin", "", 0),
@@ -181,7 +195,15 @@ export class Auth {
                     otpAuthUrl: this.otpAuthUrl(setup.totpSecret, setup.user.username),
                 };
         }
-        return this.sessions.get(sessionToken);
+        if (!sessionToken) return undefined;
+        const session = this.sessions.get(sessionToken) || this.sessionStore?.get(sessionToken, "session")?.credential;
+        if (session && session.expires <= Date.now()) {
+            this.sessions.delete(sessionToken);
+            this.sessionStore?.delete(sessionToken, "session");
+            return undefined;
+        }
+        if (session) this.sessions.set(sessionToken, session);
+        return session;
     }
     async localLogin(input, req, res) {
         if (!this.identityStore) throw Object.assign(new Error("Local identity is not enabled."), { status: 503 });
@@ -261,7 +283,27 @@ export class Auth {
         this.require(req, true);
         const sessionToken = this.value(req, "ModellingSession");
         this.sessions.delete(sessionToken);
+        this.sessionStore?.delete(sessionToken, "session");
         if (this.identityStore) this.identityStore.revokeSession(sessionToken);
         res.setHeader("Set-Cookie", this.cookie("ModellingSession", "", 0));
+    }
+    renew(req, res) {
+        const session = this.require(req, true);
+        const token = this.value(req, "ModellingSession");
+        let expires;
+        if (session.user) expires = this.identityStore.renewSession(token);
+        else {
+            session.started ??= session.expires - this.config.sessionSeconds * 1000;
+            expires = Math.min(Date.now() + this.config.sessionSeconds * 1000, session.started + 8 * 3600000);
+            if (expires > Date.now()) session.expires = expires;
+            this.sessionStore?.set(token, "session", session);
+        }
+        if (!expires || expires <= Date.now())
+            throw Object.assign(new Error("Please sign in again to continue your saved work."), { status: 401 });
+        res.setHeader(
+            "Set-Cookie",
+            this.cookie("ModellingSession", token, Math.max(1, Math.floor((expires - Date.now()) / 1000))),
+        );
+        return { expires };
     }
 }

@@ -10,6 +10,7 @@ import { ReviewClient } from "./reviews.mjs";
 import { CdrClient, CDR_OPERATIONS } from "./cdr.mjs";
 import { readModels } from "./models.mjs";
 import { PersonalConnections } from "./personal-connections.mjs";
+import { Checkpoints } from "./checkpoints.mjs";
 import { TemplatePackages } from "./template-packages.mjs";
 import { RepositoryModels } from "./repository-models.mjs";
 import { draftAql } from "./aql-drafting.mjs";
@@ -87,6 +88,7 @@ export function createApplication(
     store.prune();
     shares.prune();
     TemplatePackages.prune(config);
+    Checkpoints.prune(config);
     const modelCache = new ModelCache(config);
     try {
         modelCache.prune();
@@ -98,6 +100,7 @@ export function createApplication(
             store.prune();
             shares.prune();
             TemplatePackages.prune(config);
+            Checkpoints.prune(config);
             modelCache.prune();
         } catch {
             console.error('{"event":"chat_retention_failed"}');
@@ -238,6 +241,10 @@ export function createApplication(
             const mutation = req.method !== "GET";
             const session = auth.require(req, mutation);
             const identity = session.identity;
+            if (req.method === "POST" && path === "/chat/auth/keepalive") {
+                await body(req, []);
+                return json(res, 200, auth.renew(req, res));
+            }
             const checkMoving = () => {
                 if (moving.has(identity))
                     throw Object.assign(new Error("Wait for the project move to finish."), { status: 409 });
@@ -665,7 +672,7 @@ export function createApplication(
                 }
             }
             const route = path.match(
-                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|choice|settings|share|attachments|move-preview|move)(?:\/([a-f0-9-]{36}))?(?:\/(preview))?)?$/,
+                /^\/chat\/api\/conversations\/([a-f0-9-]{36})(?:\/(messages|stop|approval|choice|settings|share|attachments|drafts|move-preview|move)(?:\/([a-f0-9-]{36}))?(?:\/(preview))?)?$/,
             );
             if (!route) throw Object.assign(new Error("Not found"), { status: 404 });
             const [, id, action, attachmentId, preview] = route,
@@ -683,7 +690,8 @@ export function createApplication(
                     });
                 return store.get(identity, id);
             };
-            if (attachmentId && action !== "attachments") throw Object.assign(new Error("Not found"), { status: 404 });
+            if (attachmentId && !["attachments", "drafts"].includes(action))
+                throw Object.assign(new Error("Not found"), { status: 404 });
             if (preview && (!attachmentId || action !== "attachments" || req.method !== "GET"))
                 throw Object.assign(new Error("Not found"), { status: 404 });
             if (mutation && uploading.has(key))
@@ -770,6 +778,19 @@ export function createApplication(
                     return json(res, 200, { success: true });
                 }
             }
+            if (action === "drafts" && attachmentId && req.method === "GET") {
+                const draft = new Checkpoints(config, identity, id).getDraft(attachmentId);
+                const filename =
+                    draft.name
+                        .split("/")
+                        .at(-1)
+                        .replace(/[^A-Za-z0-9._-]/g, "_") || "draft.txt";
+                res.writeHead(200, {
+                    "Content-Type": "application/octet-stream",
+                    "Content-Disposition": "attachment; filename=" + JSON.stringify(filename),
+                });
+                return res.end(draft.content);
+            }
             if (action === "attachments") {
                 if (attachmentId && req.method === "GET") {
                     if (preview) {
@@ -819,17 +840,39 @@ export function createApplication(
                     }
                 }
             }
-            if (!action && req.method === "GET") return json(res, 200, { ...conversation, running: active.has(key) });
+            if (!action && req.method === "GET") {
+                if (conversation.run?.status === "running" && !active.has(key)) {
+                    conversation.run.status = "interrupted";
+                    conversation.run.reason = "SERVER_RESTART";
+                    const reply = conversation.messages.find((message) => message.id === conversation.run.messageId);
+                    if (reply) {
+                        reply.error = true;
+                        reply.content +=
+                            "\n\nThe server restarted. Continue from saved progress to reuse retained drafts and completed modelling evidence.";
+                        for (const tool of reply.tools || [])
+                            if (tool.status === "running") tool.status = "interrupted";
+                    }
+                    store.save(identity, conversation);
+                }
+                const turn = active.get(key);
+                return json(res, 200, {
+                    ...conversation,
+                    running: !!turn,
+                    pending: turn?.pending || null,
+                    recovery: new Checkpoints(config, identity, id).summary(),
+                });
+            }
             if (!action && req.method === "DELETE") {
                 if (active.has(key))
                     throw Object.assign(new Error("Stop the response before deleting this chat."), { status: 409 });
                 shares.revoke(identity, conversation);
                 store.delete(identity, id);
                 new TemplatePackages(config, identity, id).delete();
+                new Checkpoints(config, identity, id).delete();
                 return json(res, 200, { success: true });
             }
             if (action === "stop" && req.method === "POST") {
-                active.get(key)?.controller.abort();
+                active.get(key)?.controller.abort("USER_STOP");
                 return json(res, 200, { success: true });
             }
             if (action === "approval" && req.method === "POST") {
@@ -899,19 +942,42 @@ export function createApplication(
             const controller = new AbortController(),
                 turn = { controller, approval: null, provider: conversation.provider || "codex" };
             active.set(key, turn);
-            const timeout = setTimeout(() => controller.abort(), config.turnTimeoutMs);
-            timeout.unref();
-            const disconnected = () => {
-                if (!res.writableEnded) controller.abort();
+            // A response belongs to its conversation, not to one browser socket.
+            // Human confirmation time does not consume the model's work budget.
+            let remaining = config.turnTimeoutMs,
+                started = Date.now(),
+                timeout;
+            const resumeBudget = () => {
+                if (controller.signal.aborted || timeout) return;
+                started = Date.now();
+                timeout = setTimeout(() => controller.abort("TIME_LIMIT"), Math.max(1, remaining));
+                timeout.unref();
             };
-            res.on("close", disconnected);
+            const pauseBudget = () => {
+                if (!timeout) return;
+                remaining -= Date.now() - started;
+                clearTimeout(timeout);
+                timeout = null;
+            };
+            resumeBudget();
+            const reply = { id: randomUUID(), role: "assistant", content: "", tools: [] };
+            conversation.messages.push(reply);
+            conversation.run = { status: "running", messageId: reply.id, startedAt: new Date().toISOString() };
+            store.save(identity, conversation);
             res.writeHead(200, {
                 "Content-Type": "text/event-stream",
                 "X-Accel-Buffering": "no",
                 Connection: "keep-alive",
             });
             res.flushHeaders();
+            const checkpoint = () => {
+                reply.content = content;
+                conversation.run.updatedAt = new Date().toISOString();
+                store.save(identity, conversation);
+            };
             const emit = (event) => {
+                if (event.type === "approval" || event.type === "choice") turn.pending = event;
+                if (event.type !== "delta") checkpoint();
                 if (!res.destroyed) res.write("data: " + JSON.stringify(event) + "\n\n");
             };
             const heartbeat = setInterval(() => {
@@ -921,7 +987,15 @@ export function createApplication(
             let mcp;
             let content = "",
                 toolCount = 0,
-                toolActivity = [];
+                toolActivity = reply.tools;
+            const snapshot = setInterval(() => {
+                try {
+                    checkpoint();
+                } catch {
+                    controller.abort("CHECKPOINT_FAILED");
+                }
+            }, 2000);
+            snapshot.unref();
             try {
                 emit({ type: "status", text: "Connecting to modelling tools…" });
                 mcp = mcpFactory(controller.signal);
@@ -940,7 +1014,7 @@ export function createApplication(
                 const result = await provider.run({
                     identity,
                     provider: turn.provider,
-                    messages: workspace.context(conversation.messages),
+                    messages: workspace.context(conversation.messages.filter((message) => message !== reply)),
                     images: attachments.images(identity, conversation),
                     tools,
                     signal: controller.signal,
@@ -949,8 +1023,9 @@ export function createApplication(
                         emit(event);
                     },
                     callTool: serialToolCalls(async (name, args) => {
-                        if (!names.has(name) || ++toolCount > 16 || controller.signal.aborted)
-                            throw new Error("Tool is unavailable");
+                        if (++toolCount > 64) controller.abort("TOOL_LIMIT");
+                        controller.signal.throwIfAborted();
+                        if (!names.has(name)) throw new Error("Tool is unavailable");
                         const trace = { id: randomUUID(), name, status: "running" };
                         toolActivity.push(trace);
                         emit({ type: "tool", ...trace });
@@ -959,6 +1034,7 @@ export function createApplication(
                                 const question = choiceQuestion(args);
                                 if (conversation.messages.length >= 79)
                                     throw new Error("Start a new conversation for more questions.");
+                                pauseBudget();
                                 const answer = await new Promise((resolve, reject) => {
                                     const choiceId = randomUUID();
                                     let timer,
@@ -969,9 +1045,11 @@ export function createApplication(
                                         clearTimeout(timer);
                                         controller.signal.removeEventListener("abort", cancel);
                                         turn.choice = null;
+                                        turn.pending = null;
+                                        resumeBudget();
                                         try {
                                             if (!value.cancelled) {
-                                                conversation.messages.push({
+                                                conversation.messages.splice(conversation.messages.indexOf(reply), 0, {
                                                     role: "user",
                                                     content: choiceMessage(value),
                                                 });
@@ -1001,12 +1079,15 @@ export function createApplication(
                             if (WRITE_TOOLS.has(name) || name === PERSONAL_WRITE) {
                                 workspace.checkWrite(name, args);
                                 const packagePlan = await workspace.prepareWrite(name, args);
+                                pauseBudget();
                                 const approved = await new Promise((resolve) => {
                                     const approvalId = randomUUID();
                                     let timer;
                                     const finish = (value) => {
                                         clearTimeout(timer);
                                         controller.signal.removeEventListener("abort", deny);
+                                        turn.pending = null;
+                                        resumeBudget();
                                         resolve(value);
                                     };
                                     const deny = () => finish(false);
@@ -1060,34 +1141,44 @@ export function createApplication(
                     }),
                 });
                 if (!content) content = result || "No response was returned. Please try again.";
-                conversation.messages.push({ role: "assistant", content, tools: toolActivity });
-                store.save(identity, conversation);
+                conversation.run.status = "completed";
+                checkpoint();
                 emit({ type: "done", conversationId: id });
             } catch {
                 const stopped = controller.signal.aborted;
-                const message = stopped
-                    ? "Response stopped. You can send another message."
-                    : "The assistant could not complete this response. Please retry.";
-                conversation.messages.push({
-                    role: "assistant",
-                    content: content ? content + "\n\n" + message : message,
-                    tools: toolActivity,
-                    error: true,
-                });
-                store.save(identity, conversation);
+                const reason = stopped ? controller.signal.reason : "PROVIDER_OR_TOOL_ERROR";
+                const message =
+                    reason === "TIME_LIMIT"
+                        ? "This response reached its time limit. Continue from saved progress to reuse retained drafts and completed modelling evidence."
+                        : reason === "TOOL_LIMIT"
+                          ? "This response reached its tool limit. Continue from saved progress to reuse completed work."
+                          : reason === "USER_STOP"
+                            ? "Response stopped. Continue from saved progress when ready."
+                            : "The assistant was interrupted. Continue from saved progress to reuse retained drafts and completed modelling evidence.";
+                content = content ? content + "\n\n" + message : message;
+                reply.error = true;
+                for (const tool of toolActivity) if (tool.status === "running") tool.status = "interrupted";
+                conversation.run.status = "interrupted";
+                conversation.run.reason = typeof reason === "string" ? reason : "INTERRUPTED";
+                checkpoint();
                 emit({ type: "error", message });
                 console.error(
-                    JSON.stringify({ event: "chat_turn_failed", code: stopped ? "STOPPED" : "PROVIDER_OR_TOOL_ERROR" }),
+                    JSON.stringify({
+                        event: "chat_turn_failed",
+                        code: conversation.run.reason,
+                        toolCount,
+                        lastTool: toolActivity.at(-1)?.name || null,
+                    }),
                 );
             } finally {
                 clearTimeout(timeout);
                 clearInterval(heartbeat);
+                clearInterval(snapshot);
                 await mcp?.close?.();
                 active.delete(key);
                 turn.approval?.resolve(false);
                 turn.choice?.cancel();
-                res.off("close", disconnected);
-                res.end();
+                if (!res.destroyed) res.end();
             }
         } catch (error) {
             if (res.headersSent) {
