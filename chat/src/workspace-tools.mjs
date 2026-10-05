@@ -23,7 +23,23 @@ export class WorkspaceTools {
         this.prepared = new WeakMap();
     }
     async tools() {
-        const core = await this.mcp.tools();
+        const core = (await this.mcp.tools()).map((item) =>
+            item.name !== "template_build_oet"
+                ? item
+                : {
+                      ...item,
+                      description:
+                          item.description +
+                          " In a selected personal repository, current project archetypes take precedence automatically. Use full openEHR identifiers. ckmUpgrades is only for an explicitly requested upgrade verified against CKM version/revision evidence, never just a different hash. A new versioned identifier can coexist with the older version. Read an existing template before regeneration and save at its same path.",
+                      inputSchema: {
+                          ...item.inputSchema,
+                          properties: {
+                              ...item.inputSchema.properties,
+                              ckmUpgrades: { type: "array", maxItems: 31, uniqueItems: true, items: string },
+                          },
+                      },
+                  },
+        );
         const personal = [
             CHOICE_TOOL,
             tool(
@@ -201,7 +217,10 @@ export class WorkspaceTools {
         this.checkWrite(name, args);
         if (name !== PERSONAL_WRITE || !isTemplate(args.path)) return null;
         if (this.prepared.has(args)) return this.prepared.get(args);
-        const files = await this.packages.files(args, this.conversation.folder || "", this.mcp);
+        const reader = new RepositoryModels(this.connections, this.identity, this.signal);
+        const files = await this.packages.files(args, this.conversation.folder || "", this.mcp, (identifiers) =>
+            reader.currentArchetypes(args.repository, this.conversation.folder || "", identifiers),
+        );
         for (const file of files) {
             this.checkWrite(name, { ...args, path: file.path });
             if (!file.dependency) this.checkpoints.draft(file.content, file.path, "template_compile");
@@ -238,7 +257,58 @@ export class WorkspaceTools {
         const personal = this.personal.find((t) => t.name === name);
         if (!personal) {
             this.checkWrite(name, args);
-            const response = await this.mcp.call(name, args);
+            let buildSources = new Map();
+            const { ckmUpgrades = [], ...buildArgs } = args;
+            if (name === "template_build_oet" && this.conversation.repository) {
+                const identifiers = [
+                    args.composition,
+                    ...(args.entries || []),
+                    ...(args.placements || []).map((p) => p.identifier),
+                ].filter(Boolean);
+                if (
+                    !Array.isArray(ckmUpgrades) ||
+                    ckmUpgrades.length > 31 ||
+                    ckmUpgrades.some((id) => !identifiers.includes(id))
+                )
+                    throw problem("CKM upgrades must identify archetypes used by this build.");
+                buildSources = await new RepositoryModels(
+                    this.connections,
+                    this.identity,
+                    this.signal,
+                ).currentArchetypes(this.conversation.repository, this.conversation.folder || "", identifiers);
+                const supplied = new Map((args.archetypes || []).map((item) => [item.identifier, item]));
+                for (const id of ckmUpgrades) supplied.delete(id);
+                for (const [id, item] of buildSources)
+                    if (!ckmUpgrades.includes(id)) supplied.set(id, { identifier: id, content: item.content });
+                buildArgs.archetypes = [...supplied.values()];
+            }
+            let response = await this.mcp.call(name, name === "template_build_oet" ? buildArgs : args);
+            const built = name === "template_build_oet" ? modelResult(response) : null;
+            if (built?.dependencies && this.conversation.repository) {
+                built.repositorySources = Object.fromEntries(
+                    [...buildSources].map(([id, { content, ...item }]) => [id, item]),
+                );
+                built.ckmUpgrades = ckmUpgrades.map((identifier) => ({
+                    identifier,
+                    previousSha256: buildSources.get(identifier)?.sha256 || null,
+                }));
+                built.provenance ||= {};
+                for (const [id, item] of buildSources)
+                    if (!ckmUpgrades.includes(id))
+                        built.provenance[id] = {
+                            kind: "personal_repository",
+                            repository: this.conversation.repository,
+                            path: item.path,
+                            ref: item.ref,
+                            sha256: item.sha256,
+                        };
+                const value = { success: true, result: built };
+                response = {
+                    ...response,
+                    structuredContent: value,
+                    content: [{ type: "text", text: JSON.stringify(value) }],
+                };
+            }
             this.packages.capture(name, args, response);
             const result = name === "template_build_oet" ? modelResult(response) : null;
             if (result?.dependencies) {

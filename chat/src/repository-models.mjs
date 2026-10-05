@@ -170,6 +170,42 @@ export class RepositoryModels {
             return content;
         });
     }
+    // Current authoring sources are separate from historical manifest pins.
+    // One operation uses one immutable branch snapshot; caches are revision keyed.
+    async currentArchetypes(repository, folder, identifiers) {
+        const { repo, ref } = await this.source({ repository });
+        const rows = await this.tree(repo, ref);
+        const prefix = (folder ? folder + "/" : "") + "archetypes/";
+        const found = new Map();
+        for (const identifier of new Set(identifiers)) {
+            if (!/^openEHR-[A-Z_]+-[A-Z_]+\.[A-Za-z0-9_.-]+\.v[0-9]+(?:\.[0-9]+)*$/.test(identifier))
+                throw problem("Use full openEHR archetype identifiers when building from a personal repository.");
+            const matches = rows.filter(
+                (item) =>
+                    item.type === "blob" &&
+                    item.path.startsWith(prefix) &&
+                    item.path.slice(item.path.lastIndexOf("/") + 1) === identifier + ".adl",
+            );
+            if (matches.length > 1)
+                throw problem(
+                    "Multiple repository copies of " +
+                        identifier +
+                        " exist in this project. Resolve the duplicate sources before building.",
+                    409,
+                );
+            if (!matches.length) continue;
+            const file = await this.get({ repository, path: matches[0].path, ref });
+            found.set(identifier, {
+                identifier,
+                content: file.content,
+                sha256: file.sha256,
+                path: file.path,
+                revision: file.revision,
+                ref,
+            });
+        }
+        return found;
+    }
     async history(args) {
         const { repo, ref } = await this.source(args);
         const path = this.connections.validatePath(args.path);

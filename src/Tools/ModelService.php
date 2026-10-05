@@ -36,9 +36,10 @@ final readonly class ModelService
         return ToolResult::run(fn (): array => $this->validator->diff($before, $after));
     }
 
-    /** Generate a draft OET from either 1–30 direct ENTRY identifiers or explicit parent-linked nested placements with supplied archetype paths. Returns the exact ADL dependencies and hashes used; save these alongside the OET in the project's archetypes folder. Drafts are compile-checked when the native engine is configured; this does not certify complete legacy semantics.
+    /** Generate a draft OET from either 1–30 direct ENTRY identifiers or explicit parent-linked nested placements with supplied archetype paths. Returns the exact ADL dependencies and hashes used; save these alongside the OET in the project's archetypes folder. Supplied archetypes take precedence over CKM for matching identifiers; pass current repository sources to preserve designer edits. Unmatched identifiers are fetched from CKM. A changed hash is not a semantic version or approval. Drafts are compile-checked when the native engine is configured; this does not certify complete legacy semantics.
      *
      * @param list<string> $entries
+     * @param list<array{identifier: string, content: string}> $archetypes
      * @param list<array<string, mixed>> $placements
      * @return array<string, mixed>
      */
@@ -50,9 +51,11 @@ final readonly class ModelService
             'id' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 64], 'parent' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 64],
             'identifier' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 300], 'path' => ['type' => 'string', 'minLength' => 2, 'maxLength' => 2048],
             'min' => ['type' => 'string', 'pattern' => '^[0-9]+$'], 'max' => ['type' => 'string', 'pattern' => '^(?:[0-9]+|\\*)$'],
-            'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 1000]]], maxItems: 30)] array $placements = []): array
+            'name' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 1000]]], maxItems: 30)] array $placements = [],
+        #[Schema(items: ['type' => 'object', 'additionalProperties' => false, 'required' => ['identifier', 'content'], 'properties' => [
+            'identifier' => ['type' => 'string', 'maxLength' => 200], 'content' => ['type' => 'string', 'maxLength' => 1048576]]], maxItems: 64)] array $archetypes = []): array
     {
-        return ToolResult::run(fn (): array => $this->authoring->generateOet($name, $composition, $entries, $ckm, $placements));
+        return ToolResult::run(fn (): array => $this->authoring->generateOet($name, $composition, $entries, $ckm, $placements, $archetypes));
     }
 
     /** Run document/project QA and verify any saved native build tied to the exact source revision. Missing qualification remains NOT_EXECUTED; release eligibility stays false.

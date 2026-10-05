@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Template authoring preserves repository designer edits and supports deliberate CKM upgrades at stable artefact paths.
+
 - Browser conversations recover private drafts and completed work after interruptions, with persistent sessions for active users.
 
 - Retain the MIT project license and third-party attribution.

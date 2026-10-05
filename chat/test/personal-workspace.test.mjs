@@ -1020,7 +1020,10 @@ test("template package confirmation covers all files and records every dependenc
             });
             return "Complete package saved";
         },
-        undefined,
+        async (url) => ({
+            status: 200,
+            text: JSON.stringify(url.includes("/git/ref/") ? { object: { sha: "b".repeat(40) } } : { tree: [] }),
+        }),
         async () => ({
             structuredContent: {
                 success: true,

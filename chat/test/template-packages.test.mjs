@@ -64,6 +64,10 @@ function fixture(t, kind = "github") {
             if (path.endsWith("/commits") && !options.method)
                 return result([{ sha: state.historyCommit || state.head, id: state.historyCommit || state.head }]);
             if (path.includes("/git/commits/") && !options.method) return result({ tree: { sha: "c".repeat(40) } });
+            if (path.endsWith("/repository/tree") && !options.method)
+                return result(
+                    Object.entries(files).map(([path, content]) => ({ path, type: "blob", id: gitHash(content) })),
+                );
             if (path.includes("/git/trees/") && !options.method)
                 return result({
                     tree: Object.entries(files).map(([path, content]) => ({
@@ -122,11 +126,14 @@ function fixture(t, kind = "github") {
     const mcp = {
         tools: async () => [],
         call: async (name, args) => {
-            if (name === "template_build_oet")
+            if (name === "template_build_oet") {
+                state.buildArgs = args;
+                const selected = args.archetypes?.length ? args.archetypes : state.upstream || [source];
                 return envelope({
                     content: "<template/>",
-                    dependencies: [{ ...source, sha256: hash(source.content) }],
+                    dependencies: selected.map((item) => ({ ...item, sha256: hash(item.content) })),
                 });
+            }
             assert.equal(name, "template_compile");
             assert.deepEqual(args.dependencies, state.sources);
             return envelope({
@@ -332,20 +339,24 @@ for (const kind of ["github", "gitlab"])
             template: { ...firstManifest.template, path: "templates/oet/other.oet" },
         });
         const changedSource = { ...source, content: "revised ADL source bytes\n" };
+        // An external designer commits corrected bytes without renaming the file.
+        f.state.snapshots[first.commit] = { ...f.state.files };
+        f.state.files[archetype] = changedSource.content;
+        f.state.head = "e".repeat(40);
         f.state.sources = [changedSource];
         f.state.generated = { opt: "compiled second", web: '{"version":2}' };
         const expectedRevision = kind === "github" ? gitHash(f.args.content) : first.commit;
         const secondArgs = {
             ...args,
             content: '<template changed="true"/>',
-            dependencies: [changedSource],
+            dependencies: [source], // A recovered draft still contains the old CKM bytes.
             expectedRevision,
         };
         const next = f.makeWorkspace();
         await next.tools();
         const plan = await next.prepareWrite(PERSONAL_WRITE, secondArgs);
-        assert.equal(plan.files.find((file) => file.path === archetype).change, "updated");
-        assert.equal(plan.files.find((file) => file.path === archetype).previousSha256, hash(source.content));
+        assert.equal(plan.files.find((file) => file.path === archetype).change, "unchanged");
+        assert.equal(plan.files.find((file) => file.path === archetype).previousSha256, hash(changedSource.content));
         const second = (await next.call(PERSONAL_WRITE, secondArgs)).structuredContent;
         assert.notEqual(second.commit, first.commit);
         assert.equal(f.state.files[archetype], changedSource.content);
@@ -452,4 +463,94 @@ test("an interrupted build can save its exact retained draft and dependencies wi
     assert.equal(result.structuredContent.saved, true);
     assert.equal(f.state.files[f.args.path], content);
     await assert.rejects(second.prepareWrite(PERSONAL_WRITE, { ...save, content: "different" }), /do not match/);
+});
+
+for (const kind of ["github", "gitlab"])
+    test(`${kind} builds use designer edits by default and CKM revisions only for deliberate upgrades`, async (t) => {
+        const f = fixture(t, kind);
+        const path = "AKI/archetypes/" + source.identifier + ".adl";
+        const edited = { ...source, content: "designer corrected ADL" };
+        f.state.files[path] = edited.content;
+        f.state.sources = [edited];
+        const workspace = f.makeWorkspace();
+        await workspace.tools();
+        const built = await workspace.call("template_build_oet", { name: "Renal", composition: source.identifier });
+        assert.deepEqual(f.state.buildArgs.archetypes, [edited]);
+        assert.equal(built.structuredContent.result.provenance[source.identifier].kind, "personal_repository");
+        const plan = await workspace.prepareWrite(PERSONAL_WRITE, f.args);
+        assert.equal(plan.files.find((item) => item.path === path).change, "unchanged");
+        // Explicit upstream revision upgrade, including a revision retaining the same identifier.
+        const upstream = { ...source, content: "new CKM revision" };
+        f.state.upstream = [upstream];
+        f.state.sources = [upstream];
+        const upgraded = f.makeWorkspace();
+        await upgraded.tools();
+        await upgraded.call("template_build_oet", {
+            name: "Renal",
+            composition: source.identifier,
+            ckmUpgrades: [source.identifier],
+        });
+        assert.deepEqual(f.state.buildArgs.archetypes, []);
+        assert.equal(f.state.buildArgs.ckmUpgrades, undefined, "Browser-only policy is not sent to MCP");
+        await upgraded.call("template_compile", { content: f.args.content, dependencies: [upstream] });
+        const upgradePlan = await upgraded.prepareWrite(PERSONAL_WRITE, { ...f.args });
+        assert.equal(upgradePlan.files.find((item) => item.path === path).content, upstream.content);
+        assert.equal(upgradePlan.files.find((item) => item.path === path).change, "updated");
+        // A second designer edit must not be silently replaced by an already built upgrade.
+        f.state.files[path] = "another designer edit";
+        f.state.head = "e".repeat(40);
+        const retry = f.makeWorkspace();
+        await retry.tools();
+        await assert.rejects(retry.prepareWrite(PERSONAL_WRITE, { ...f.args }), /changed after the CKM upgrade/);
+        assert.equal(f.state.writes.length, 0);
+    });
+
+test("new CKM identifiers coexist with repository versions and compilation rejects incompatible edits", async (t) => {
+    const f = fixture(t);
+    const oldPath = "AKI/archetypes/" + source.identifier + ".adl";
+    f.state.files[oldPath] = "designer v1";
+    const newer = { identifier: source.identifier.replace(".v1", ".v2"), content: "CKM v2" };
+    f.state.upstream = [newer];
+    f.state.sources = [newer];
+    const workspace = f.makeWorkspace();
+    await workspace.tools();
+    await workspace.call("template_build_oet", { name: "Renal", composition: newer.identifier });
+    const plan = await workspace.prepareWrite(PERSONAL_WRITE, { ...f.args });
+    assert.equal(plan.files.find((item) => item.dependency).change, "created");
+    assert.equal(plan.files.find((item) => item.dependency).path, "AKI/archetypes/" + newer.identifier + ".adl");
+    assert.equal(f.state.files[oldPath], "designer v1");
+    f.state.sources = [{ ...source, content: "designer v1" }];
+    f.state.valid = false;
+    await assert.rejects(
+        workspace.prepareWrite(PERSONAL_WRITE, { ...f.args, dependencies: [source] }),
+        /could not be compiled/,
+    );
+    assert.equal(f.state.writes.length, 0);
+});
+
+test("repository source selection rejects duplicates and guards edits between compile and save", async (t) => {
+    const f = fixture(t);
+    const path = "AKI/archetypes/" + source.identifier + ".adl";
+    f.state.files[path] = source.content;
+    f.state.files["AKI/archetypes/duplicate/" + source.identifier + ".adl"] = source.content;
+    const workspace = f.makeWorkspace();
+    await workspace.tools();
+    await assert.rejects(
+        workspace.prepareWrite(PERSONAL_WRITE, { ...f.args, dependencies: [source] }),
+        /Multiple repository copies/,
+    );
+    delete f.state.files["AKI/archetypes/duplicate/" + source.identifier + ".adl"];
+    f.state.head = "b".repeat(40);
+    const call = f.mcp.call;
+    f.mcp.call = async (...args) => {
+        const result = await call(...args);
+        f.state.files[path] = "concurrent edit";
+        f.state.head = "e".repeat(40);
+        return result;
+    };
+    await assert.rejects(
+        workspace.prepareWrite(PERSONAL_WRITE, { ...f.args, dependencies: [source] }),
+        /Repository changed/,
+    );
+    assert.equal(f.state.writes.length, 0);
 });

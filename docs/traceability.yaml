@@ -211,7 +211,7 @@ requirements:
     status: draft
     implementation: partial
     packages: [src/Domain/Modelling/*.php, src/Validation/*.php, src/Tools/ModelService.php]
-    tests: [tests/Enterprise/ModelValidationTest.php]
+    tests: [tests/Enterprise/ModelValidationTest.php, tests/Enterprise/TemplateAuthoringTest.php]
     adr: ["0008"]
 
   - id: REQ-F14

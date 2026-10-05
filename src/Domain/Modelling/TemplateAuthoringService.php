@@ -16,12 +16,13 @@ final readonly class TemplateAuthoringService
 
     /** Generate a draft OET from direct entries or an explicit, parent-first supported placement tree.
      *
-        * @param array<mixed> $entries
-        * @param array<mixed> $placements
+     * @param array<mixed> $entries
+     * @param array<mixed> $archetypes
+     * @param array<mixed> $placements
      *
      * @return array<string, mixed>
      */
-    public function generateOet(string $name, string $composition, array $entries, ?string $ckm = null, array $placements = []): array
+    public function generateOet(string $name, string $composition, array $entries, ?string $ckm = null, array $placements = [], array $archetypes = []): array
     {
         if (trim($name) === '' || strlen($name) > 200 || !array_is_list($entries) || !array_is_list($placements)
             || count($entries) > 30 || count($placements) > 30
@@ -36,7 +37,8 @@ final readonly class TemplateAuthoringService
         if (count(array_unique($entries)) !== count($entries)) {
             throw new \InvalidArgumentException('Duplicate direct archetype placement is not supported by this generator.');
         }
-        $root = $this->archetypes->fetch($composition, $ckm);
+        $overrides = $this->sourceOverrides($archetypes);
+        $root = $this->source($composition, $ckm, $overrides);
         if ($root['rm_class'] !== 'COMPOSITION') {
             throw new \InvalidArgumentException('The root archetype must be a COMPOSITION.');
         }
@@ -71,12 +73,12 @@ final readonly class TemplateAuthoringService
         $sources = [$root['id'] => $root['provenance']];
         $nativeDependencies = [['identifier' => $root['id'], 'content' => $root['content'], 'sha256' => hash('sha256', $root['content'])]];
         if ($placements !== []) {
-            $added = $this->appendPlacements($document, $definition, $root, $placements, $ckm);
+            $added = $this->appendPlacements($document, $definition, $root, $placements, $ckm, $overrides);
             $sources += $added['sources'];
             $nativeDependencies = [...$nativeDependencies, ...$added['dependencies']];
         } else {
             foreach ($entries as $identifier) {
-                $entry = $this->archetypes->fetch($identifier, $ckm);
+                $entry = $this->source($identifier, $ckm, $overrides);
                 if (!in_array($entry['rm_class'], ['OBSERVATION', 'EVALUATION', 'INSTRUCTION', 'ACTION', 'ADMIN_ENTRY'], true)) {
                     throw new \InvalidArgumentException('Direct placements must be ENTRY archetypes.');
                 }
@@ -114,10 +116,11 @@ final readonly class TemplateAuthoringService
             'native_compile_check' => $nativeCheck, 'clinical_approval' => false, 'warnings' => $warnings];
     }
 
-    /** @param array<mixed> $placements
+    /** @param array<string, array{id: string, rm_class: string, content: string, provenance: array<string, mixed>}> $overrides
+     * @param array<mixed> $placements
      * @param array{id: string, rm_class: string, content: string, provenance: array<string, mixed>} $root
      * @return array{sources: array<string, array<string, mixed>>, dependencies: list<array{identifier: string, content: string, sha256: string}>} */
-    private function appendPlacements(DOMDocument $document, DOMElement $definition, array $root, array $placements, ?string $ckm): array
+    private function appendPlacements(DOMDocument $document, DOMElement $definition, array $root, array $placements, ?string $ckm, array $overrides): array
     {
         if (!array_is_list($placements)) {
             throw new \InvalidArgumentException('Placements must be a list.');
@@ -145,7 +148,7 @@ final readonly class TemplateAuthoringService
                 'CLUSTER' => ['Items', ['CLUSTER', 'ELEMENT']],
                 default => throw new \InvalidArgumentException('Unsupported placement parent RM class.'),
             };
-            $source = $this->archetypes->fetch($placement['identifier'], $ckm);
+            $source = $this->source($placement['identifier'], $ckm, $overrides);
             if (!in_array($source['rm_class'], $allowedClasses, true)) {
                 throw new \InvalidArgumentException('The child RM class is not a supported placement for its parent.');
             }
@@ -187,6 +190,45 @@ final readonly class TemplateAuthoringService
             $parents[$placement['id']] = ['node' => $node, 'rm_class' => $source['rm_class']];
         }
         return ['sources' => $sources, 'dependencies' => $dependencies];
+    }
+
+    /** @param array<mixed> $archetypes
+     * @return array<string, array{id: string, rm_class: string, content: string, provenance: array<string, mixed>}> */
+    private function sourceOverrides(array $archetypes): array
+    {
+        if (!array_is_list($archetypes) || count($archetypes) > 64) {
+            throw new \InvalidArgumentException('Supply up to 64 exact archetype sources.');
+        }
+        $sources = [];
+        $bytes = 0;
+        foreach ($archetypes as $item) {
+            if (!is_array($item) || !is_string($item['identifier'] ?? null) || !is_string($item['content'] ?? null)
+                || !preg_match(ModelValidator::ARCHETYPE_ID, $item['identifier']) || isset($sources[$item['identifier']])
+                || strlen($item['content']) > 1048576 || str_contains($item['content'], "\0")
+                || !preg_match('/\A\s*(?:--[^\n]*\n\s*)*archetype\b[\s\S]*?\b(openEHR-[^\s]+)\s/', $item['content'], $match)
+                || $match[1] !== $item['identifier']
+                || !preg_match('/^openEHR-[A-Z_]+-([A-Z_]+)\./', $item['identifier'], $class)) {
+                throw new \InvalidArgumentException('Exact archetype sources must have unique identifiers matching their ADL declarations.');
+            }
+            $bytes += strlen($item['content']);
+            if ($bytes > 6291456) {
+                throw new \InvalidArgumentException('Exact archetype sources exceed 6 MiB.');
+            }
+            $sources[$item['identifier']] = ['id' => $item['identifier'], 'rm_class' => $class[1], 'content' => $item['content'],
+                'provenance' => ['kind' => 'supplied_source', 'sha256' => hash('sha256', $item['content'])]];
+        }
+        return $sources;
+    }
+
+    /** @param array<string, array{id: string, rm_class: string, content: string, provenance: array<string, mixed>}> $overrides
+     * @return array{id: string, rm_class: string, content: string, provenance: array<string, mixed>} */
+    private function source(string $identifier, ?string $ckm, array $overrides): array
+    {
+        if (isset($overrides[$identifier])) {
+            return $overrides[$identifier];
+        }
+        $source = $this->archetypes->fetch($identifier, $ckm);
+        return $overrides[$source['id']] ?? $source;
     }
 
     /** @param list<array{identifier: string, content: string, sha256: string}> $dependencies
