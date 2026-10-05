@@ -84,7 +84,7 @@ export class TemplatePackages {
         for (const name of names) {
             if (!/^[a-f0-9]{64}-packages\.json$/.test(name)) continue;
             const path = join(directory, name);
-            if (statSync(path).mtimeMs < Date.now() - 7 * 86400000) unlinkSync(path);
+            if (statSync(path).mtimeMs < Date.now() - (config.retentionDays || 30) * 86400000) unlinkSync(path);
         }
     }
     constructor(config, identity, conversation) {
@@ -93,6 +93,7 @@ export class TemplatePackages {
             ? new ProviderStore(join(config.dataDir, "template-packages"), config.providerEncryptionKey, ["packages"])
             : null;
         this.memory = [];
+        this.ttl = (config?.retentionDays || 30) * 86400000;
     }
     entries() {
         return (this.store?.get(this.identity, "packages")?.credential || this.memory).filter(
@@ -115,10 +116,10 @@ export class TemplatePackages {
             hash: hash(content),
             dependencies: dependencies(inputs),
             ...(generated && result.provenance ? { provenance: result.provenance } : {}),
-            expires: Date.now() + 7 * 86400000,
+            expires: Date.now() + this.ttl,
         };
-        const entries = [entry, ...this.entries().filter((item) => item.hash !== entry.hash)].slice(0, 4);
-        while (entries.length > 1 && Buffer.byteLength(JSON.stringify(entries)) > 8 * 1024 * 1024) entries.pop();
+        const entries = [entry, ...this.entries().filter((item) => item.hash !== entry.hash)].slice(0, 16);
+        while (entries.length > 1 && Buffer.byteLength(JSON.stringify(entries)) > 16 * 1024 * 1024) entries.pop();
         if (this.store) this.store.set(this.identity, "packages", entries);
         else this.memory = entries;
     }

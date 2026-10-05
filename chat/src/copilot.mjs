@@ -224,11 +224,12 @@ export class CopilotProvider {
                 else resolve(result);
             };
             const abort = () => finish(signal.reason || new Error("Cancelled"));
-            const timer = setTimeout(
-                () => finish(problem("Copilot Studio timed out. Please retry.", 504)),
-                input.probe ? 45000 : this.config.turnTimeoutMs || 240000,
-            );
-            timer.unref();
+            // Normal turns use the caller's active-work deadline. A second wall
+            // clock would incorrectly consume time spent waiting for confirmation.
+            const timer = input.probe
+                ? setTimeout(() => finish(problem("Copilot Studio timed out. Please retry.", 504)), 45000)
+                : null;
+            timer?.unref();
             signal.addEventListener("abort", abort, { once: true });
             if (signal.aborted) return abort();
             worker.on("message", async (message) => {

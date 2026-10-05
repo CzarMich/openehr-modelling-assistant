@@ -432,3 +432,24 @@ for (const kind of ["github", "gitlab"])
             /history does not match/,
         );
     });
+
+test("an interrupted build can save its exact retained draft and dependencies without rebuilding", async (t) => {
+    const f = fixture(t),
+        first = f.makeWorkspace();
+    await first.tools();
+    await first.call("template_build_oet", {});
+    const second = f.makeWorkspace();
+    await second.tools();
+    const checkpoints = (await second.call("workspace_checkpoints", {})).structuredContent;
+    const draftId = checkpoints.drafts[0].id;
+    const { content, ...args } = f.args;
+    const save = { ...args, draftId };
+    const plan = await second.prepareWrite(PERSONAL_WRITE, save);
+    assert.equal(save.content, content);
+    assert(plan.files.some((file) => file.content === source.content));
+    assert.equal(f.state.writes.length, 0, "Preparing recovery cannot publish a file");
+    const result = await second.call(PERSONAL_WRITE, save);
+    assert.equal(result.structuredContent.saved, true);
+    assert.equal(f.state.files[f.args.path], content);
+    await assert.rejects(second.prepareWrite(PERSONAL_WRITE, { ...save, content: "different" }), /do not match/);
+});

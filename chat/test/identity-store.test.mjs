@@ -124,3 +124,17 @@ test("password reset, MFA recovery and service credentials remain scoped and non
     assert.equal(store.authenticateServiceAccount(credential.token), null);
     assert.ok(enrolled.recoveryCodes.length === 10);
 });
+
+test("active local sessions renew without extending authentication age or reviving revoked sessions", (t) => {
+    const { store, close } = fixture();
+    t.after(close);
+    const owner = store.bootstrap(store.bootstrapToken(), "owner.admin", "Owner", password);
+    assert.equal(store.renewSession(owner.sessionToken), null, "MFA setup cannot be renewed");
+    store.verifyMfaSetup(owner.sessionToken, code(owner.totpSecret));
+    const initial = store.localSession(owner.sessionToken);
+    const expires = store.renewSession(owner.sessionToken);
+    assert(expires >= initial.expires);
+    assert.equal(store.localSession(owner.sessionToken).reviewIdentity.started, initial.reviewIdentity.started);
+    store.revokeSession(owner.sessionToken);
+    assert.equal(store.renewSession(owner.sessionToken), null);
+});

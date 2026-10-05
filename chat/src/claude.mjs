@@ -40,7 +40,7 @@ export class ClaudeProvider {
                 { type: "text", text: latest.content },
             ];
         }
-        for (let step = 0; step < 17; step++) {
+        for (let step = 0; step < 65; step++) {
             signal.throwIfAborted();
             const stream = this.client.messages.stream(
                 {

@@ -697,3 +697,138 @@ test("personal provider routes enforce identity, CSRF and connection ownership",
         400,
     );
 });
+
+test("browser disconnect does not cancel work and partial progress can be recovered", async (t) => {
+    let finish;
+    const f = await fixture(t, {
+        provider: {
+            run: async ({ signal, onEvent, callTool }) => {
+                onEvent({ type: "delta", text: "Retained progress" });
+                await callTool("ckm_sources", {});
+                await new Promise((resolve) => {
+                    finish = resolve;
+                });
+                assert.equal(signal.aborted, false);
+                return "Retained progress";
+            },
+        },
+    });
+    const chat = await (await f.request("/chat/api/conversations", { method: "POST" })).json();
+    const base = "/chat/api/conversations/" + chat.id;
+    const response = await f.request(base + "/messages", { method: "POST", data: { content: "Start" } });
+    await response.body.cancel();
+    const snapshot = await (await f.request(base)).json();
+    assert.equal(snapshot.running, true);
+    assert.match(snapshot.messages.at(-1).content, /Retained progress/);
+    assert.equal((await f.request(base, { user: "bob" })).status, 404);
+    finish();
+    for (let i = 0; i < 50; i++) {
+        const done = await (await f.request(base)).json();
+        if (!done.running) {
+            assert.equal(done.run.status, "completed");
+            return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    assert.fail("Response did not finish");
+});
+test("approval survives reconnect and waiting does not consume the active turn budget", async (t) => {
+    const f = await fixture(t, {
+        provider: {
+            run: async ({ callTool }) => {
+                await callTool("model_artifact_save", { content: "exact draft" });
+                return "Saved";
+            },
+        },
+    });
+    f.config.turnTimeoutMs = 100;
+    const chat = await (await f.request("/chat/api/conversations", { method: "POST" })).json();
+    const base = "/chat/api/conversations/" + chat.id;
+    const response = await f.request(base + "/messages", { method: "POST", data: { content: "Save" } });
+    await response.body.cancel();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const snapshot = await (await f.request(base)).json();
+    assert.equal(snapshot.running, true);
+    assert.equal(snapshot.pending.type, "approval");
+    assert.equal(snapshot.pending.arguments.content, "exact draft");
+    assert.equal(f.calls.length, 0);
+    await f.request(base + "/approval", { method: "POST", data: { id: snapshot.pending.id, approved: true } });
+    for (let i = 0; i < 30 && !f.calls.length; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.equal(f.calls.length, 1);
+});
+test("time limits and server restarts are explained and keep partial messages", async (t) => {
+    const f = await fixture(t, {
+        provider: {
+            run: async ({ signal, onEvent }) => {
+                onEvent({ type: "delta", text: "Completed part" });
+                await new Promise((resolve, reject) =>
+                    signal.addEventListener("abort", () => reject(new Error("timeout")), { once: true }),
+                );
+            },
+        },
+    });
+    f.config.turnTimeoutMs = 30;
+    const chat = await (await f.request("/chat/api/conversations", { method: "POST" })).json();
+    const base = "/chat/api/conversations/" + chat.id;
+    const response = await f.request(base + "/messages", { method: "POST", data: { content: "Start" } });
+    assert.match(await response.text(), /time limit/);
+    const snapshot = await (await f.request(base)).json();
+    assert.equal(snapshot.run.reason, "TIME_LIMIT");
+    assert.match(snapshot.messages.at(-1).content, /Completed part/);
+    const stored = f.store.get("issuer\nalice", chat.id);
+    stored.run.status = "running";
+    f.store.save("issuer\nalice", stored);
+    const recovered = await (await f.request(base)).json();
+    assert.equal(recovered.run.reason, "SERVER_RESTART");
+    assert.match(recovered.messages.at(-1).content, /server restarted/);
+});
+test("modelling can exceed sixteen tools but the bounded limit remains explicit", async (t) => {
+    const f = await fixture(t, {
+        provider: {
+            run: async ({ callTool }) => {
+                for (let i = 0; i < 65; i++) await callTool("ckm_sources", {});
+            },
+        },
+    });
+    const chat = await (await f.request("/chat/api/conversations", { method: "POST" })).json();
+    const response = await f.request("/chat/api/conversations/" + chat.id + "/messages", {
+        method: "POST",
+        data: { content: "Start" },
+    });
+    assert.match(await response.text(), /tool limit/);
+    assert.equal(f.calls.length, 64);
+});
+
+test("recovered draft downloads are private, excluded from shares and removed with the chat", async (t) => {
+    const { Checkpoints } = await import("../src/checkpoints.mjs");
+    const f = await fixture(t);
+    f.config.providerEncryptionKey = "ab".repeat(32);
+    const chat = f.store.create("issuer\nalice"),
+        base = "/chat/api/conversations/" + chat.id;
+    const cache = new Checkpoints(f.config, "issuer\nalice", chat.id);
+    const id = cache.draft("exact draft bytes", "AKI/templates/oet/renal.oet");
+    const path = base + "/drafts/" + id;
+    assert.equal((await f.request(path, { user: null })).status, 401);
+    assert.equal((await f.request(path, { user: "bob" })).status, 404);
+    const download = await f.request(path);
+    assert.match(download.headers.get("Content-Disposition"), /renal.oet/);
+    assert.equal(await download.text(), "exact draft bytes");
+    const share = await (await f.request(base + "/share", { method: "POST", data: {} })).json();
+    const snapshot = await (await f.request("/chat/api/shares/" + share.token, { user: "bob" })).text();
+    assert(!snapshot.includes("exact draft bytes"));
+    assert(!snapshot.includes(id));
+    await f.request(base, { method: "DELETE" });
+    assert.equal((await f.request(path)).status, 404);
+    assert.equal(cache.summary().drafts.length, 0);
+});
+
+test("session renewal is authenticated and CSRF protected", async (t) => {
+    const f = await fixture(t);
+    const path = "/chat/auth/keepalive";
+    assert.equal((await f.request(path, { method: "POST", user: null, data: {} })).status, 401);
+    assert.equal((await f.request(path, { method: "POST", csrf: false, data: {} })).status, 403);
+    const response = await f.request(path, { method: "POST", data: {} });
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("set-cookie"), /ModellingSession=alice/);
+    assert((await response.json()).expires > Date.now());
+});

@@ -220,6 +220,15 @@ async function loadSession() {
         notice("Browser chat is not configured on this deployment.");
 }
 let sessionRefresh;
+let lastInteraction = Date.now();
+for (const event of ["pointerdown", "keydown", "input"])
+    document.addEventListener(
+        event,
+        () => {
+            lastInteraction = Date.now();
+        },
+        { passive: true },
+    );
 function refreshSession() {
     if (!sessionRefresh)
         sessionRefresh = loadSession()
@@ -236,8 +245,17 @@ window.addEventListener("focus", () => {
 document.addEventListener("visibilitychange", () => {
     if (!document.hidden && session?.authenticated) refreshSession();
 });
-setInterval(() => {
-    if (!document.hidden && session?.authenticated) refreshSession();
+setInterval(async () => {
+    if (document.hidden || !session?.authenticated) return;
+    if (running || Date.now() - lastInteraction < 120000) {
+        try {
+            await api("auth/keepalive", { method: "POST", data: {} });
+        } catch (error) {
+            if (!session?.authenticated)
+                notice("Your session expired. Sign in again; saved work remains in this conversation.");
+        }
+    }
+    refreshSession();
 }, 60000);
 $("sign-in").onclick = (event) => {
     if (!session?.identityEnabled) {
@@ -645,6 +663,17 @@ function bubble(message) {
                 })
                 .catch(() => notice("Copy is unavailable in this browser."));
         article.append(copy);
+        if (message.error && !sharedView && message === current?.messages?.at(-1)) {
+            const resume = document.createElement("button");
+            resume.type = "button";
+            resume.textContent = "Continue from saved progress";
+            resume.disabled = running || !!current?.running;
+            resume.onclick = () =>
+                send(
+                    "Continue the unfinished task from saved progress. Inspect retained drafts and completed modelling evidence first. Reuse the correct draft instead of rebuilding it; check current repository contents before retrying any save.",
+                ).catch((error) => notice(error.message));
+            article.append(resume);
+        }
     }
     $("thread").append(article);
     return { article, content, tools, text: message.content || "" };
@@ -681,9 +710,45 @@ async function open(id) {
     $("thread").scrollTop = $("thread").scrollHeight;
     $("sidebar").classList.remove("open");
     await list();
-    if (current.running)
-        notice("A response is running in another browser tab. Refresh this conversation when it finishes.");
-    else notice("");
+    if (current.running) {
+        notice("Reconnected to the running response. Completed work is being saved.");
+        followResponse(id);
+    } else notice("");
+}
+async function followResponse(id) {
+    running = true;
+    controls();
+    let previous = "";
+    try {
+        while (current?.id === id && session?.authenticated) {
+            const snapshot = await api("api/conversations/" + id);
+            const fingerprint = JSON.stringify([snapshot.messages, snapshot.pending, snapshot.running]);
+            current = snapshot;
+            if (fingerprint !== previous) {
+                previous = fingerprint;
+                $("thread").replaceChildren();
+                let target;
+                for (const message of current.messages) target = bubble(message);
+                if (target && current.pending?.type === "approval") approval(current.pending, target);
+                if (target && current.pending?.type === "choice") choiceCard(current.pending, target);
+                renderAttachments();
+            }
+            $("activity").dataset.waiting = String(!!current.pending);
+            $("activity").textContent = current.pending
+                ? "Waiting for your response"
+                : current.running
+                  ? "Working; progress is saved…"
+                  : "";
+            if (!current.running) break;
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+    } catch (error) {
+        notice("Connection unavailable. Reopen this conversation to recover saved progress.");
+    } finally {
+        running = false;
+        controls();
+        if (current?.id === id && !current.running) await open(id);
+    }
 }
 function approval(event, target) {
     const card = document.createElement("section");
@@ -1434,10 +1499,22 @@ function renderAttachments() {
 }
 function renderArtifacts() {
     const artifacts = sharedView ? [] : current?.artifacts || [];
-    $("conversation-artifacts").hidden = !artifacts.length;
-    $("conversation-artifacts-title").textContent = "Saved artefacts (" + artifacts.length + ")";
+    const recovered = sharedView ? [] : current?.recovery?.drafts || [];
+    $("conversation-artifacts").hidden = !artifacts.length && !recovered.length;
+    $("conversation-artifacts-title").textContent = recovered.length
+        ? "Artefacts and recovered drafts"
+        : "Saved artefacts (" + artifacts.length + ")";
     const list = $("conversation-artifact-list");
     list.replaceChildren();
+    for (const draft of recovered) {
+        const item = document.createElement("li"),
+            link = document.createElement("a");
+        link.textContent =
+            "Download draft: " + draft.name + " · " + draft.sha256.slice(0, 8) + " (not proof of a Git save)";
+        link.href = "/chat/api/conversations/" + current.id + "/drafts/" + draft.id;
+        item.append(link);
+        list.append(item);
+    }
     const copyButton = (label, value) => {
         const button = document.createElement("button");
         button.type = "button";
