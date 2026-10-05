@@ -237,7 +237,14 @@
                             </svg>
                         </button>
                         <span id="user-name"></span>
-                        <a id="sign-in" class="sign-in" href="/chat/auth/login">Sign in</a>
+                        <a
+                            id="sign-in"
+                            class="sign-in"
+                            href="/chat/auth/login"
+                            aria-haspopup="dialog"
+                            aria-controls="account-dialog"
+                            >Sign in</a
+                        >
                         <button id="sign-out" class="text-button" hidden>Sign out</button>
                     </div>
                 </header>
@@ -643,6 +650,221 @@
                     <p id="share-status" role="status"></p>
                     <button id="close-share" type="button">Close</button>
                 </dialog>
+                <dialog id="account-dialog" class="account-dialog" aria-labelledby="account-dialog-title">
+                    <header class="account-dialog-header">
+                        <div>
+                            <span class="eyebrow">YOUR WORKSPACE</span>
+                            <h2 id="account-dialog-title">Welcome back</h2>
+                        </div>
+                        <button
+                            id="close-account-dialog"
+                            class="account-close"
+                            type="button"
+                            aria-label="Close account window"
+                        >
+                            ×
+                        </button>
+                    </header>
+                    <div id="login-panel" class="login-panel">
+                        <div id="account-entry-options">
+                            <a id="oidc-login" class="primary-button" href="/chat/auth/login" hidden
+                                >Use organisation account <span aria-hidden="true">→</span></a
+                            >
+                            <p id="login-description">
+                                Your conversations and connections belong to your workspace account.
+                            </p>
+                            <button id="show-owner-setup" type="button" class="primary-button" hidden>
+                                Set up the platform owner
+                            </button>
+                        </div>
+                        <form id="local-login" class="identity-form" hidden>
+                            <h2>Sign in to your workspace</h2>
+                            <label for="local-username">Username</label
+                            ><input id="local-username" autocomplete="username" required />
+                            <label for="local-password">Password</label
+                            ><input id="local-password" type="password" autocomplete="current-password" required />
+                            <label for="local-code">Authenticator code or recovery code</label
+                            ><input id="local-code" autocomplete="one-time-code" />
+                            <button type="submit" class="primary-button">Continue</button>
+                            <button id="show-code-recovery" type="button" class="secondary-button">
+                                Forgot password or locked out?
+                            </button>
+                            <p class="help-note">
+                                Five failed sign-ins lock password access. Use a saved recovery code, or ask your
+                                administrator for a one-time recovery link. No email is sent.
+                            </p>
+                        </form>
+
+                        <p id="signup-prompt" hidden>
+                            New here?
+                            <button id="show-signup" type="button" class="account-text-button">
+                                Create an account
+                            </button>
+                        </p>
+                        <form id="code-recovery-form" class="identity-form" hidden>
+                            <h2>Recover your account</h2>
+                            <p>
+                                Use one of the recovery codes saved when you set up your authenticator. This resets your
+                                password and authenticator and signs out your other sessions.
+                            </p>
+                            <label for="code-recovery-username">Username</label
+                            ><input id="code-recovery-username" autocomplete="username" required />
+                            <label for="code-recovery-code">Saved recovery code</label
+                            ><input id="code-recovery-code" type="password" autocomplete="off" required />
+                            <label for="code-recovery-password">New password (12 or more characters)</label
+                            ><input
+                                id="code-recovery-password"
+                                type="password"
+                                autocomplete="new-password"
+                                minlength="12"
+                                maxlength="256"
+                                required
+                            />
+                            <button type="submit" class="primary-button">Reset and set up authenticator</button>
+                            <button id="recovery-back-to-signin" type="button" class="secondary-button">
+                                Back to sign in
+                            </button>
+                            <p>
+                                No recovery code? Contact your administrator for a one-time recovery link. Do not share
+                                passwords or recovery codes in chat.
+                            </p>
+                        </form>
+                        <form id="signup-form" class="identity-form" hidden>
+                            <h2>Create your workspace account</h2>
+                            <p>
+                                Your chats and private connections belong to you. The platform owner can grant access to
+                                shared connections.
+                            </p>
+                            <label for="signup-name">Display name</label
+                            ><input id="signup-name" autocomplete="name" maxlength="160" required />
+                            <label for="signup-username">Username</label
+                            ><input
+                                id="signup-username"
+                                autocomplete="username"
+                                minlength="3"
+                                maxlength="64"
+                                required
+                            />
+                            <label for="signup-password">Password (12 or more characters)</label
+                            ><input
+                                id="signup-password"
+                                type="password"
+                                autocomplete="new-password"
+                                minlength="12"
+                                maxlength="256"
+                                required
+                            />
+                            <button type="submit" class="primary-button">Create account</button>
+                            <button type="button" id="back-to-signin" class="secondary-button">Back to sign in</button>
+                        </form>
+                        <form id="owner-bootstrap" class="identity-form" hidden>
+                            <h2>Create platform owner</h2>
+                            <label for="bootstrap-token">One-time setup token</label
+                            ><input id="bootstrap-token" autocomplete="off" required />
+                            <label for="bootstrap-username">Username</label
+                            ><input id="bootstrap-username" autocomplete="username" required />
+                            <label for="bootstrap-name">Display name</label
+                            ><input id="bootstrap-name" autocomplete="name" required />
+                            <label for="bootstrap-password">Password (12 or more characters)</label
+                            ><input
+                                id="bootstrap-password"
+                                type="password"
+                                autocomplete="new-password"
+                                minlength="12"
+                                required
+                            />
+                            <button type="submit" class="primary-button">Create owner account</button>
+                            <button id="owner-back-to-signin" type="button" class="secondary-button">
+                                Back to sign in
+                            </button>
+                        </form>
+                        <form id="invite-accept" class="identity-form" hidden>
+                            <h2>Accept account invitation</h2>
+                            <label for="invite-username">Username</label
+                            ><input id="invite-username" autocomplete="username" required />
+                            <label for="invite-name">Display name</label
+                            ><input id="invite-name" autocomplete="name" required />
+                            <label for="invite-password">Password (12 or more characters)</label
+                            ><input
+                                id="invite-password"
+                                type="password"
+                                autocomplete="new-password"
+                                minlength="12"
+                                required
+                            />
+                            <button type="submit" class="primary-button">Create account</button>
+                        </form>
+                        <form id="password-reset" class="identity-form" hidden>
+                            <h2>Reset password</h2>
+                            <label for="reset-password">New password (12 or more characters)</label
+                            ><input
+                                id="reset-password"
+                                type="password"
+                                autocomplete="new-password"
+                                minlength="12"
+                                required
+                            />
+                            <button type="submit" class="primary-button">Reset password</button>
+                        </form>
+                        <form id="account-recovery" class="identity-form" hidden>
+                            <h2>Recover account</h2>
+                            <label for="recovery-password">New password (12 or more characters)</label
+                            ><input
+                                id="recovery-password"
+                                type="password"
+                                autocomplete="new-password"
+                                minlength="12"
+                                required
+                            />
+                            <button type="submit" class="primary-button">Reset password and MFA</button>
+                        </form>
+                        <section id="mfa-enrollment" class="identity-form" hidden>
+                            <h2>Set up multi-factor authentication</h2>
+                            <p>In your phone’s authenticator app, choose Add account, then Scan QR code.</p>
+                            <img
+                                id="mfa-qr"
+                                class="mfa-qr"
+                                width="288"
+                                height="288"
+                                alt="Scan this QR code with your authenticator app to add your workspace account"
+                                hidden
+                            />
+                            <p id="mfa-qr-error" role="status" hidden>
+                                The QR code could not load. Open your authenticator app below or enter the key manually.
+                            </p>
+                            <p>Setting up on this phone? <a id="otp-auth-link">Open authenticator app</a></p>
+                            <details id="mfa-manual">
+                                <summary>Can’t scan? Enter the key manually</summary>
+                                <p>Add a time-based account named openEHR Modelling Assistant using this key:</p>
+                                <code id="totp-secret"></code>
+                            </details>
+                            <p>Enter the six-digit code shown in your authenticator app to finish setup.</p>
+                            <form id="mfa-form">
+                                <label for="mfa-code">Authenticator code</label
+                                ><input
+                                    id="mfa-code"
+                                    inputmode="numeric"
+                                    autocomplete="one-time-code"
+                                    pattern="[0-9]{6}"
+                                    required
+                                /><button type="submit" class="primary-button">Verify and continue</button>
+                            </form>
+                        </section>
+                        <section id="recovery-codes" class="identity-form" hidden>
+                            <h2>Save recovery codes</h2>
+                            <p>
+                                Keep these codes somewhere safe outside this workspace. Each code works once to recover
+                                a forgotten password, unlock sign-in, or replace a lost authenticator.
+                            </p>
+                            <p>Each code works once. Store them somewhere private; they will not be shown again.</p>
+                            <pre id="recovery-code-list"></pre>
+                            <button id="finish-recovery-codes" type="button" class="primary-button">
+                                I saved these codes
+                            </button>
+                        </section>
+                        <p id="identity-auth-notice" role="status" aria-live="polite"></p>
+                    </div>
+                </dialog>
                 <section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
                     <div id="notice" role="alert" class="notice" hidden></div>
                     <section id="welcome" class="welcome">
@@ -653,179 +875,6 @@
                             requirement or open an existing project.
                         </p>
                         <p><a href="#help-start">New here? Follow the quick start guide.</a></p>
-                        <div id="login-panel" class="login-panel" hidden>
-                            <a id="oidc-login" class="primary-button" href="/chat/auth/login" hidden
-                                >Use organisation account <span aria-hidden="true">→</span></a
-                            >
-                            <p id="login-description">
-                                Your conversations and connections belong to your workspace account.
-                            </p>
-                            <form id="local-login" class="identity-form" hidden>
-                                <h2>Local account</h2>
-                                <label for="local-username">Username</label
-                                ><input id="local-username" autocomplete="username" required />
-                                <label for="local-password">Password</label
-                                ><input id="local-password" type="password" autocomplete="current-password" required />
-                                <label for="local-code">Authenticator code or recovery code</label
-                                ><input id="local-code" autocomplete="one-time-code" />
-                                <button type="submit" class="primary-button">Continue</button>
-                                <button id="show-code-recovery" type="button" class="secondary-button">
-                                    Forgot password or locked out?
-                                </button>
-                                <p class="help-note">
-                                    Five failed sign-ins lock password access. Use a saved recovery code, or ask your
-                                    administrator for a one-time recovery link. No email is sent.
-                                </p>
-                            </form>
-                            <button id="show-signup" type="button" class="secondary-button" hidden>
-                                Create an account
-                            </button>
-                            <form id="code-recovery-form" class="identity-form" hidden>
-                                <h2>Recover your account</h2>
-                                <p>
-                                    Use one of the recovery codes saved when you set up your authenticator. This resets
-                                    your password and authenticator and signs out your other sessions.
-                                </p>
-                                <label for="code-recovery-username">Username</label
-                                ><input id="code-recovery-username" autocomplete="username" required />
-                                <label for="code-recovery-code">Saved recovery code</label
-                                ><input id="code-recovery-code" type="password" autocomplete="off" required />
-                                <label for="code-recovery-password">New password (12 or more characters)</label
-                                ><input
-                                    id="code-recovery-password"
-                                    type="password"
-                                    autocomplete="new-password"
-                                    minlength="12"
-                                    maxlength="256"
-                                    required
-                                />
-                                <button type="submit" class="primary-button">Reset and set up authenticator</button>
-                                <button id="recovery-back-to-signin" type="button" class="secondary-button">
-                                    Back to sign in
-                                </button>
-                                <p>
-                                    No recovery code? Contact your administrator for a one-time recovery link. Do not
-                                    share passwords or recovery codes in chat.
-                                </p>
-                            </form>
-                            <form id="signup-form" class="identity-form" hidden>
-                                <h2>Create your workspace account</h2>
-                                <p>
-                                    Your chats and private connections belong to you. The platform owner can grant
-                                    access to shared connections.
-                                </p>
-                                <label for="signup-name">Display name</label
-                                ><input id="signup-name" autocomplete="name" maxlength="160" required />
-                                <label for="signup-username">Username</label
-                                ><input
-                                    id="signup-username"
-                                    autocomplete="username"
-                                    minlength="3"
-                                    maxlength="64"
-                                    required
-                                />
-                                <label for="signup-password">Password (12 or more characters)</label
-                                ><input
-                                    id="signup-password"
-                                    type="password"
-                                    autocomplete="new-password"
-                                    minlength="12"
-                                    maxlength="256"
-                                    required
-                                />
-                                <button type="submit" class="primary-button">Create account</button>
-                                <button type="button" id="back-to-signin" class="secondary-button">
-                                    Back to sign in
-                                </button>
-                            </form>
-                            <form id="owner-bootstrap" class="identity-form" hidden>
-                                <h2>Create platform owner</h2>
-                                <label for="bootstrap-token">One-time setup token</label
-                                ><input id="bootstrap-token" autocomplete="off" required />
-                                <label for="bootstrap-username">Username</label
-                                ><input id="bootstrap-username" autocomplete="username" required />
-                                <label for="bootstrap-name">Display name</label
-                                ><input id="bootstrap-name" autocomplete="name" required />
-                                <label for="bootstrap-password">Password (12 or more characters)</label
-                                ><input
-                                    id="bootstrap-password"
-                                    type="password"
-                                    autocomplete="new-password"
-                                    minlength="12"
-                                    required
-                                />
-                                <button type="submit" class="primary-button">Create owner account</button>
-                            </form>
-                            <form id="invite-accept" class="identity-form" hidden>
-                                <h2>Accept account invitation</h2>
-                                <label for="invite-username">Username</label
-                                ><input id="invite-username" autocomplete="username" required />
-                                <label for="invite-name">Display name</label
-                                ><input id="invite-name" autocomplete="name" required />
-                                <label for="invite-password">Password (12 or more characters)</label
-                                ><input
-                                    id="invite-password"
-                                    type="password"
-                                    autocomplete="new-password"
-                                    minlength="12"
-                                    required
-                                />
-                                <button type="submit" class="primary-button">Create account</button>
-                            </form>
-                            <form id="password-reset" class="identity-form" hidden>
-                                <h2>Reset password</h2>
-                                <label for="reset-password">New password (12 or more characters)</label
-                                ><input
-                                    id="reset-password"
-                                    type="password"
-                                    autocomplete="new-password"
-                                    minlength="12"
-                                    required
-                                />
-                                <button type="submit" class="primary-button">Reset password</button>
-                            </form>
-                            <form id="account-recovery" class="identity-form" hidden>
-                                <h2>Recover account</h2>
-                                <label for="recovery-password">New password (12 or more characters)</label
-                                ><input
-                                    id="recovery-password"
-                                    type="password"
-                                    autocomplete="new-password"
-                                    minlength="12"
-                                    required
-                                />
-                                <button type="submit" class="primary-button">Reset password and MFA</button>
-                            </form>
-                            <section id="mfa-enrollment" class="identity-form" hidden>
-                                <h2>Set up multi-factor authentication</h2>
-                                <p>Add this secret to an authenticator app, then enter its six-digit code.</p>
-                                <a id="otp-auth-link" class="secondary-button" href="#">Open authenticator app</a>
-                                <p>Manual setup secret: <code id="totp-secret"></code></p>
-                                <form id="mfa-form">
-                                    <label for="mfa-code">Authenticator code</label
-                                    ><input
-                                        id="mfa-code"
-                                        inputmode="numeric"
-                                        autocomplete="one-time-code"
-                                        pattern="[0-9]{6}"
-                                        required
-                                    /><button type="submit" class="primary-button">Verify and continue</button>
-                                </form>
-                            </section>
-                            <section id="recovery-codes" class="identity-form" hidden>
-                                <h2>Save recovery codes</h2>
-                                <p>
-                                    Keep these codes somewhere safe outside this workspace. Each code works once to
-                                    recover a forgotten password, unlock sign-in, or replace a lost authenticator.
-                                </p>
-                                <p>Each code works once. Store them somewhere private; they will not be shown again.</p>
-                                <pre id="recovery-code-list"></pre>
-                                <button id="finish-recovery-codes" type="button" class="primary-button">
-                                    I saved these codes
-                                </button>
-                            </section>
-                            <p id="identity-auth-notice" role="status" aria-live="polite"></p>
-                        </div>
                         <div id="suggestions" class="suggestions">
                             <button
                                 class="suggestion"
@@ -1449,6 +1498,13 @@ LIMIT 100</textarea
                     </nav>
                     <section class="help-topic" aria-labelledby="help-accounts">
                         <h2 id="help-accounts" tabindex="-1">Accounts and shared connections</h2>
+                        <p>
+                            Choose <strong>Sign in</strong> at the top right. The account window includes sign-in,
+                            account creation and recovery. When setting up your authenticator, choose Add account in the
+                            app on your phone and scan the QR code. Enter the six-digit code here, then save your
+                            recovery codes somewhere private. On the same phone, use Open authenticator app. If scanning
+                            is unavailable, expand Can’t scan? Enter the key manually.
+                        </p>
                         <p>
                             The first platform owner completes setup before anyone can create an account. New accounts
                             require an authenticator and receive recovery codes. Keep the codes somewhere safe outside

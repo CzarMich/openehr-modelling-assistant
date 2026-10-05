@@ -34,7 +34,39 @@ async function adminRequest(path, method = "GET", data = undefined) {
     if (!response.ok) throw new Error(result.error || "The request could not be completed.");
     return result;
 }
+function clearMfaSetup() {
+    $("mfa-qr").removeAttribute("src");
+    $("mfa-qr").hidden = true;
+    $("mfa-qr-error").hidden = true;
+    $("mfa-manual").open = false;
+    $("otp-auth-link").removeAttribute("href");
+    $("totp-secret").textContent = "";
+    $("mfa-code").value = "";
+}
+$("mfa-qr").addEventListener("error", () => {
+    if (!$("mfa-qr").hasAttribute("src")) return;
+    $("mfa-qr").hidden = true;
+    $("mfa-qr-error").hidden = false;
+    $("mfa-manual").open = true;
+});
 function showOnly(formId) {
+    const entry = formId === "local-login" || formId === "owner-home";
+    $("account-entry-options").hidden = !entry;
+    $("signup-prompt").hidden = !entry || !session?.signupEnabled || session?.identitySetupRequired;
+    const titles = {
+        "local-login": "Welcome back",
+        "owner-home": "Welcome to your workspace",
+        "signup-form": "Create an account",
+        "owner-bootstrap": "Set up your workspace",
+        "code-recovery-form": "Recover your account",
+        "account-recovery": "Recover your account",
+        "password-reset": "Reset your password",
+        "invite-accept": "Join your workspace",
+        "mfa-enrollment": "Secure your account",
+        "recovery-codes": "Save your recovery codes",
+    };
+    $("account-dialog-title").textContent = titles[formId] || "Workspace account";
+    if (formId !== "mfa-enrollment") clearMfaSetup();
     for (const id of [
         "local-login",
         "signup-form",
@@ -49,10 +81,17 @@ function showOnly(formId) {
         $(id).hidden = id !== formId;
 }
 function setupMfa(result) {
+    session = { ...(session || {}), ...result, mfaSetupRequired: true };
     authCsrf(result.csrf);
+    if ($("otp-auth-link").getAttribute("href") !== result.otpAuthUrl) {
+        clearMfaSetup();
+        $("mfa-qr").hidden = false;
+        $("mfa-qr").src = "/chat/auth/mfa-qr";
+    }
     $("otp-auth-link").href = result.otpAuthUrl;
     $("totp-secret").textContent = result.totpSecret;
     showOnly("mfa-enrollment");
+    openAccountDialog();
     notice("Keep the setup page private while you enroll your authenticator.");
 }
 function authCsrf(value) {
@@ -274,46 +313,71 @@ function renderAudit(events) {
         root.append(row);
     }
 }
+function openAccountDialog() {
+    const dialog = $("account-dialog");
+    if (!dialog.open) dialog.showModal();
+    const form = [...dialog.querySelectorAll(".identity-form")].find((item) => !item.hidden);
+    (
+        form?.querySelector("input, button") || (!$("oidc-login").hidden ? $("oidc-login") : $("show-owner-setup"))
+    )?.focus();
+}
+function closeAccountDialog() {
+    if (!$("recovery-codes").hidden) {
+        notice("Save your recovery codes, then choose I saved these codes to continue.");
+        return;
+    }
+    $("account-dialog").close();
+    for (const input of $("account-dialog").querySelectorAll(
+        'input[type="password"], #local-code, #code-recovery-code, #bootstrap-token',
+    ))
+        input.value = "";
+    clearMfaSetup();
+}
+$("close-account-dialog").onclick = closeAccountDialog;
+$("account-dialog").addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeAccountDialog();
+});
+document.addEventListener("workspace:open-account", () => {
+    $("oidc-login").href =
+        document.body.dataset.section === "governance" ? "/chat/auth/login?review=1" : "/chat/auth/login";
+    if (session?.mfaSetupRequired) setupMfa(session);
+    openAccountDialog();
+});
 function update(value) {
+    const previous = session;
     session = value;
-    const identityEnabled = value.identityEnabled;
-    const admin = value.authenticated && identityEnabled && value.user?.roles?.includes("modelling-administrator");
+    const admin =
+        value.authenticated && value.identityEnabled && value.user?.roles?.includes("modelling-administrator");
     $("tab-accounts").hidden = !admin;
-    $("oidc-login").hidden = !identityEnabled || !value.oidcEnabled;
-    $("show-signup").hidden = value.authenticated || !value.signupEnabled || value.mfaSetupRequired;
-    $("signup-form").hidden = true;
-    $("code-recovery-form").hidden = true;
-    $("local-login").hidden = true;
-    $("owner-bootstrap").hidden = true;
-    $("invite-accept").hidden = true;
-    $("password-reset").hidden = true;
-    $("account-recovery").hidden = true;
+    $("oidc-login").hidden = value.identityEnabled && !value.oidcEnabled;
+    $("oidc-login").href =
+        document.body.dataset.section === "governance" ? "/chat/auth/login?review=1" : "/chat/auth/login";
+    $("show-owner-setup").hidden = !value.identitySetupRequired;
     if (value.mfaSetupRequired) {
-        $("login-panel").hidden = false;
-        setupMfa(value);
+        // Do not interrupt a form being filled or reopen a dismissed window on each refresh.
+        if (!previous?.mfaSetupRequired || previous.otpAuthUrl !== value.otpAuthUrl) setupMfa(value);
         return;
     }
     if (value.authenticated) {
-        $("login-panel").hidden = true;
+        clearMfaSetup();
+        if ($("recovery-codes").hidden) $("account-dialog").close();
         if (admin && document.body.dataset.section === "accounts") loadAdmin();
         return;
     }
-    if (!identityEnabled) return;
-    if (query.has("invite")) {
-        $("login-panel").hidden = false;
-        $("invite-accept").hidden = false;
-    } else if (query.has("reset")) {
-        $("login-panel").hidden = false;
-        $("password-reset").hidden = false;
-    } else if (query.has("recovery")) {
-        $("login-panel").hidden = false;
-        $("account-recovery").hidden = false;
-    } else if (value.identitySetupRequired) {
-        $("login-panel").hidden = false;
-        $("owner-bootstrap").hidden = false;
+    const sameSignIn =
+        previous &&
+        !previous.authenticated &&
+        !previous.mfaSetupRequired &&
+        previous.identitySetupRequired === value.identitySetupRequired &&
+        previous.identityEnabled === value.identityEnabled;
+    if (sameSignIn && $("account-dialog").open) return;
+    if (query.has("invite") || query.has("reset") || query.has("recovery")) {
+        showOnly(query.has("invite") ? "invite-accept" : query.has("reset") ? "password-reset" : "account-recovery");
+        openAccountDialog();
     } else {
-        $("login-panel").hidden = false;
-        $("local-login").hidden = false;
+        showOnly(value.identitySetupRequired ? "owner-home" : "local-login");
+        $("local-login").hidden = !value.identityEnabled || !!value.identitySetupRequired;
     }
 }
 $("local-login").addEventListener("submit", async (event) => {
@@ -388,6 +452,7 @@ $("mfa-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
         const result = await post("auth/mfa", { code: $("mfa-code").value });
+        session = { ...session, mfaSetupRequired: false, authenticated: true };
         authCsrf(result.csrf);
         $("recovery-code-list").textContent = result.recoveryCodes.join("\n");
         showOnly("recovery-codes");
@@ -448,10 +513,20 @@ fetch("/chat/api/session")
 
 $("show-signup").onclick = () => {
     showOnly("signup-form");
-    $("show-signup").hidden = true;
     $("signup-name").focus();
 };
-$("back-to-signin").onclick = () => update(session);
+function backToSignIn() {
+    notice("");
+    showOnly(session?.identitySetupRequired ? "owner-home" : "local-login");
+    $("local-login").hidden = !session?.identityEnabled || !!session?.identitySetupRequired;
+    openAccountDialog();
+}
+$("back-to-signin").onclick = backToSignIn;
+$("owner-back-to-signin").onclick = backToSignIn;
+$("show-owner-setup").onclick = () => {
+    showOnly("owner-bootstrap");
+    openAccountDialog();
+};
 $("signup-form").onsubmit = async (event) => {
     event.preventDefault();
     try {
@@ -477,15 +552,11 @@ $("save-signup-settings").onclick = async () => {
 
 $("show-code-recovery").onclick = () => {
     showOnly("code-recovery-form");
-    $("show-signup").hidden = true;
     $("code-recovery-username").value = $("local-username").value;
     $("code-recovery-code").focus();
     notice("");
 };
-$("recovery-back-to-signin").onclick = () => {
-    notice("");
-    update(session);
-};
+$("recovery-back-to-signin").onclick = backToSignIn;
 $("code-recovery-form").onsubmit = async (event) => {
     event.preventDefault();
     try {
