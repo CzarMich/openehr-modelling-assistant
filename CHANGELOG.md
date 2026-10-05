@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Browser workspaces gain owner-managed shared connections, native signup and email-free lockout recovery.
+- Chat settings and continuation controls improve, with a twenty-minute modelling budget.
+
 - Template authoring preserves repository designer edits and supports deliberate CKM upgrades at stable artefact paths.
 
 - Browser conversations recover private drafts and completed work after interruptions, with persistent sessions for active users.

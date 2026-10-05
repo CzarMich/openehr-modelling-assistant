@@ -1,3 +1,4 @@
+import { GLOBAL_IDENTITY } from "./access.mjs";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -28,8 +29,19 @@ export class Providers {
         this.logins = new Map();
         this.busy = new Set();
     }
+    credentialIdentity(identity, provider) {
+        if (!["codex", "claude", "copilot"].includes(provider)) return identity;
+        if (
+            identity !== GLOBAL_IDENTITY &&
+            !this.store?.get(identity, provider) &&
+            this.canUseGlobal?.(identity) &&
+            this.store?.get(GLOBAL_IDENTITY, provider)
+        )
+            return GLOBAL_IDENTITY;
+        return identity;
+    }
     status(identity) {
-        return [
+        const personal = [
             ...["codex", "claude"].map((id) => ({
                 id,
                 name: id === "codex" ? "Codex" : "Claude",
@@ -38,8 +50,25 @@ export class Providers {
             })),
             this.copilot.status(identity),
         ];
+        if (identity === GLOBAL_IDENTITY) return personal;
+        return personal.map((item) => {
+            const shared = !!this.canUseGlobal?.(identity) && !!this.store?.get(GLOBAL_IDENTITY, item.id);
+            return {
+                ...item,
+                personalConnected: item.connected,
+                sharedAvailable: shared,
+                connected: item.connected || shared,
+                scope: item.connected ? "personal" : shared ? "global" : "personal",
+            };
+        });
+    }
+    connectCodexKey(identity, apiKey) {
+        if (typeof apiKey !== "string" || !/^sk-[A-Za-z0-9_-]{20,500}$/.test(apiKey))
+            throw Object.assign(new Error("Enter an OpenAI project API key."), { status: 400 });
+        this.store.set(identity, "codex", { OPENAI_API_KEY: apiKey });
     }
     assertConnected(identity, provider) {
+        identity = this.credentialIdentity(identity, provider);
         if (!["codex", "claude", "copilot"].includes(provider) || !this.store?.get(identity, provider))
             throw Object.assign(new Error("Connect your provider account before sending a message."), { status: 409 });
     }
@@ -120,9 +149,12 @@ export class Providers {
     }
     async run({ identity, provider, ...options }) {
         this.assertConnected(identity, provider);
+        identity = this.credentialIdentity(identity, provider);
         const record = this.store.get(identity, provider);
         if (provider === "claude") return this.claude(record.credential).run(options);
         if (provider === "copilot") return this.copilot.run(identity, options);
+        // API keys have no rotating refresh token and support concurrent isolated runtimes.
+        if (record.credential.OPENAI_API_KEY) return this.withCodex(record.credential, (client) => client.run(options));
         // Serialize a user's Codex turns so refresh-token rotation cannot race itself.
         if (
             this.busy.has(identity) ||

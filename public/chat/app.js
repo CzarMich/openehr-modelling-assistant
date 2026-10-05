@@ -213,6 +213,10 @@ async function loadSession() {
         !session.identityEnabled || !session.user?.roles?.includes("modelling-administrator");
     $("copilot-key").value = "";
     $("copilot-key-field").hidden = true;
+    if (!session.authenticated || !session.access?.permissions?.includes("manage-global-providers"))
+        providerScope = "personal";
+    displayedProviders =
+        providerScope === "global" ? (await api("api/providers?scope=global")).providers : session.providers;
     renderProviders();
     controls();
     document.dispatchEvent(new CustomEvent("workspace:session", { detail: session }));
@@ -662,17 +666,21 @@ function bubble(message) {
                     copy.textContent = "Copied";
                 })
                 .catch(() => notice("Copy is unavailable in this browser."));
-        article.append(copy);
+        const actions = document.createElement("div");
+        actions.className = "message-actions";
+        actions.append(copy);
+        article.append(actions);
         if (message.error && !sharedView && message === current?.messages?.at(-1)) {
             const resume = document.createElement("button");
             resume.type = "button";
+            resume.className = "resume-button";
             resume.textContent = "Continue from saved progress";
             resume.disabled = running || !!current?.running;
             resume.onclick = () =>
                 send(
                     "Continue the unfinished task from saved progress. Inspect retained drafts and completed modelling evidence first. Reuse the correct draft instead of rebuilding it; check current repository contents before retrying any save.",
                 ).catch((error) => notice(error.message));
-            article.append(resume);
+            actions.prepend(resume);
         }
     }
     $("thread").append(article);
@@ -1036,6 +1044,9 @@ $("toggle-sidebar").onclick = () => {
 document
     .querySelectorAll(".suggestion")
     .forEach((button) => (button.onclick = () => send(button.dataset.prompt).catch((e) => notice(e.message))));
+let providerScope = "personal";
+let displayedProviders = [];
+const scopedProviderPath = (name) => "api/providers/" + name + (providerScope === "global" ? "?scope=global" : "");
 let providerPoll;
 let providerSession;
 function renderProviders() {
@@ -1050,14 +1061,22 @@ function renderProviders() {
     $("toggle-chat-settings").hidden = !session?.authenticated || (!session.enabled && !session.cdrEnabled);
     $("share-chat").hidden = $("provider-bar").hidden;
     if ($("toggle-chat-settings").hidden) chatSettings(false);
-    for (const provider of session?.providers || []) {
+    $("provider-scope-control").hidden = !session?.access?.permissions?.includes("manage-global-providers");
+    $("repository-scope-control").hidden = !session?.access?.permissions?.includes("manage-global-repositories");
+    $("provider-scope").value = providerScope;
+    $("codex-shared-key-field").hidden = providerScope !== "global";
+    for (const provider of displayedProviders || session?.providers || []) {
+        const personal =
+            providerScope === "global" ? provider.connected : (provider.personalConnected ?? provider.connected);
         $(provider.id + "-status").textContent = provider.connected
-            ? "Connected"
+            ? providerScope === "personal" && provider.scope === "global"
+                ? "Shared connection available"
+                : "Connected"
             : provider.signingIn
               ? "Waiting for sign-in…"
               : "Not connected";
-        $("connect-" + provider.id).disabled = provider.connected || provider.signingIn;
-        $("disconnect-" + provider.id).hidden = !provider.connected && !provider.signingIn;
+        $("connect-" + provider.id).disabled = personal || provider.signingIn;
+        $("disconnect-" + provider.id).hidden = !personal && !provider.signingIn;
         if (provider.id === "copilot") {
             if (provider.error) $("copilot-status").textContent = provider.error;
             $("test-copilot").hidden = !provider.connected;
@@ -1068,14 +1087,14 @@ function renderProviders() {
                 schema: "schemaName",
             };
             for (const [id, key] of Object.entries(fields)) {
-                $("copilot-" + id).disabled = provider.connected || provider.signingIn;
+                $("copilot-" + id).disabled = personal || provider.signingIn;
                 if (provider.settings) $("copilot-" + id).value = provider.settings[key];
             }
         }
     }
     for (const name of ["codex", "copilot"])
-        if (!session?.providers?.some((p) => p.id === name && p.signingIn)) $(name + "-device").hidden = true;
-    if (!session?.providers?.some((p) => p.signingIn)) {
+        if (!displayedProviders?.some((p) => p.id === name && p.signingIn)) $(name + "-device").hidden = true;
+    if (!displayedProviders?.some((p) => p.signingIn)) {
         clearTimeout(providerPoll);
         $("codex-device").hidden = true;
     }
@@ -1085,7 +1104,7 @@ function pollProviders() {
     providerPoll = setTimeout(async () => {
         try {
             await loadSession();
-            if (session.providers.some((p) => p.signingIn)) pollProviders();
+            if (displayedProviders.some((p) => p.signingIn)) pollProviders();
         } catch (error) {
             notice(error.message);
         }
@@ -1098,8 +1117,16 @@ $("chat-provider").onchange = () => {
 $("connect-codex").onclick = async () => {
     $("connect-codex").disabled = true;
     try {
-        const result = await api("api/providers/codex", { method: "POST", data: {} });
+        const result = await api(scopedProviderPath("codex"), {
+            method: "POST",
+            data: providerScope === "global" ? { apiKey: $("codex-shared-key").value } : {},
+        });
         await loadSession();
+        $("codex-shared-key").value = "";
+        if (result.success) {
+            notice("Shared Codex connection saved.");
+            return;
+        }
         $("codex-verification").href = result.verificationUrl;
         $("codex-code").textContent = result.userCode;
         $("codex-device").hidden = false;
@@ -1114,7 +1141,7 @@ $("claude-connection").onsubmit = async (event) => {
     const apiKey = $("claude-key").value.trim();
     $("claude-key").value = "";
     try {
-        await api("api/providers/claude", { method: "POST", data: { apiKey } });
+        await api(scopedProviderPath("claude"), { method: "POST", data: { apiKey } });
         await loadSession();
     } catch (error) {
         notice(error.message);
@@ -1131,7 +1158,7 @@ $("copilot-connection").onsubmit = async (event) => {
             environmentId: $("copilot-environment").value.trim(),
             schemaName: $("copilot-schema").value.trim(),
         };
-        const result = await api("api/providers/copilot", { method: "POST", data });
+        const result = await api(scopedProviderPath("copilot"), { method: "POST", data });
         await loadSession();
         $("copilot-verification").href = result.verificationUrl;
         $("copilot-code").textContent = result.userCode;
@@ -1146,7 +1173,7 @@ $("test-copilot").onclick = async () => {
     $("test-copilot").disabled = true;
     $("copilot-test-status").textContent = "Checking the agent and workspace tools…";
     try {
-        const result = await api("api/providers/copilot/test", { method: "POST", data: {} });
+        const result = await api(scopedProviderPath("copilot/test"), { method: "POST", data: {} });
         $("copilot-test-status").textContent = result.message;
     } catch (error) {
         $("copilot-test-status").textContent = error.message;
@@ -1157,7 +1184,7 @@ $("test-copilot").onclick = async () => {
 for (const name of ["codex", "claude", "copilot"])
     $("disconnect-" + name).onclick = async () => {
         try {
-            await api("api/providers/" + name, { method: "DELETE" });
+            await api(scopedProviderPath(name), { method: "DELETE" });
             await loadSession();
         } catch (error) {
             notice(error.message);
@@ -1247,14 +1274,14 @@ async function loadConnections() {
     $("enterprise-ckm-status").hidden = !data.enterpriseUnavailable;
     personalConnections = data.personal;
     $("connection-list").replaceChildren();
-    for (const item of [...data.enterprise, ...data.personal]) {
+    for (const item of [...data.enterprise, ...data.personal, ...(data.managed || [])]) {
         const row = document.createElement("div"),
             text = document.createElement("span");
         row.setAttribute("role", "listitem");
         text.textContent =
             item.label +
             " · " +
-            (item.scope === "enterprise" ? "Enterprise" : "Personal") +
+            (item.scope === "enterprise" ? "Enterprise" : item.scope === "global" ? "Shared" : "Personal") +
             " · " +
             item.url +
             (item.branch ? " · " + item.branch : "");
@@ -1264,12 +1291,16 @@ async function loadConnections() {
             failure.textContent = "Last save failed: " + item.lastWriteError.message;
             row.append(failure);
         }
-        if (item.scope !== "enterprise") {
+        if (
+            item.scope !== "enterprise" &&
+            (item.scope !== "global" || session?.access?.permissions?.includes("manage-global-repositories"))
+        ) {
             if (item.kind !== "ckm") {
                 const update = document.createElement("button");
                 update.type = "button";
                 update.textContent = "Update access for " + item.label;
                 update.onclick = () => {
+                    $("repository-scope").value = item.scope === "global" ? "global" : "personal";
                     $("connection-kind").value = item.kind;
                     $("connection-kind").dispatchEvent(new Event("change"));
                     $("connection-label").value = item.label;
@@ -1285,7 +1316,9 @@ async function loadConnections() {
             remove.textContent = "Remove " + item.label;
             remove.onclick = async () => {
                 try {
-                    await api("api/connections/" + item.id, { method: "DELETE" });
+                    await api("api/connections/" + item.id + (item.scope === "global" ? "?scope=global" : ""), {
+                        method: "DELETE",
+                    });
                     await loadConnections();
                 } catch (e) {
                     notice(e.message);
@@ -1328,7 +1361,10 @@ $("personal-connection").onsubmit = async (event) => {
     if (data.kind !== "ckm") data.branch = $("connection-branch").value;
     $("connection-token").value = "";
     try {
-        const result = await api("api/connections", { method: "POST", data });
+        const result = await api(
+            "api/connections" + ($("repository-scope").value === "global" ? "?scope=global" : ""),
+            { method: "POST", data },
+        );
         await loadConnections();
         notice(
             result.updated
@@ -1336,7 +1372,7 @@ $("personal-connection").onsubmit = async (event) => {
                 : result.duplicate
                   ? "This connection is already available. No duplicate was added."
                   : result.connection.kind === "ckm"
-                    ? "Personal connection saved."
+                    ? "Connection saved."
                     : "Repository connection saved. Choose it under Save artifacts to and press Save repository selection to activate it.",
         );
     } catch (e) {
@@ -1765,3 +1801,15 @@ async function showShared() {
     }
 }
 window.addEventListener("hashchange", () => showShared());
+
+$("provider-scope").onchange = async () => {
+    providerScope = $("provider-scope").value;
+    $("claude-key").value = "";
+    $("codex-shared-key").value = "";
+    for (const key of ["tenant", "client", "environment", "schema"]) $("copilot-" + key).value = "";
+    try {
+        await loadSession();
+    } catch (error) {
+        notice(error.message);
+    }
+};

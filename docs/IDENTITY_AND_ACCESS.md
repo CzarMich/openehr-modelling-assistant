@@ -136,3 +136,10 @@ Common outcomes:
 | `403 GOVERNANCE_VALIDATION_REQUIRED` | Required qualified validation is incomplete; adding a role does not bypass this gate |
 
 Native account administration, owner bootstrap, invitations, password reset, TOTP MFA and service-credential management are implemented independently of OIDC; see [native setup](REVIEW_DEPLOYMENT.md#browser-variables). There is no default user. Passkeys, mail delivery and a shared transactional identity backend are not implemented. OIDC users remain managed in their IdP.
+
+
+## Native registration, owner permissions and recovery
+
+After the first owner finishes authenticator setup, the sign-in page offers **Create an account**. The owner controls registration and delegates shared-provider/repository permissions in **Accounts**. New users start with private workspaces and must complete MFA. See [native accounts and shared connections](BROWSER_CHAT.md#native-accounts-and-shared-connections) for scope and recovery rules.
+
+Native sign-in shows the number of failures remaining before lockout at five. Choose **Forgot password or locked out?** and enter a saved recovery code to set a new password and authenticator. If no code is available, contact an administrator for a one-time recovery link; no email is sent. Keep the owner recovery codes offline: another administrator cannot take over the original owner account. The operator recovery command remains available to the server administrator as documented in [review deployment](REVIEW_DEPLOYMENT.md).

@@ -1,7 +1,7 @@
 # Browser chat
 
-Open `/chat/`, sign in to the modelling workspace, and open the **Chat settings** gear, then **My AI connections**.
-Each user connects their own provider account. Choose **Codex**, **Claude** or **Copilot Studio** before
+Open `/chat/`, sign in to the modelling workspace, and open the **Chat settings** gear, then **AI connections**.
+Use a private provider connection or a shared connection explicitly granted by the platform owner. Choose **Codex**, **Claude** or **Copilot Studio** before
 starting a conversation; a conversation keeps that provider when reopened.
 
 **Sign in** stays at the top right while signed out, including in Help, Models and
@@ -277,6 +277,7 @@ The server saves partial responses every two seconds and after tool events. In-f
 | `CHAT_OIDC_ISSUER`, `CHAT_OIDC_CLIENT_ID`, `CHAT_OIDC_CLIENT_SECRET` | empty | Workspace OIDC client |
 | `CHAT_ALLOWED_GROUPS` | empty | Optional signed group allowlist |
 | `CHAT_LOCAL_IDENTITY_ENABLED` | `false` | Enable native accounts; see [identity configuration](IDENTITY_AND_ACCESS.md) |
+| `CHAT_SIGNUP_ENABLED` | `true` | Permit native self-registration after owner MFA setup; owner can close registration in Accounts |
 | `CHAT_LOCAL_IDENTITY_ISSUER` | `<origin>/identity/local` | Stable native identity issuer |
 | `CHAT_LOCAL_IDENTITY_ENCRYPTION_KEY` | empty | Separate native TOTP encryption key |
 | `CHAT_PROVIDER_ENCRYPTION_KEY` | empty | Required 32-byte hex key for personal provider credentials |
@@ -285,7 +286,7 @@ The server saves partial responses every two seconds and after tool events. In-f
 | `CHAT_ALLOW_WRITES` | `false` | Enable confirmed writes; enterprise saves also require MCP write permission |
 | `CHAT_MODEL` | `gpt-6-sol` | Codex model |
 | `CHAT_CLAUDE_MODEL` | `claude-sonnet-5-5` | Claude model available to the user's API account |
-| `CHAT_TURN_TIMEOUT_SECONDS` | `600` | Active turn work budget, bounded to 30–1800 seconds; browser confirmation/choice waits are excluded |
+| `CHAT_TURN_TIMEOUT_SECONDS` | `1200` | Active turn work budget, bounded to 30–1800 seconds; browser confirmation/choice waits are excluded |
 | `CHAT_DATA_DIR` | `/data/chat` | Private identity, conversations and encrypted connections |
 | `CHAT_CODEX_WORK_DIR`, `CHAT_CODEX_BINARY` | `/workspace`, `codex` | Isolated working directory and executable |
 | `CHAT_PORT` | `8350` | Internal HTTP port |
@@ -295,12 +296,12 @@ Review settings are documented in [review deployment](REVIEW_DEPLOYMENT.md).
 
 ## Privacy and limits
 
-Both providers receive the conversation and selected tool results. Neither receives
+The selected provider receives the conversation and selected tool results. Neither receives
 the MCP service key. Credentials are encrypted using AES-256-GCM and bound to the
 verified workspace identity and provider. They are never returned by status endpoints.
 Codex receives a private temporary credential directory per operation, removed after
 the process exits. Refreshed credentials cannot restore a disconnected account.
-There is no shared-account fallback.
+Shared provider fallback requires a current native-owner grant; public signup and ordinary administrator roles do not grant it.
 
 Personal connection secrets use the same encryption key in a separate store and
 authenticated namespace. Public HTTPS destinations are resolved and checked at the
@@ -346,3 +347,16 @@ The sidebar AQL workspace uses browser identity independently of any assistant-p
 GitHub save failures distinguish token permissions, expired credentials, protected branches and rate limits. A confirmed token/branch refusal is shown beside the private connection and blocks repeated save proposals until **Update access → Save connection** acknowledges the repair. A repository owner's account permissions do not prove that a fine-grained token has **Contents: Read and write**. Updating an existing token's GitHub permissions does not require re-entering it; saving the connection with a blank token preserves the credential and clears the previous failure. Remote error bodies and credentials are never displayed.
 
 Template packages also save immutable, hash-named compiled OPTs in `templates/opt/` and Web Template JSON in `data/json/web-templates/` when supplied by the compiler. The package manifest links their exact hashes to the OET and archetypes. Previous compiled outputs remain unchanged. Files are bounded to 2 MiB each; a complete package is at most 68 files. See [form compatibility](LEGACY_OPT_COMPILATION.md) and [CDR patient-data boundary](PATIENT_DATA_BOUNDARY.md).
+
+
+### Native accounts and shared connections
+
+Native workspaces support self-registration only after the original platform owner completes MFA setup. New accounts have the modeller role, private chats, private connections and mandatory MFA. The owner can close registration in **Accounts** or the operator can set `CHAT_SIGNUP_ENABLED=false`. OIDC accounts continue to be managed by the external identity provider.
+
+**Accounts** distinguishes the original owner from other administrators. Only that owner can grant **Use shared AI connections and repositories**, **Manage shared AI connections**, and **Manage shared repositories and sources**. Grants are explicit and revoke affected sessions. Administrators cannot reset, disable or change the roles of the owner or delegated shared-connection users. Owner identity persists across upgrades; no username implicitly grants ownership.
+
+In the settings gear, authorised managers choose **My profile** or **Shared workspace**. Shared Codex uses an OpenAI project API key; Claude uses an API key; Copilot Studio uses the existing published-agent connection flow. Personal connections take precedence, with shared fallback only for authorised users. Shared API keys permit concurrent isolated Codex runtimes without token-refresh races. Public self-registration does not grant use of shared paid providers. See [Codex authentication](https://learn.chatgpt.com/docs/auth) for API-key billing and account requirements.
+
+Shared repositories use a dedicated encrypted connection namespace. They are visible only to authorised users; private repository and chat records remain identity-bound. Files committed to a shared repository are visible to people with access to that repository. Sharing credentials does not make another user's workspace history visible. Existing installation-configured MCP repositories and CKMs retain their deployment-level access policy.
+
+Five failed native sign-ins lock password sign-in. The response gives failed/remaining attempts and the same generic error for unknown usernames. Locks survive restarts and are not cleared by changing IP. A successful sign-in before lockout clears failures. A saved one-time recovery code can reset the password and authenticator, revoke all sessions and unlock sign-in; MFA enrollment then issues ten fresh codes. Recovery attempts are rate-limited. Administrators may instead issue a one-time recovery link through **Accounts**; no email is sent. The owner must retain recovery codes (or use the documented operator recovery command if all factors are lost). These controls apply to native accounts; an organisation provider manages its own recovery.

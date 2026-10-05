@@ -138,3 +138,123 @@ test("active local sessions renew without extending authentication age or revivi
     store.revokeSession(owner.sessionToken);
     assert.equal(store.renewSession(owner.sessionToken), null);
 });
+
+test("five failures persist across restarts and recovery codes unlock without email", async (t) => {
+    const { store, close } = fixture();
+    t.after(close);
+    const owner = store.bootstrap(store.bootstrapToken(), "owner.admin", "Owner", password);
+    const codes = store.verifyMfaSetup(owner.sessionToken, code(owner.totpSecret)).recoveryCodes;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+        for (const username of ["owner.admin", "unknown.user"]) {
+            await assert.rejects(store.login(username, "wrong", null, null, "ip-" + attempt), (error) => {
+                assert.deepEqual(error.login, {
+                    failedAttempts: attempt,
+                    remainingAttempts: 5 - attempt,
+                    locked: attempt === 5,
+                });
+                return true;
+            });
+        }
+    }
+    const restarted = new IdentityStore(store.directory, { issuer: store.issuer, encryptionKey });
+    await assert.rejects(
+        restarted.login("owner.admin", password, null, codes[0], "new-ip"),
+        (error) => error.login.locked,
+    );
+    assert.equal(restarted.listUsers(owner.user.id).users[0].loginLocked, true);
+    assert.throws(() => restarted.recoverWithCode("owner.admin", "incorrect-code", password), /RESET_INVALID/);
+    const recovered = restarted.recoverWithCode("owner.admin", codes[0], "New-recovery-password-2026!");
+    assert.equal(restarted.localSession(owner.sessionToken), null);
+    assert.equal(restarted.localSession(recovered.sessionToken), null, "MFA enrollment is mandatory");
+    assert.throws(() => restarted.recoverWithCode("owner.admin", codes[0], password), /RESET_INVALID/);
+    const refreshed = restarted.verifyMfaSetup(recovered.sessionToken, code(recovered.totpSecret));
+    assert.equal(refreshed.recoveryCodes.length, 10);
+    assert.throws(() => restarted.recoverWithCode("owner.admin", codes[1], password), /RESET_INVALID/);
+    assert.ok(
+        (
+            await restarted.login(
+                "owner.admin",
+                "New-recovery-password-2026!",
+                null,
+                refreshed.recoveryCodes[0],
+                "new-ip",
+            )
+        ).sessionToken,
+    );
+    assert.equal(restarted.read().users[0].loginLocked, false);
+});
+
+test("successful login clears failures and failed MFA never produces success audit", async (t) => {
+    const { store, close } = fixture();
+    t.after(close);
+    const owner = store.bootstrap(store.bootstrapToken(), "owner.admin", "Owner", password);
+    const codes = store.verifyMfaSetup(owner.sessionToken, code(owner.totpSecret)).recoveryCodes;
+    await assert.rejects(
+        store.login("owner.admin", password, null, "bad-code", "ip"),
+        (error) => error.login.failedAttempts === 1,
+    );
+    assert.equal(store.read().audit.filter((event) => event.action === "USER_LOGIN_SUCCEEDED").length, 0);
+    await store.login("owner.admin", password, null, codes[0], "ip");
+    await assert.rejects(
+        store.login("owner.admin", "wrong", null, null, "ip"),
+        (error) => error.login.failedAttempts === 1,
+    );
+    assert.equal(store.read().audit.filter((event) => event.action === "USER_LOGIN_SUCCEEDED").length, 1);
+});
+
+test("signup requires completed owner setup and cannot inherit or delegate shared privileges", (t) => {
+    const { store, close } = fixture();
+    t.after(close);
+    assert.throws(() => store.signup("alice", "Alice", password, "ip"), /SIGNUP_CLOSED/);
+    const owner = store.bootstrap(store.bootstrapToken(), "owner.admin", "Owner", password);
+    assert.throws(() => store.signup("alice", "Alice", password, "ip"), /SIGNUP_CLOSED/);
+    store.verifyMfaSetup(owner.sessionToken, code(owner.totpSecret));
+    const member = store.signup("alice", "Alice", password, "ip");
+    assert.deepEqual(member.user.permissions, []);
+    assert.deepEqual(member.user.roles, ["modelling-modeller"]);
+    assert.equal(store.localSession(member.sessionToken), null);
+    store.verifyMfaSetup(member.sessionToken, code(member.totpSecret));
+    assert.throws(
+        () => store.setPermissions(member.user.id, member.user.id, ["use-global-connections"]),
+        /OWNER_REQUIRED/,
+    );
+    store.setPermissions(owner.user.id, member.user.id, ["use-global-connections"]);
+    assert.equal(store.localSession(member.sessionToken), null);
+    store.setSignup(owner.user.id, false);
+    assert.throws(() => store.signup("bob", "Bob", password, "ip2"), /SIGNUP_CLOSED/);
+    store.setSignup(owner.user.id, true);
+    const admin = store.signup("second.admin", "Admin", password, "ip2");
+    store.verifyMfaSetup(admin.sessionToken, code(admin.totpSecret));
+    store.setRoles(owner.user.id, admin.user.id, ["modelling-administrator"]);
+    for (const target of [owner.user.id, member.user.id]) {
+        assert.throws(() => store.inviteReset(admin.user.id, target), /OWNER_REQUIRED/);
+        assert.throws(() => store.issueAccountRecovery(admin.user.id, target), /OWNER_REQUIRED/);
+        assert.throws(() => store.setRoles(admin.user.id, target, ["modelling-administrator"]), /OWNER_REQUIRED/);
+    }
+    assert.throws(() => store.disableUser(owner.user.id, owner.user.id), /LAST_ADMIN_REQUIRED/);
+    store.mutate("test", null, {}, (state) => {
+        delete state.ownerId;
+    });
+    assert.equal(store.read().ownerId, owner.user.id, "migration keeps bootstrap owner");
+});
+
+test("server operator recovery preserves owner identity, expires and supersedes earlier links", (t) => {
+    const { store, close } = fixture();
+    t.after(close);
+    const owner = store.bootstrap(store.bootstrapToken(), "owner.admin", "Owner", password);
+    store.verifyMfaSetup(owner.sessionToken, code(owner.totpSecret));
+    const old = store.operatorOwnerRecovery(),
+        current = store.operatorOwnerRecovery();
+    assert.throws(() => store.completeAccountRecovery(old, password), /RESET_INVALID/);
+    const recovered = store.completeAccountRecovery(current, "Operator-reset-password-2026!");
+    assert.equal(recovered.user.id, owner.user.id);
+    assert.equal(store.localSession(owner.sessionToken), null);
+    assert.equal(store.read().audit.find((event) => event.action === "OWNER_RECOVERY_ISSUED").actor, "server_operator");
+    const expiring = store.operatorOwnerRecovery();
+    store.mutate("test", null, {}, (state) => {
+        state.resets.forEach((entry) => {
+            entry.expires = 1;
+        });
+    });
+    assert.throws(() => store.completeAccountRecovery(expiring, password), /RESET_INVALID/);
+});

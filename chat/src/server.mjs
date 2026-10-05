@@ -1,3 +1,4 @@
+import { GLOBAL_IDENTITY, workspaceAccess, identityCanUseGlobal } from "./access.mjs";
 import http from "node:http";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -77,11 +78,19 @@ export function createApplication(
         shares = new Shares(store),
     } = {},
 ) {
+    provider.canUseGlobal = (identity) => identityCanUseGlobal(auth.identityStore, identity);
+    connections.canUseGlobal = provider.canUseGlobal;
     const active = new Map(),
         rate = new Map(),
         modelReads = new Map(),
         cdrRequests = new Map();
     const drafts = new Map();
+    const cancelUserWork = (userId) => {
+        const affectedIdentity = auth.identityStore?.issuer + "\n" + userId;
+        for (const turn of active.values())
+            if (turn.identity === affectedIdentity) turn.controller.abort("ACCESS_CHANGED");
+        drafts.get(affectedIdentity)?.abort();
+    };
     const uploading = new Set();
     const moving = new Set();
     const projectMoves = new ProjectMoves(store, connections, config.allowWrites);
@@ -169,6 +178,8 @@ export function createApplication(
                     reviewEnabled: config.reviewEnabled,
                     cdrEnabled: !!config.cdrEnabled,
                     identityEnabled: config.identityEnabled,
+                    signupEnabled: config.signupEnabled !== false && !!auth.identityStore?.signupAvailable(),
+                    access: workspaceAccess(auth.identityStore, session),
                     identitySetupRequired: config.identityEnabled && auth.identityStore.read().users.length === 0,
                     oidcEnabled: !!config.issuer,
                     mcpConnection: { url: config.origin + "/mcp", header: config.mcpKeyHeader },
@@ -204,6 +215,10 @@ export function createApplication(
                 const result = await auth.localLogin(input, req, res);
                 return json(res, 200, result);
             }
+            if (req.method === "POST" && path === "/chat/auth/signup") {
+                const input = await body(req, ["username", "displayName", "password"], "Invalid registration.");
+                return json(res, 201, auth.signup(input, req, res));
+            }
             if (req.method === "POST" && path === "/chat/auth/bootstrap") {
                 const input = await body(
                     req,
@@ -232,9 +247,17 @@ export function createApplication(
                 auth.identityStore.resetPassword(input.token, input.password);
                 return json(res, 200, { success: true });
             }
+            if (req.method === "POST" && path === "/chat/auth/recovery-code") {
+                const input = await body(req, ["username", "recoveryCode", "password"], "Invalid recovery request.");
+                const result = auth.recoverWithCode(input, res);
+                cancelUserWork(result.user.id);
+                return json(res, 200, result);
+            }
             if (req.method === "POST" && path === "/chat/auth/account-recovery") {
                 const input = await body(req, ["token", "password"], "Invalid account recovery request.");
-                return json(res, 200, auth.completeAccountRecovery(input, res));
+                const result = auth.completeAccountRecovery(input, res);
+                cancelUserWork(result.user.id);
+                return json(res, 200, result);
             }
             if (req.method === "GET" && path === "/chat/auth/login") return await auth.login(req, res);
             if (req.method === "GET" && path === "/chat/auth/callback") return await auth.callback(req, res);
@@ -245,6 +268,28 @@ export function createApplication(
                 await body(req, []);
                 return json(res, 200, auth.renew(req, res));
             }
+            const access = workspaceAccess(auth.identityStore, session);
+            const globalScope = new URL(req.url, config.origin).searchParams.get("scope") === "global";
+            const connectionOwner = (permission, write = false) => {
+                if (!globalScope) return identity;
+                if (
+                    !access.permissions.includes(permission) &&
+                    (write || !access.permissions.includes("use-global-connections"))
+                )
+                    throw Object.assign(new Error("The platform owner must grant shared connection permission."), {
+                        status: 403,
+                    });
+                return GLOBAL_IDENTITY;
+            };
+            const recordSharedChange = (kind, operation) => {
+                if (globalScope)
+                    auth.identityStore.mutate(
+                        session.user.id,
+                        "SHARED_CONNECTION_CHANGED",
+                        { kind, operation },
+                        () => {},
+                    );
+            };
             const checkMoving = () => {
                 if (moving.has(identity))
                     throw Object.assign(new Error("Wait for the project move to finish."), { status: 409 });
@@ -264,6 +309,17 @@ export function createApplication(
                 const actor = session.user?.id;
                 if (!actor)
                     throw Object.assign(new Error("A native administrator account is required."), { status: 403 });
+                if (req.method === "PUT" && path === "/chat/api/identity/signup") {
+                    const input = await body(req, ["enabled"]);
+                    return json(res, 200, store.setSignup(actor, input.enabled));
+                }
+                const permissionsRoute = path.match(/^\/chat\/api\/identity\/users\/([a-f0-9-]{36})\/permissions$/);
+                if (permissionsRoute && req.method === "PUT") {
+                    const input = await body(req, ["permissions"]);
+                    const user = store.setPermissions(actor, permissionsRoute[1], input.permissions);
+                    cancelUserWork(user.id);
+                    return json(res, 200, { user });
+                }
                 if (req.method === "GET" && path === "/chat/api/identity/users")
                     return json(res, 200, store.listUsers(actor));
                 if (req.method === "GET" && path === "/chat/api/identity/audit")
@@ -290,14 +346,22 @@ export function createApplication(
                     const [, userId, action] = userRoute;
                     if (action === "roles" && req.method === "PUT") {
                         const input = await body(req, ["roles"], "Invalid role assignment.");
-                        return json(res, 200, { user: store.setRoles(actor, userId, input.roles) });
+                        const user = store.setRoles(actor, userId, input.roles);
+                        cancelUserWork(userId);
+                        return json(res, 200, { user });
                     }
-                    if (action === "disable" && req.method === "POST")
-                        return json(res, 200, { user: store.disableUser(actor, userId) });
+                    if (action === "disable" && req.method === "POST") {
+                        const user = store.disableUser(actor, userId);
+                        cancelUserWork(userId);
+                        return json(res, 200, { user });
+                    }
                     if (action === "reset" && req.method === "POST")
                         return json(res, 201, store.inviteReset(actor, userId));
-                    if (action === "sessions" && req.method === "DELETE")
-                        return json(res, 200, { success: store.revokeUserSessions(actor, userId) });
+                    if (action === "sessions" && req.method === "DELETE") {
+                        const success = store.revokeUserSessions(actor, userId);
+                        cancelUserWork(userId);
+                        return json(res, 200, { success });
+                    }
                 }
                 if (req.method === "POST" && path === "/chat/api/identity/service-accounts") {
                     const input = await body(req, ["name", "scopes"], "Invalid service account request.");
@@ -353,6 +417,8 @@ export function createApplication(
                 if (drafts.has(identity) || drafts.size + active.size >= config.maxConcurrentTurns)
                     throw Object.assign(new Error("An assistant is busy. Please retry shortly."), { status: 429 });
                 const controller = new AbortController();
+                controller.provider = input.provider;
+                controller.credentialIdentity = provider.credentialIdentity?.(identity, input.provider) || identity;
                 const closed = () => controller.abort();
                 res.once("close", closed);
                 drafts.set(identity, controller);
@@ -493,28 +559,49 @@ export function createApplication(
                     }
                     if (input) {
                         checkMoving();
-                        return json(res, 200, connections.add(identity, input, enterprise));
+                        const result = connections.add(
+                            connectionOwner("manage-global-repositories", true),
+                            input,
+                            enterprise,
+                        );
+                        recordSharedChange(input.kind, "save");
+                        return json(res, 200, result);
                     }
-                    return json(res, 200, { enterprise, personal: connections.list(identity), enterpriseUnavailable });
+                    return json(res, 200, {
+                        enterprise,
+                        personal: connections.list(connectionOwner("manage-global-repositories")),
+                        managed:
+                            !globalScope &&
+                            access.permissions.includes("manage-global-repositories") &&
+                            !access.permissions.includes("use-global-connections")
+                                ? connections.list(GLOBAL_IDENTITY).map((item) => ({ ...item, scope: "global" }))
+                                : [],
+                        enterpriseUnavailable,
+                    });
                 } finally {
                     await mcp.close?.();
                 }
             }
             const personalRoute = path.match(/^\/chat\/api\/connections\/([a-f0-9-]{36})$/);
             if (personalRoute && req.method === "DELETE") {
-                connections.remove(identity, personalRoute[1]);
+                connections.remove(connectionOwner("manage-global-repositories", true), personalRoute[1]);
+                recordSharedChange("source_or_repository", "delete");
                 return json(res, 200, { success: true });
             }
             const sharedRoute = path.match(/^\/chat\/api\/shares\/([A-Za-z0-9_-]{43})$/);
             if (sharedRoute && req.method === "GET") return json(res, 200, shares.get(sharedRoute[1]));
             if (path === "/chat/api/providers" && req.method === "GET")
-                return json(res, 200, { providers: provider.status(identity) });
+                return json(res, 200, { providers: provider.status(connectionOwner("manage-global-providers")) });
             if (path === "/chat/api/providers/copilot/test" && req.method === "POST") {
                 await body(req, []);
                 if (drafts.has(identity) || active.size + drafts.size >= config.maxConcurrentTurns)
                     throw Object.assign(new Error("The assistant is busy. Please retry shortly."), { status: 429 });
-                provider.assertConnected(identity, "copilot");
+                provider.assertConnected(connectionOwner("manage-global-providers"), "copilot");
                 const controller = new AbortController();
+                controller.provider = "copilot";
+                controller.credentialIdentity =
+                    provider.credentialIdentity?.(connectionOwner("manage-global-providers"), "copilot") ||
+                    connectionOwner("manage-global-providers");
                 const timer = setTimeout(() => controller.abort(), 60000);
                 const disconnected = () => {
                     if (!res.writableEnded) controller.abort();
@@ -524,7 +611,7 @@ export function createApplication(
                 let verified = false;
                 try {
                     await provider.run({
-                        identity,
+                        identity: connectionOwner("manage-global-providers"),
                         provider: "copilot",
                         signal: controller.signal,
                         instructions:
@@ -567,26 +654,45 @@ export function createApplication(
             const connection = path.match(/^\/chat\/api\/providers\/(codex|claude|copilot)$/);
             if (connection) {
                 const name = connection[1];
+                const owner = connectionOwner("manage-global-providers", true);
                 if (req.method === "DELETE") {
                     for (const [key, turn] of active)
-                        if (key.startsWith(store.owner(identity) + ":") && turn.provider === name)
+                        if (
+                            (owner === GLOBAL_IDENTITY
+                                ? turn.credentialIdentity === GLOBAL_IDENTITY
+                                : key.startsWith(store.owner(identity) + ":")) &&
+                            turn.provider === name
+                        )
                             turn.controller.abort();
-                    provider.disconnect(identity, name);
+                    if (owner === GLOBAL_IDENTITY)
+                        for (const draft of drafts.values())
+                            if (draft.credentialIdentity === GLOBAL_IDENTITY && draft.provider === name)
+                                draft.abort("ACCESS_CHANGED");
+                    provider.disconnect(owner, name);
+                    recordSharedChange(name, "disconnect");
                     drafts.get(identity)?.abort();
                     return json(res, 200, { success: true });
                 }
                 if (req.method === "POST" && name === "codex") {
-                    await body(req, []);
-                    return json(res, 200, await provider.startLogin(identity));
+                    const input = await body(req, globalScope ? ["apiKey"] : []);
+                    if (globalScope) {
+                        provider.connectCodexKey(owner, input.apiKey);
+                        recordSharedChange(name, "connect");
+                        return json(res, 200, { success: true });
+                    }
+                    return json(res, 200, await provider.startLogin(owner));
                 }
                 if (req.method === "POST" && name === "claude") {
                     const input = await body(req, ["apiKey"]);
-                    provider.connectClaude(identity, input.apiKey);
+                    provider.connectClaude(owner, input.apiKey);
+                    recordSharedChange(name, "connect");
                     return json(res, 200, { success: true });
                 }
                 if (req.method === "POST" && name === "copilot") {
                     const input = await body(req, ["tenantId", "clientId", "environmentId", "schemaName"]);
-                    return json(res, 200, await provider.copilot.start(identity, input));
+                    const result = await provider.copilot.start(owner, input);
+                    recordSharedChange(name, "sign_in_started");
+                    return json(res, 200, result);
                 }
                 throw Object.assign(new Error("Not found"), { status: 404 });
             }
@@ -940,7 +1046,14 @@ export function createApplication(
             if (conversation.messages.length === 1) conversation.title = input.content.trim().slice(0, 70);
             store.save(identity, conversation);
             const controller = new AbortController(),
-                turn = { controller, approval: null, provider: conversation.provider || "codex" };
+                turn = {
+                    controller,
+                    identity,
+                    approval: null,
+                    provider: conversation.provider || "codex",
+                    credentialIdentity:
+                        provider.credentialIdentity?.(identity, conversation.provider || "codex") || identity,
+                };
             active.set(key, turn);
             // A response belongs to its conversation, not to one browser socket.
             // Human confirmation time does not consume the model's work budget.
@@ -1188,7 +1301,7 @@ export function createApplication(
             if (typeof error.message === "string" && error.message.startsWith("IDENTITY_")) {
                 error.status =
                     error.status ||
-                    (/ADMIN_REQUIRED/.test(error.message)
+                    (/ADMIN_REQUIRED|OWNER_REQUIRED/.test(error.message)
                         ? 403
                         : /NOT_FOUND/.test(error.message)
                           ? 404
@@ -1201,8 +1314,8 @@ export function createApplication(
                                 : 400);
                 error.message = /LOGIN_INVALID|BOOTSTRAP_INVALID|INVITATION_INVALID|RESET_INVALID/.test(error.message)
                     ? "The sign-in or one-time link is invalid or expired."
-                    : /ADMIN_REQUIRED/.test(error.message)
-                      ? "Administrator permission is required."
+                    : /ADMIN_REQUIRED|OWNER_REQUIRED/.test(error.message)
+                      ? "Platform owner or administrator permission is required."
                       : /LAST_ADMIN/.test(error.message)
                         ? "At least one active administrator must remain."
                         : "The identity request could not be completed.";
@@ -1211,7 +1324,18 @@ export function createApplication(
                 ? error.status
                 : 500;
             json(res, status, {
-                error: status === 500 ? "The service could not complete the request." : error.message,
+                error: error.login
+                    ? error.login.locked
+                        ? "Sign-in is locked after 5 failed attempts. Use a saved recovery code or contact your administrator for a one-time recovery link."
+                        : "Sign-in failed. " +
+                          error.login.failedAttempts +
+                          " of 5 attempts used; " +
+                          error.login.remainingAttempts +
+                          " attempts remain. Check your username, password and authenticator code, or use account recovery."
+                    : status === 500
+                      ? "The service could not complete the request."
+                      : error.message,
+                ...(error.login ? { login: error.login } : {}),
                 ...(/^(?:CDR|ENGINE)_[A-Z_]{1,70}$/.test(error.code || "") ? { code: error.code } : {}),
             });
         }

@@ -296,7 +296,7 @@
                 </dialog>
                 <dialog id="chat-settings-dialog" aria-labelledby="chat-settings-title">
                     <div class="settings-heading">
-                        <h2 id="chat-settings-title">Chat settings</h2>
+                        <h2 id="chat-settings-title">Workspace settings</h2>
                         <button id="close-chat-settings" type="button" aria-label="Close settings">✕</button>
                     </div>
                     <p id="settings-notice" role="alert" hidden></p>
@@ -308,7 +308,18 @@
                             <option value="copilot">Copilot Studio</option>
                         </select>
                         <details id="provider-settings">
-                            <summary>My AI connections</summary>
+                            <summary>AI connections</summary>
+                            <div id="provider-scope-control" class="settings-scope" hidden>
+                                <label for="provider-scope">Manage connections for</label>
+                                <select id="provider-scope">
+                                    <option value="personal">My profile</option>
+                                    <option value="global">Shared workspace</option>
+                                </select>
+                            </div>
+                            <p id="provider-scope-note">
+                                Private connections belong to you. Approved shared connections can be used without
+                                revealing their credentials.
+                            </p>
                             <p>
                                 Your account supplies the replies. Conversations stay with the provider selected when
                                 they were created.
@@ -316,6 +327,13 @@
                             <p><a href="#help-start">Help with getting started</a></p>
                             <div class="provider-connection">
                                 <strong>Codex</strong> <span id="codex-status" role="status"></span>
+                                <div id="codex-shared-key-field" class="connection-field" hidden>
+                                    <label for="codex-shared-key">OpenAI project API key</label>
+                                    <input id="codex-shared-key" type="password" autocomplete="off" maxlength="512" />
+                                    <small
+                                        >Shared Codex uses API billing. Personal ChatGPT sign-in stays private.</small
+                                    >
+                                </div>
                                 <button id="connect-codex" type="button">Connect Codex</button>
                                 <button id="disconnect-codex" type="button" hidden>Disconnect Codex</button>
                                 <p id="codex-device" hidden>
@@ -332,14 +350,16 @@
                                     Use your Anthropic API key. API usage is billed separately from a Claude
                                     subscription.
                                 </p>
-                                <label for="claude-key">Anthropic API key</label>
-                                <input
-                                    id="claude-key"
-                                    type="password"
-                                    autocomplete="off"
-                                    maxlength="512"
-                                    spellcheck="false"
-                                />
+                                <div class="connection-field">
+                                    <label for="claude-key">Anthropic API key</label>
+                                    <input
+                                        id="claude-key"
+                                        type="password"
+                                        autocomplete="off"
+                                        maxlength="512"
+                                        spellcheck="false"
+                                    />
+                                </div>
                                 <button id="connect-claude" type="submit">Connect Claude</button>
                                 <button id="disconnect-claude" type="button" hidden>Disconnect Claude</button>
                             </form>
@@ -350,38 +370,46 @@
                                     belongs to your profile.
                                 </p>
                                 <p><a href="#help-copilot-browser">Copilot Studio browser setup</a></p>
-                                <label for="copilot-tenant">Microsoft tenant ID</label>
-                                <input
-                                    id="copilot-tenant"
-                                    required
-                                    maxlength="36"
-                                    autocomplete="off"
-                                    spellcheck="false"
-                                />
-                                <label for="copilot-client">Application (client) ID</label>
-                                <input
-                                    id="copilot-client"
-                                    required
-                                    maxlength="36"
-                                    autocomplete="off"
-                                    spellcheck="false"
-                                />
-                                <label for="copilot-environment">Copilot Studio environment ID</label>
-                                <input
-                                    id="copilot-environment"
-                                    required
-                                    maxlength="44"
-                                    autocomplete="off"
-                                    spellcheck="false"
-                                />
-                                <label for="copilot-schema">Agent schema name</label>
-                                <input
-                                    id="copilot-schema"
-                                    required
-                                    maxlength="200"
-                                    autocomplete="off"
-                                    spellcheck="false"
-                                />
+                                <div class="connection-field">
+                                    <label for="copilot-tenant">Microsoft tenant ID</label>
+                                    <input
+                                        id="copilot-tenant"
+                                        required
+                                        maxlength="36"
+                                        autocomplete="off"
+                                        spellcheck="false"
+                                    />
+                                </div>
+                                <div class="connection-field">
+                                    <label for="copilot-client">Application (client) ID</label>
+                                    <input
+                                        id="copilot-client"
+                                        required
+                                        maxlength="36"
+                                        autocomplete="off"
+                                        spellcheck="false"
+                                    />
+                                </div>
+                                <div class="connection-field">
+                                    <label for="copilot-environment">Copilot Studio environment ID</label>
+                                    <input
+                                        id="copilot-environment"
+                                        required
+                                        maxlength="44"
+                                        autocomplete="off"
+                                        spellcheck="false"
+                                    />
+                                </div>
+                                <div class="connection-field">
+                                    <label for="copilot-schema">Agent schema name</label>
+                                    <input
+                                        id="copilot-schema"
+                                        required
+                                        maxlength="200"
+                                        autocomplete="off"
+                                        spellcheck="false"
+                                    />
+                                </div>
                                 <button id="connect-copilot" type="submit">Connect Copilot Studio</button>
                                 <button id="disconnect-copilot" type="button" hidden>Disconnect Copilot Studio</button>
                                 <button id="test-copilot" type="button" hidden>Test workspace tools</button>
@@ -397,7 +425,14 @@
                             </form>
                         </details>
                         <details id="personal-settings">
-                            <summary>My sources and repositories</summary>
+                            <summary>Sources and repositories</summary>
+                            <div id="repository-scope-control" class="settings-scope" hidden>
+                                <label for="repository-scope">Save this connection for</label>
+                                <select id="repository-scope">
+                                    <option value="personal">My profile</option>
+                                    <option value="global">Shared workspace</option>
+                                </select>
+                            </div>
                             <p>
                                 Personal connections are available only to your profile. Enterprise CKMs stay available
                                 to everyone.
@@ -634,6 +669,74 @@
                                 <label for="local-code">Authenticator code or recovery code</label
                                 ><input id="local-code" autocomplete="one-time-code" />
                                 <button type="submit" class="primary-button">Continue</button>
+                                <button id="show-code-recovery" type="button" class="secondary-button">
+                                    Forgot password or locked out?
+                                </button>
+                                <p class="help-note">
+                                    Five failed sign-ins lock password access. Use a saved recovery code, or ask your
+                                    administrator for a one-time recovery link. No email is sent.
+                                </p>
+                            </form>
+                            <button id="show-signup" type="button" class="secondary-button" hidden>
+                                Create an account
+                            </button>
+                            <form id="code-recovery-form" class="identity-form" hidden>
+                                <h2>Recover your account</h2>
+                                <p>
+                                    Use one of the recovery codes saved when you set up your authenticator. This resets
+                                    your password and authenticator and signs out your other sessions.
+                                </p>
+                                <label for="code-recovery-username">Username</label
+                                ><input id="code-recovery-username" autocomplete="username" required />
+                                <label for="code-recovery-code">Saved recovery code</label
+                                ><input id="code-recovery-code" type="password" autocomplete="off" required />
+                                <label for="code-recovery-password">New password (12 or more characters)</label
+                                ><input
+                                    id="code-recovery-password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    minlength="12"
+                                    maxlength="256"
+                                    required
+                                />
+                                <button type="submit" class="primary-button">Reset and set up authenticator</button>
+                                <button id="recovery-back-to-signin" type="button" class="secondary-button">
+                                    Back to sign in
+                                </button>
+                                <p>
+                                    No recovery code? Contact your administrator for a one-time recovery link. Do not
+                                    share passwords or recovery codes in chat.
+                                </p>
+                            </form>
+                            <form id="signup-form" class="identity-form" hidden>
+                                <h2>Create your workspace account</h2>
+                                <p>
+                                    Your chats and private connections belong to you. The platform owner can grant
+                                    access to shared connections.
+                                </p>
+                                <label for="signup-name">Display name</label
+                                ><input id="signup-name" autocomplete="name" maxlength="160" required />
+                                <label for="signup-username">Username</label
+                                ><input
+                                    id="signup-username"
+                                    autocomplete="username"
+                                    minlength="3"
+                                    maxlength="64"
+                                    required
+                                />
+                                <label for="signup-password">Password (12 or more characters)</label
+                                ><input
+                                    id="signup-password"
+                                    type="password"
+                                    autocomplete="new-password"
+                                    minlength="12"
+                                    maxlength="256"
+                                    required
+                                />
+                                <button type="submit" class="primary-button">Create account</button>
+                                <button type="button" id="back-to-signin" class="secondary-button">
+                                    Back to sign in
+                                </button>
                             </form>
                             <form id="owner-bootstrap" class="identity-form" hidden>
                                 <h2>Create platform owner</h2>
@@ -711,6 +814,10 @@
                             </section>
                             <section id="recovery-codes" class="identity-form" hidden>
                                 <h2>Save recovery codes</h2>
+                                <p>
+                                    Keep these codes somewhere safe outside this workspace. Each code works once to
+                                    recover a forgotten password, unlock sign-in, or replace a lost authenticator.
+                                </p>
                                 <p>Each code works once. Store them somewhere private; they will not be shown again.</p>
                                 <pre id="recovery-code-list"></pre>
                                 <button id="finish-recovery-codes" type="button" class="primary-button">
@@ -1328,7 +1435,7 @@ LIMIT 100</textarea
                     </section>
                     <nav class="help-topics" aria-label="Guide topics">
                         <a href="#help-aql">AQL and CDR connections</a>
-                        <a href="#help-start">Get started</a>
+                        <a href="#help-start">Get started</a><a href="#help-accounts">Accounts and recovery</a>
                         <a href="#help-files">Upload documents</a>
                         <a href="#help-connections">Add sources and repositories</a>
                         <a href="#help-folders">Choose a repository folder</a>
@@ -1340,17 +1447,47 @@ LIMIT 100</textarea
                         <a href="#help-troubleshooting">Solve a problem</a>
                         <a href="#help-about">About and licensing</a>
                     </nav>
+                    <section class="help-topic" aria-labelledby="help-accounts">
+                        <h2 id="help-accounts" tabindex="-1">Accounts and shared connections</h2>
+                        <p>
+                            The first platform owner completes setup before anyone can create an account. New accounts
+                            require an authenticator and receive recovery codes. Keep the codes somewhere safe outside
+                            the workspace. Five failed sign-ins lock password access; use a recovery code or ask your
+                            administrator for a one-time recovery link. No email is sent.
+                        </p>
+                        <p>
+                            Your chats and private connections belong to you. In <strong>Accounts</strong>, the platform
+                            owner can open or close registration, assign roles and grant permission to use or manage
+                            shared connections. Other administrators can manage ordinary users; they cannot take over
+                            the owner account.
+                        </p>
+                        <p>
+                            In the settings gear, authorised managers can select <strong>Shared workspace</strong> to
+                            configure an AI connection or repository for permitted users. Shared Codex requires an
+                            OpenAI project API key; Claude requires an API key; Copilot Studio uses your published
+                            agent. Private connections are used first. Shared provider usage is billed to the configured
+                            account. Files saved to a shared repository are visible to others with repository access.
+                        </p>
+                        <p>
+                            The assistant has up to <strong>20 minutes</strong> of working time per response. Time
+                            waiting for your choices or save confirmation is excluded. If interrupted, use
+                            <strong>Continue from saved progress</strong> below the response to reuse saved drafts.
+                        </p>
+                    </section>
                     <section class="help-topic" aria-labelledby="help-start">
                         <h2 id="help-start" tabindex="-1">1. Get started</h2>
                         <ol>
                             <li>
                                 Open <a href="#chat">Chat</a> and sign in with your workspace account. If you need an
-                                account or a password reset, contact your workspace administrator. The
+                                account, choose <strong>Create an account</strong> when registration is open. For a
+                                forgotten password or locked account, choose
+                                <strong>Forgot password or locked out?</strong> and use a saved recovery code, or
+                                contact your administrator for a one-time recovery link. The
                                 <strong>Sign in</strong> button at the top right is available whenever you are signed
                                 out.
                             </li>
                             <li>
-                                Open the <strong>Chat settings</strong> gear, then <strong>My AI connections</strong>.
+                                Open the <strong>Chat settings</strong> gear, then <strong>AI connections</strong>.
                                 Choose <strong>Connect Codex</strong> and follow the sign-in instructions, or enter your
                                 Anthropic API key for Claude. Your workspace login and AI connection are separate.
                             </li>
@@ -1946,8 +2083,8 @@ Help the user model openEHR artefacts in the browser workspace. Use OpenEhrWorks
                             <dt>I cannot send a message.</dt>
                             <dd>
                                 Check that you are signed in and your selected assistant is connected under
-                                <strong>My AI connections</strong>. If chat is unavailable for this workspace, contact
-                                your administrator.
+                                <strong>AI connections</strong>. If chat is unavailable for this workspace, contact your
+                                administrator.
                             </dd>
                             <dt>My file says unsupported or failed.</dt>
                             <dd>
@@ -2018,6 +2155,15 @@ Help the user model openEHR artefacts in the browser workspace. Use OpenEhrWorks
                         </p>
                     </div>
                     <p id="identity-admin-notice" role="status" aria-live="polite"></p>
+                    <div id="owner-signup-settings" class="settings-scope" hidden>
+                        <label
+                            ><input id="allow-signup" type="checkbox" /> Allow people to create workspace
+                            accounts</label
+                        >
+                        <button id="save-signup-settings" type="button" class="secondary-button">
+                            Save registration setting
+                        </button>
+                    </div>
                     <form id="invite-user-form" class="identity-form identity-admin-form">
                         <h2>Invite a user</h2>
                         <label for="new-user-email">Email address</label
