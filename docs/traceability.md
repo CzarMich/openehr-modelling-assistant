@@ -100,3 +100,5 @@ REQ-F23 links personal browser connections, attachment extraction and read-only 
 REQ-F24 connects private CDR configuration, read-only execution, exact-template AQL checks and browser result handling to PHP service/authentication/contract tests, native path tests and browser privacy/cancellation tests. See [ADR-0024](decisions/0024-cdr-client-and-aql-workspace.md).
 
 Repository-first designer source selection and deliberate CKM upgrades are covered under REQ-F23 by `TemplateAuthoringTest` and `chat/test/template-packages.test.mjs`; see [Artefact versions](ARTEFACT_VERSIONING.md).
+
+REQ-F25 maps bounded provider context, session rotation, persistent project task/draft state and independent review to `task-execution`, `context-budget` and `tool-context`, their unit/HTTP/browser tests and [ADR-0025](decisions/0025-bounded-ai-execution.md).
