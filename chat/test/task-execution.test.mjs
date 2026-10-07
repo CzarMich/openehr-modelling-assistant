@@ -11,6 +11,7 @@ import { Store } from "../src/store.mjs";
 import { Checkpoints } from "../src/checkpoints.mjs";
 import { TemplatePackages } from "../src/template-packages.mjs";
 import { loadConfig } from "../src/config.mjs";
+import { WorkspaceTools } from "../src/workspace-tools.mjs";
 
 function fixture(t) {
     const dataDir = mkdtempSync(join(tmpdir(), "task-context-"));
@@ -294,4 +295,60 @@ test("budget settings are validated and common credentials are removed from task
         result: "api_key=secret sk-proj-abcdefghijklmnopqrstuvwxyz Bearer private-access",
     });
     assert.doesNotMatch(JSON.stringify(value), /secret|private|abcdefghijklmnopqrstuvwxyz|hidden/);
+});
+
+test("deterministic validators resolve exact retained drafts and dependency bytes without model retranscription", async (t) => {
+    const { config, store, chat, project } = fixture(t);
+    const ledger = new TaskLedger(config, "alice", project.id);
+    const content = "synthetic template\n".repeat(12000);
+    const checkpoints = new Checkpoints(config, "alice", chat.id, ledger);
+    const id = checkpoints.draft(content, "large.oet");
+    const packages = new TemplatePackages(config, "alice", chat.id, ledger);
+    const dependencies = [{ identifier: "openEHR-EHR-COMPOSITION.fixture.v1", content: "exact dependency" }];
+    packages.capture("template_build_oet", {}, { structuredContent: { content, dependencies } });
+    checkpoints.delete();
+    packages.delete();
+    let calls = 0;
+    const mcp = {
+        tools: async () => [
+            {
+                name: "template_validate",
+                inputSchema: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: { content: { type: "string" }, dependencies: { type: "array" } },
+                    required: ["content"],
+                },
+            },
+        ],
+        call: async (name, args) => {
+            calls++;
+            assert.equal(name, "template_validate");
+            assert.equal(args.content, content);
+            assert.deepEqual(args.dependencies, dependencies);
+            assert.equal(args.draftId, undefined);
+            return { structuredContent: { valid: true } };
+        },
+    };
+    const next = store.create("alice", "codex", null, project.id);
+    const workspace = new WorkspaceTools(
+        mcp,
+        { config },
+        null,
+        "alice",
+        next,
+        new AbortController().signal,
+        false,
+        null,
+        new TaskOrchestrator(config, store, "alice", next),
+    );
+    const schema = (await workspace.tools()).find((tool) => tool.name === "template_validate").inputSchema;
+    assert(schema.properties.draftId);
+    assert.deepEqual(schema.required, []);
+    const args = { draftId: id };
+    assert.equal((await workspace.call("template_validate", args)).structuredContent.valid, true);
+    assert.deepEqual(args, { draftId: id });
+    await assert.rejects(workspace.call("template_validate", { draftId: id, content: "changed" }), /do not match/);
+    await assert.rejects(workspace.call("template_validate", { draftId: "unknown" }), /unavailable/);
+    assert.equal(calls, 1);
 });

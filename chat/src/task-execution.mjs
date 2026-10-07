@@ -330,7 +330,7 @@ export class TaskOrchestrator {
             baseRevision: args.expectedRevision,
             revision: data.ref || data.revision || data.commit,
             sha256: data.sha256,
-            draftId: data.draftId,
+            draftId: data.draftId || args.draftId,
             saved: data.saved === true,
             changed: data.changed,
             files: data.files?.map(({ path, revision, sha256, change }) => ({ path, revision, sha256, change })),

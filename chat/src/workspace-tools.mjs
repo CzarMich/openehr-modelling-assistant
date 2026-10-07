@@ -45,9 +45,39 @@ export class WorkspaceTools {
         this.prepared = new WeakMap();
     }
     async tools() {
-        const core = (await this.mcp.tools()).map((item) =>
+        const catalogue = await this.mcp.tools();
+        this.draftTools = new Map(
+            catalogue
+                .filter(
+                    (item) =>
+                        [
+                            "model_validate",
+                            "archetype_validate",
+                            "template_validate",
+                            "template_compile",
+                            "opt_validate",
+                            "model_inspect",
+                            "aql_validate",
+                        ].includes(item.name) && item.inputSchema?.properties?.content,
+                )
+                .map((item) => [item.name, item]),
+        );
+        const core = catalogue.map((item) =>
             item.name !== "template_build_oet"
-                ? item
+                ? !this.draftTools.has(item.name)
+                    ? item
+                    : {
+                          ...item,
+                          description:
+                              (item.description || item.name) +
+                              " Use draftId instead of content for an exact retained private draft. Its pinned template dependencies are loaded automatically when omitted; no retranscription is needed.",
+                          inputSchema: {
+                              ...item.inputSchema,
+                              properties: { ...item.inputSchema.properties, draftId: string },
+                              required: (item.inputSchema.required || []).filter((key) => key !== "content"),
+                              anyOf: [{ required: ["content"] }, { required: ["draftId"] }],
+                          },
+                      }
                 : {
                       ...item,
                       description:
@@ -334,6 +364,20 @@ export class WorkspaceTools {
         this.checkpoints.draft(args.content, args.path);
     }
     async call(name, args) {
+        if (this.draftTools?.has(name) && args?.draftId) {
+            const draft = this.checkpoints.getDraft(args.draftId);
+            if (args.content !== undefined && args.content !== draft.content)
+                throw problem("Draft contents do not match the retained draft.");
+            const { draftId, ...input } = args;
+            args = { ...input, content: draft.content };
+            const dependencies = this.packages.entry(draft.content)?.dependencies;
+            if (
+                dependencies &&
+                args.dependencies === undefined &&
+                this.draftTools.get(name).inputSchema.properties.dependencies
+            )
+                args.dependencies = dependencies.map(({ identifier, content }) => ({ identifier, content }));
+        }
         if (CDR_BROWSER_ONLY_TOOLS.has(name))
             throw problem(
                 "Patient-data protection: use the AQL workspace for execution, results and query history. The assistant can generate and validate model-based queries.",
