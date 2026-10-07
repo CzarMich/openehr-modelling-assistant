@@ -65,6 +65,7 @@ When adding or changing guidance on archetypes, templates, or clinical modelling
 - `resources/`: guides, examples, BMM JSON, terminology, prompt bodies, `server-instructions.md`.
 - `tests/`: PHPUnit tests (mirroring `src/`) and the PHPUnit/PHPStan configs.
 - `chat/`: optional browser service, personal Claude/Codex provider connections, identity and chat tests. `public/chat/`: browser UI.
+- Browser task context, session rotation, private project handoffs and token-budget rules: [`docs/TASK_EXECUTION.md`](docs/TASK_EXECUTION.md). Extend existing repository/traceability authority; do not treat transcripts or AI handoffs as approved decisions.
 - `Dockerfile`: PHP and ingress images. `.docker/`: development Compose overlay and `Caddyfile`. `.github/workflows/`: `pr-validation.yml`, `release.yml`.
 
 ## Development

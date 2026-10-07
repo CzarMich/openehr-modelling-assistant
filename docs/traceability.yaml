@@ -339,3 +339,13 @@ requirements:
     packages: [src/Domain/Cdr/*.php, src/Integrations/Cdr/*.php, src/Application/CdrWorkspace.php, src/Application/AqlWorkbench.php, src/Rest/CdrApi.php, src/Tools/CdrTools.php, chat/src/cdr.mjs, chat/src/repository-models.mjs, chat/src/model-cache.mjs, chat/src/aql-drafting.mjs, chat/src/workspace-tools.mjs, public/chat/aql.js, public/chat/aql.css, engine/src/main/java]
     tests: [tests/Enterprise/CdrWorkspaceTest.php, tests/Enterprise/CdrAdapterTest.php, tests/Enterprise/CdrApiTest.php, tests/Tools/CdrOutputCases.php, tests/fixtures/cdr/probe.php, scripts/test-cdr-container.sh, chat/test/cdr.test.mjs, chat/test/aql-drafting.test.mjs, chat/test/model-cache.test.mjs, chat/test/repository-models.test.mjs, chat/test/browser.spec.mjs, engine/src/test/java]
     adr: ["0024"]
+
+  - id: REQ-F25
+    title: Bounded AI execution and persistent project task state
+    canonical: docs/requirements.md
+    status: draft
+    implementation: landed
+    packages: [chat/src/task-execution.mjs, chat/src/context-budget.mjs, chat/src/tool-context.mjs, chat/src/provider-tools.mjs, chat/src/providers.mjs, chat/src/codex.mjs, chat/src/claude.mjs, chat/src/copilot.mjs, chat/src/workspace-tools.mjs, chat/src/checkpoints.mjs, chat/src/template-packages.mjs, chat/src/store.mjs, chat/src/server.mjs, chat/src/config.mjs, public/chat]
+    tests: [chat/test/task-execution.test.mjs, chat/test/security.test.mjs, chat/test/providers.test.mjs, chat/test/copilot.test.mjs, chat/test/browser.spec.mjs]
+    adr: ["0025"]
+    verification: npm --prefix chat test and npm --prefix chat run test:browser
