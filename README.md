@@ -1,6 +1,6 @@
 # openEHR Modelling Assistant
 
-Independently maintained and developed by Michael Anywar
+Maintained by Michael Anywar.
 
 Licensed under the [MIT License](LICENSE).
 

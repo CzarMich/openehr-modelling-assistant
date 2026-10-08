@@ -10,7 +10,7 @@ User-facing documentation and UI use **terminology server**, **server**, and **C
 
 ## Ownership and third-party material
 
-The current product is independently maintained and developed by Michael Anywar.
+The current product is maintained by Michael Anywar.
 Keep the project under the MIT License. Use `Copyright © 2026 Michael Anywar.`
 only for his original material. See [LICENSE](LICENSE) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
