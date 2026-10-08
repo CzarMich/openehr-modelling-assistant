@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Add an Azure and Copilot Studio deployment handover for colleague operators.
+
 - Use neutral maintainer attribution in project documentation.
 
 - Accept optional `v` release-tag prefixes while enforcing the source application version.

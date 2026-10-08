@@ -26,6 +26,10 @@ Availability and tenant policies must be checked in the target organisation.
 
 ## Connect with Copilot Studio
 
+For a colleague deploying in a company Azure environment, use the
+[Azure and Copilot Studio handover](AZURE_COPILOT_HANDOVER.md), including the
+Container Apps starter, permissions, optional Entra profile and acceptance checklist.
+
 The browser's **Help → Connect Copilot Studio** page provides these steps and the
 deployment's exact server address/header. A signed-in native administrator can
 explicitly retrieve the configured MCP key there; retrieval is audited and requires

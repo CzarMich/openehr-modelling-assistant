@@ -11,6 +11,7 @@ material retains its respective terms; see the
 ## Setup and use
 
 - [Installation](install.md), [deployment](DEPLOYMENT.md) and [configuration](CONFIGURATION.md)
+- [Azure and Copilot Studio deployment handover](AZURE_COPILOT_HANDOVER.md): colleague access, managed hosting, agent connection, data transfer and rollback.
 - [Claude, Codex and other MCP clients](MCP_CLIENTS.md); [Microsoft clients](MICROSOFT_AGENT_INTEGRATION.md)
 - [Browser chat](BROWSER_CHAT.md), [workspace](BROWSER_WORKSPACE.md) and [human review setup](REVIEW_DEPLOYMENT.md)
 - [Bounded AI task execution](TASK_EXECUTION.md): context budgets, project handoffs and independent review.
