@@ -33,6 +33,7 @@ the [deployment guide](docs/DEPLOYMENT.md).
 - [Configure browser chat](docs/BROWSER_CHAT.md)
 - [Browse models and review changes](docs/BROWSER_WORKSPACE.md)
 - [Installation and configuration](docs/install.md)
+- [Deploy on Azure with Copilot Studio: colleague handover](docs/AZURE_COPILOT_HANDOVER.md)
 
 ## Modelling tools
 

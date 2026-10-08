@@ -2,6 +2,10 @@
 
 openEHR Modelling Assistant is a PHP 8.4 application. MCP and a versioned human review REST API adapt shared application services; the modelling domain has no Microsoft, Claude, OpenAI, GitHub, GitLab or Graph SDK dependency. Clients supply the language model and orchestration. The application provides deterministic retrieval, persistence and bounded checks.
 
+The [editable SVG architecture figures](diagrams/README.md) provide an overview for
+handover documents and presentations, including persistent project records and
+human review. The detailed component map below remains the implementation reference.
+
 ```mermaid
 flowchart TB
     Browser[Unified workspace: Chat, Models and Governance] --> Chat[Chat service: sessions, history and write confirmation]

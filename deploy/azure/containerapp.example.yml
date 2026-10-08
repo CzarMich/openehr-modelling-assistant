@@ -1,0 +1,217 @@
+# Starter for the Azure handover guide. Replace every <PLACEHOLDER> before use.
+# Secrets remain in Key Vault. This file contains no deployment credentials.
+name: <APP_NAME>
+type: Microsoft.App/containerApps
+location: <AZURE_LOCATION>
+identity:
+  type: UserAssigned
+  userAssignedIdentities:
+    <MANAGED_IDENTITY_RESOURCE_ID>: {}
+properties:
+  managedEnvironmentId: <CONTAINER_APPS_ENVIRONMENT_RESOURCE_ID>
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 8343
+      transport: http
+      allowInsecure: false
+    registries:
+      - server: <ACR_LOGIN_SERVER>
+        identity: <MANAGED_IDENTITY_RESOURCE_ID>
+    secrets:
+      - name: mcp-api-key
+        keyVaultUrl: <MCP_API_KEY_VAULT_SECRET_VERSION_URL>
+        identity: <MANAGED_IDENTITY_RESOURCE_ID>
+      # Public configuration mounted through a secret volume, avoiding an image build.
+      - name: caddy-config
+        value: |
+          {
+              admin off
+              auto_https off
+              persist_config off
+          }
+          :8343 {
+              @ordinary not path /chat/api/conversations/*/attachments /chat/api/cdr/* /api/v1/cdr/* /chat/api/aql-draft
+              request_body @ordinary {
+                  max_size {$MAX_REQUEST_BYTES:2097152}
+              }
+              @uploads path /chat/api/conversations/*/attachments
+              request_body @uploads {
+                  max_size 10485760
+              }
+              @cdr path /chat/api/cdr/* /api/v1/cdr/* /chat/api/aql-draft
+              request_body @cdr {
+                  max_size 16777216
+              }
+              @model_requests path /chat/api/cdr/* /chat/api/aql-repository/* /chat/api/aql-draft
+              handle @model_requests {
+                  reverse_proxy 127.0.0.1:8350 {
+                      transport http {
+                          response_header_timeout 180s
+                          read_timeout 180s
+                      }
+                  }
+              }
+              @chat path /chat /chat/* /favicon.ico /favicon.svg /apple-touch-icon.png
+              handle @chat {
+                  reverse_proxy 127.0.0.1:8350 {
+                      flush_interval -1
+                      transport http {
+                          response_header_timeout 30s
+                          read_timeout 1260s
+                      }
+                  }
+              }
+              handle / {
+                  reverse_proxy 127.0.0.1:8350
+              }
+              @mcp path /mcp /health /ready /api/v1/reviews /api/v1/reviews/* /api/v1/projects /api/v1/projects/* /api/v1/artifacts /api/v1/artifact-history /api/v1/cdr/*
+              handle @mcp {
+                  reverse_proxy 127.0.0.1:9000 {
+                      transport fastcgi {
+                          env SCRIPT_FILENAME /app/public/index.php
+                          env SCRIPT_NAME /index.php
+                          env HTTP_HOST {http.request.hostport}
+                          read_timeout 180s
+                      }
+                  }
+              }
+              handle {
+                  respond 404
+              }
+              header {
+                  X-Content-Type-Options nosniff
+                  Referrer-Policy no-referrer
+                  -Server
+              }
+          }
+  template:
+    containers:
+      - name: app
+        image: <ACR_APP_IMAGE_BY_DIGEST>
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        env:
+          - name: APP_ENV
+            value: production
+          - name: MCP_TRANSPORT
+            value: streamable-http
+          - name: MCP_ALLOWED_HOSTS
+            value: <PUBLIC_HOST>,localhost,127.0.0.1
+          - name: PRODUCT_URL
+            value: https://<PUBLIC_HOST>
+          - name: AUTH_MODE
+            value: api_key
+          - name: AUTH_API_KEY
+            secretRef: mcp-api-key
+          - name: AUTH_API_KEY_HEADER
+            value: X-API-Key
+          - name: MODEL_REPOSITORY_PROVIDER
+            value: filesystem
+          - name: MODEL_REPOSITORY_PATH
+            value: /data/models
+          - name: MODEL_REPOSITORY_WRITE_ENABLED
+            value: "false"
+          - name: GOVERNANCE_ENABLED
+            value: "false"
+          - name: MAX_REQUEST_BYTES
+            value: "2097152"
+        volumeMounts:
+          - volumeName: models
+            mountPath: /data/models
+        probes:
+          - type: Startup
+            tcpSocket:
+              port: 9000
+            periodSeconds: 5
+            failureThreshold: 36
+          - type: Liveness
+            tcpSocket:
+              port: 9000
+            periodSeconds: 15
+      - name: browser
+        image: <ACR_REVIEWS_IMAGE_BY_DIGEST>
+        resources:
+          cpu: 0.25
+          memory: 0.75Gi
+        env:
+          - name: CHAT_ENABLED
+            value: "false"
+          - name: CHAT_REVIEW_ENABLED
+            value: "false"
+          - name: CHAT_LOCAL_IDENTITY_ENABLED
+            value: "false"
+          - name: CHAT_PUBLIC_URL
+            value: https://<PUBLIC_HOST>
+          - name: CHAT_MCP_URL
+            value: http://127.0.0.1:8343/mcp
+          - name: CHAT_DATA_DIR
+            # Only scratch initialization data while chat/review are disabled.
+            # Enable browser features with a dedicated persistent /data/chat mount.
+            value: /tmp/chat
+        probes:
+          - type: Startup
+            httpGet:
+              path: /health
+              port: 8350
+            periodSeconds: 5
+            failureThreshold: 36
+          - type: Liveness
+            httpGet:
+              path: /health
+              port: 8350
+            periodSeconds: 15
+      - name: ingress
+        image: <ACR_INGRESS_IMAGE_BY_DIGEST>
+        resources:
+          cpu: 0.25
+          memory: 0.25Gi
+        env:
+          - name: XDG_CONFIG_HOME
+            value: /tmp/caddy
+          - name: XDG_DATA_HOME
+            value: /tmp/caddy
+        volumeMounts:
+          - volumeName: caddy-config
+            mountPath: /etc/caddy
+        probes:
+          - type: Startup
+            httpGet:
+              path: /ready
+              port: 8343
+              httpHeaders:
+                - name: Host
+                  value: 127.0.0.1
+            periodSeconds: 5
+            failureThreshold: 36
+          - type: Readiness
+            httpGet:
+              path: /ready
+              port: 8343
+              httpHeaders:
+                - name: Host
+                  value: 127.0.0.1
+            periodSeconds: 10
+          - type: Liveness
+            httpGet:
+              path: /health
+              port: 8343
+              httpHeaders:
+                - name: Host
+                  value: 127.0.0.1
+            periodSeconds: 15
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
+    volumes:
+      - name: models
+        storageType: AzureFile
+        storageName: <ENVIRONMENT_MODELS_STORAGE_NAME>
+        mountOptions: uid=82,gid=82,dir_mode=0700,file_mode=0600
+      - name: caddy-config
+        storageType: Secret
+        secrets:
+          - secretRef: caddy-config
+            path: Caddyfile

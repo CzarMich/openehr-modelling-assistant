@@ -1,6 +1,6 @@
 # openEHR Modelling Assistant documentation
 
-Independently maintained and developed by Michael Anywar.
+Maintained by Michael Anywar.
 
 Copyright © 2026 Michael Anywar.
 
@@ -11,6 +11,7 @@ material retains its respective terms; see the
 ## Setup and use
 
 - [Installation](install.md), [deployment](DEPLOYMENT.md) and [configuration](CONFIGURATION.md)
+- [Azure and Copilot Studio deployment handover](AZURE_COPILOT_HANDOVER.md): colleague access, managed hosting, agent connection, data transfer and rollback.
 - [Claude, Codex and other MCP clients](MCP_CLIENTS.md); [Microsoft clients](MICROSOFT_AGENT_INTEGRATION.md)
 - [Browser chat](BROWSER_CHAT.md), [workspace](BROWSER_WORKSPACE.md) and [human review setup](REVIEW_DEPLOYMENT.md)
 - [Bounded AI task execution](TASK_EXECUTION.md): context budgets, project handoffs and independent review.
@@ -32,6 +33,7 @@ material retains its respective terms; see the
 ## Development
 
 - [Architecture](ARCHITECTURE.md), [development environment](development.md), [conventions](conventions.md) and [testing](testing.md)
+- [Editable architecture figures](diagrams/README.md): modelling workflow and Azure/Copilot Studio deployment.
 - [Requirements](requirements.md), [traceability](traceability.md) and [architecture decisions](decisions/README.md)
 - [Model API and CLI](MODEL_API.md); OpenAPI contracts for [models](openapi/models.json) and [reviews](openapi/reviews.json)
 - [Planned capabilities](COMPLETION_QUEUE.json) and [external exchange requirements](EXTERNAL_MODELLING_REQUIREMENTS.json)
