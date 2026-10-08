@@ -117,3 +117,7 @@ Feature branches off `main` plus pull requests (naming in [`CONTRIBUTING.md`](CO
 ## Learned Workspace Facts
 
 - Repo tooling that can be implemented in PHP should live as classes in `src/` with CLI entrypoints (e.g. `scripts/*.php`) and `composer.json` script entries; update AGENTS.md and related docs when changing such tooling.
+
+## Managed delivery
+
+[Automated delivery](docs/AUTOMATED_DELIVERY.md) builds all five component packages on GitHub-hosted runners after exact main validation. Dev and production deploy immutable digests with preserved project names, volumes, credentials and identity issuers. Keep image builds off both managed hosts. Host orchestration uses Bash/Python because hosts do not provide the application's PHP runtime; offline delivery boundaries must pass when changing this path. Version tags publish already delivered images and a GitHub release; version selection remains explicit maintainer work.

@@ -142,3 +142,12 @@ jobs:
           name: modelling-browser-evidence
           path: chat/test-results/
           if-no-files-found: ignore
+
+  delivery-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check image deployment boundaries
+        run: |
+          bash -n scripts/deploy-images.sh
+          python3 scripts/test-image-delivery.py

@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Automate container packages, Dev/production delivery and verified versioned releases.
+- Add browser and home-screen icons to web deployments.
+
 - Browser AI tasks use bounded context, selective tool retrieval and persistent project handoffs.
 
 - Account access moves into a single overlay, with private QR codes for authenticator setup.

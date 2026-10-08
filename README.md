@@ -111,3 +111,5 @@ The project is licensed under the [MIT License](LICENSE), with copyright notices
 for the upstream authors and Michael Anywar's original work. Separately licensed
 third-party material retains its respective terms. Required notices are contained in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Validated main revisions automatically publish all container packages, deploy to Dev and promote the same digests to production. Matching version tags publish verified GitHub releases: [automated delivery](docs/AUTOMATED_DELIVERY.md).
