@@ -60,7 +60,7 @@ Native ADL 2/OPT 2 compilation and AQL syntax parsing are available through the 
 | **REQ-F14** | Optional local/FHIR terminology, canonical discovery, review-only translation, independent versions, explicit bindings and provenance. | partial; exact boundaries in CAPABILITIES.md |
 | **REQ-F15** | Authenticated browser chat with MFA-gated native signup after owner setup, immutable owner-controlled shared-connection grants, five-attempt native sign-in lockout and email-free code/admin recovery, personal or explicitly authorised shared Claude/Codex/Copilot Studio connections, grounded tool calls, private conversation history grouped into user-managed chat projects, streaming and activity indicators, clickable single/multiple decision options, explicit confirmation of model writes and a built-in user guide available before sign-in. | landed; exact boundaries in CAPABILITIES.md |
 | **REQ-N11** | Authenticated bounded transport and redacted failures. | landed; exact boundaries in CAPABILITIES.md |
-| **REQ-N12** | Client-neutral deployment and truthful capability documentation. | landed; exact boundaries in CAPABILITIES.md |
+| **REQ-N12** | Client-neutral deployment and truthful capability documentation, with validated container package creation, Dev-first automatic production delivery and versioned releases. | landed; exact boundaries in CAPABILITIES.md |
 
 | **REQ-F16** | Persist exact-revision governance and immutable audit events; permit clinical approval only through an independent authenticated human session after qualified validation, never through an AI/MCP caller. | `Application/ModelGovernance`, `Domain/Governance`, `Rest/ReviewApi`, browser review workspace |
 

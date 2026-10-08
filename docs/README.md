@@ -44,3 +44,5 @@ counts and deployment observations apply to the revisions recorded there. Use th
 [testing guide](testing.md) to verify the current checkout.
 
 - [AQL workspace and private CDR connections](CDR_WORKSPACE.md) — setup, user workflow, privacy and execution limits.
+
+[Automated deployment, container packages and versioned GitHub releases](AUTOMATED_DELIVERY.md).

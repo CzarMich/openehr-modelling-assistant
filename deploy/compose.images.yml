@@ -1,0 +1,11 @@
+# Delivery only: images are built on GitHub and selected by immutable digest.
+services:
+  app:
+    image: ${MODELLING_APP_IMAGE:?A pinned app image is required}
+    build: !reset null
+  chat:
+    image: ${MODELLING_CHAT_IMAGE:?A pinned browser image is required}
+    build: !reset null
+  ingress:
+    image: ${MODELLING_INGRESS_IMAGE:?A pinned ingress image is required}
+    build: !reset null

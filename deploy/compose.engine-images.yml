@@ -1,0 +1,4 @@
+services:
+  engine:
+    image: ${MODELLING_ENGINE_IMAGE:?A pinned engine image is required}
+    build: !reset null

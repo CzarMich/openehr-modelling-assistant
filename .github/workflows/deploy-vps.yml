@@ -1,42 +1,187 @@
-name: Deploy openEHR Modelling Assistant
+name: Automated openEHR delivery
 on:
   workflow_run:
     workflows: [PR validation]
     branches: [main]
     types: [completed]
+  workflow_dispatch:
 permissions:
   contents: read
+  actions: read
+  packages: write
 concurrency:
-  group: modelling-assistant-vps
+  group: modelling-assistant-delivery
   cancel-in-progress: false
 jobs:
-  deploy:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+  gate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    if: github.repository == 'CzarMich/openehr-modelling-assistant'
+    outputs:
+      revision: ${{ steps.check.outputs.revision }}
+      eligible: ${{ steps.check.outputs.eligible }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Select successfully validated current main
+        id: check
+        uses: actions/github-script@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-      - name: Deploy the validated revision
-        shell: bash
+          script: |
+            core.setOutput('eligible','false');
+            const run=context.payload.workflow_run;
+            if (run && (run.conclusion!=='success' || run.event!=='push' || run.head_branch!=='main' || run.head_repository.full_name!==context.payload.repository.full_name)) return;
+            if (!run && context.ref!=='refs/heads/main') return;
+            const revision=run?.head_sha || context.sha;
+            const {data:main}=await github.rest.git.getRef({...context.repo,ref:'heads/main'});
+            if (revision!==main.object.sha) return;
+            const {data:runs}=await github.rest.actions.listWorkflowRuns({...context.repo,workflow_id:'pr-validation.yml',branch:'main',event:'push',head_sha:revision,per_page:100});
+            if (!runs.workflow_runs.some(r=>r.head_sha===revision && r.conclusion==='success' && r.status==='completed')) throw new Error('No exact successful main validation');
+            core.setOutput('revision',revision);core.setOutput('eligible','true');
+  images:
+    needs: gate
+    if: needs.gate.outputs.eligible == 'true'
+    uses: ./.github/workflows/build-images.yml
+    with:
+      revision: ${{ needs.gate.outputs.revision }}
+  development:
+    needs: [gate, images]
+    runs-on: [self-hosted, Linux, X64, openehr-modelling-dev]
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    environment:
+      name: development
+      url: https://dev-openehr-modelling.sandbox.hygeoniq.com/chat/
+    outputs:
+      delivered: ${{ steps.deploy.outputs.delivered }}
+    steps:
+      - name: Recheck current main before deployment
+        id: current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVISION: ${{ needs.gate.outputs.revision }}
+        run: |
+          if [[ $(gh api repos/CzarMich/openehr-modelling-assistant/commits/main --jq .sha) == "$REVISION" ]]; then
+            echo 'current=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.current.outputs.current == 'true'
+        with:
+          ref: ${{ needs.gate.outputs.revision }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        if: steps.current.outputs.current == 'true'
+        with:
+          pattern: delivery-image-*-${{ needs.gate.outputs.revision }}
+          path: ${{ runner.temp }}/delivery-images
+          merge-multiple: true
+      - name: Deploy immutable packages on the marked Dev host
+        id: deploy
+        if: steps.current.outputs.current == 'true'
+        env:
+          REVISION: ${{ needs.gate.outputs.revision }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          umask 077
+          state=/opt/hygeoniq/projects/openehr-modelling-assistant
+          test "$(cat "$state/config/deploy-environment")" = development
+          mkdir -p "$state/incoming"
+          python3 scripts/delivery-images.py "$RUNNER_TEMP/delivery-images" "$REVISION" "$RUNNER_TEMP/deployment"
+          git archive --format=tar.gz --output="$state/incoming/$REVISION.tar.gz" "$REVISION"
+          cp "$RUNNER_TEMP/deployment/images.json" "$state/incoming/$REVISION.json"
+          export DOCKER_CONFIG
+          DOCKER_CONFIG=$(mktemp -d "$RUNNER_TEMP/registry.XXXXXXXX")
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$REGISTRY_TOKEN" | docker login --username "$REGISTRY_USER" --password-stdin ghcr.io >/dev/null
+          scripts/deploy-images.sh development "$REVISION"
+          echo 'delivered=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: steps.deploy.outputs.delivered == 'true'
+        with:
+          name: development-delivery-${{ needs.gate.outputs.revision }}
+          path: |
+            /opt/hygeoniq/projects/openehr-modelling-assistant/deployment/evidence/${{ needs.gate.outputs.revision }}.json
+            /opt/hygeoniq/projects/openehr-modelling-assistant/deployment/evidence/${{ needs.gate.outputs.revision }}-images.json
+          retention-days: 90
+  production:
+    needs: [gate, images, development]
+    if: needs.development.outputs.delivered == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    environment:
+      name: production
+      url: https://openehr-modelling.sandbox.hygeoniq.com/chat/
+    steps:
+      - name: Recheck current main before production
+        id: current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVISION: ${{ needs.gate.outputs.revision }}
+        run: |
+          if [[ $(gh api repos/CzarMich/openehr-modelling-assistant/commits/main --jq .sha) == "$REVISION" ]]; then
+            echo 'current=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.current.outputs.current == 'true'
+        with:
+          ref: ${{ needs.gate.outputs.revision }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        if: steps.current.outputs.current == 'true'
+        with:
+          pattern: delivery-image-*-${{ needs.gate.outputs.revision }}
+          path: ${{ runner.temp }}/delivery-images
+          merge-multiple: true
+      - name: Promote the Dev-verified package digests
+        id: deploy
+        if: steps.current.outputs.current == 'true'
         env:
           DEPLOY_KEY: ${{ secrets.MODELLING_VPS_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.MODELLING_VPS_KNOWN_HOSTS }}
-          REVISION: ${{ github.event.workflow_run.head_sha }}
+          REVISION: ${{ needs.gate.outputs.revision }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
         run: |
           set -euo pipefail
-          test "$GITHUB_REPOSITORY" = CzarMich/openehr-modelling-assistant
-          test -n "$DEPLOY_KEY"
-          test -n "$KNOWN_HOSTS"
+          umask 077
+          test -n "$DEPLOY_KEY" && test -n "$KNOWN_HOSTS"
           install -d -m 700 "$RUNNER_TEMP/modelling-ssh"
           printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/modelling-ssh/key"
           printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/modelling-ssh/known_hosts"
-          chmod 600 "$RUNNER_TEMP/modelling-ssh/key" "$RUNNER_TEMP/modelling-ssh/known_hosts"
-          ssh_options=(-i "$RUNNER_TEMP/modelling-ssh/key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/modelling-ssh/known_hosts")
+          ssh_options=(-i "$RUNNER_TEMP/modelling-ssh/key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/modelling-ssh/known_hosts" -o ConnectTimeout=20)
+          python3 scripts/delivery-images.py "$RUNNER_TEMP/delivery-images" "$REVISION" "$RUNNER_TEMP/deployment"
           git archive --format=tar.gz --output="$RUNNER_TEMP/release.tar.gz" "$REVISION"
           scp "${ssh_options[@]}" "$RUNNER_TEMP/release.tar.gz" "amcdr@82.165.59.171:/opt/openehr-modelling-assistant/incoming/$REVISION.tar.gz"
-          ssh "${ssh_options[@]}" amcdr@82.165.59.171 "bash -s -- '$REVISION'" < scripts/deploy-vps.sh
-
-          # Verify outside the piped shell: an early clean exit must not claim delivery.
-          ssh "${ssh_options[@]}" amcdr@82.165.59.171 "grep -Fxq '$REVISION' /opt/openehr-modelling-assistant/current-revision"
+          scp "${ssh_options[@]}" "$RUNNER_TEMP/deployment/images.json" "amcdr@82.165.59.171:/opt/openehr-modelling-assistant/incoming/$REVISION.json"
+          ssh "${ssh_options[@]}" amcdr@82.165.59.171 "install -d -m 700 /opt/openehr-modelling-assistant/incoming/$REVISION"
+          printf '%s' "$REGISTRY_TOKEN" | ssh "${ssh_options[@]}" amcdr@82.165.59.171 "umask 077; cat > /opt/openehr-modelling-assistant/incoming/$REVISION/registry-token"
+          scp "${ssh_options[@]}" scripts/deploy-images.sh "amcdr@82.165.59.171:/opt/openehr-modelling-assistant/incoming/$REVISION/deploy.sh"
+          ssh "${ssh_options[@]}" amcdr@82.165.59.171 "bash -s -- '$REVISION' '$REGISTRY_USER'" <<'REMOTE'
+          set -euo pipefail
+          revision=$1
+          registry_user=$2
+          incoming=/opt/openehr-modelling-assistant/incoming/$revision
+          export DOCKER_CONFIG
+          DOCKER_CONFIG=$(mktemp -d)
+          trap 'rm -rf "$DOCKER_CONFIG"; rm -f "$incoming/registry-token"' EXIT
+          docker login --username "$registry_user" --password-stdin ghcr.io < "$incoming/registry-token" >/dev/null
+          bash "$incoming/deploy.sh" production "$revision"
+          grep -Fxq "$revision" /opt/openehr-modelling-assistant/current-revision
+          REMOTE
+          scp "${ssh_options[@]}" "amcdr@82.165.59.171:/opt/openehr-modelling-assistant/deployment/evidence/$REVISION-images.json" "$RUNNER_TEMP/production-images.json"
+          scp "${ssh_options[@]}" "amcdr@82.165.59.171:/opt/openehr-modelling-assistant/deployment/evidence/$REVISION.json" "$RUNNER_TEMP/production-smoke.json"
+          echo 'delivered=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: steps.deploy.outputs.delivered == 'true'
+        with:
+          name: production-delivery-${{ needs.gate.outputs.revision }}
+          path: |
+            ${{ runner.temp }}/production-images.json
+            ${{ runner.temp }}/production-smoke.json
+          retention-days: 90
