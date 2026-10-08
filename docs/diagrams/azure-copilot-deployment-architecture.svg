@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1130" viewBox="0 0 1800 1130" role="img" aria-labelledby="title desc">
+<title id="title">Azure Container Apps deployment with Microsoft Copilot Studio</title><desc id="desc">A company Copilot Studio agent calls an authenticated HTTPS MCP endpoint on Azure Container Apps. A single replica contains Caddy, a PHP FastCGI modelling service and the browser landing service. Approved immutable images are copied from GHCR to company ACR. Managed identity accesses the registry and Key Vault; the models share is dedicated Azure Files. Optional delegated Entra authentication and browser conversations require their own acceptance. Corporate deployment and storage tests remain required.</desc>
+<defs>
+  <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0L9 4.5L0 9Z" fill="#52657a"/></marker>
+  <marker id="teal-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0L9 4.5L0 9Z" fill="#148078"/></marker>
+  <style>
+    text { font-family: 'Liberation Sans', Arial, sans-serif; fill: #21364b; }
+    .title { font-size: 32px; font-weight: 700; }
+    .subtitle { font-size: 19px; fill: #52657a; }
+    .eyebrow { font-size: 15px; font-weight: 700; letter-spacing: 1.6px; fill: #52657a; }
+    .heading { font-size: 23px; font-weight: 700; }
+    .body { font-size: 19px; }
+    .strong { font-size: 19px; font-weight: 700; }
+    .small { font-size: 17px; fill: #52657a; }
+    .label { font-size: 15px; font-weight: 700; fill: #52657a; }
+    .white { fill: white; }
+    .teal { fill: #14766f; }
+    .line { fill: none; stroke: #52657a; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; marker-end: url(#arrow); }
+    .optional { stroke-dasharray: 7 6; }
+    .review-line { stroke: #148078; marker-end: url(#teal-arrow); }
+  </style>
+</defs>
+<rect width="1800" height="1130" fill="white"/>
+<text x="48" y="55" class="title">Figure 2. Azure deployment with Microsoft Copilot Studio</text>
+<text x="48" y="92" class="subtitle">Contributor handover  ·  Initial read-only configuration  ·  Company resources and acceptance required</text>
+<rect x="48" y="155" width="340" height="274" rx="14" fill="#eff5fc" stroke="#b9cfe5" stroke-width="1.5"/>
+<text x="72" y="194" class="eyebrow">COMPANY USERS</text>
+<text x="72" y="233" class="heading">Copilot Studio agent</text>
+<text x="72" y="276" class="body">Published company channel</text>
+<text x="72" y="308" class="body">Generative orchestration</text>
+<text x="72" y="340" class="body">Connected MCP tools</text>
+<text x="72" y="384" class="small">API key header for the starter.</text>
+<rect x="48" y="470" width="340" height="232" rx="14" fill="#faf8f2" stroke="#dacfb6" stroke-width="1.5" stroke-dasharray="7 6"/>
+<text x="72" y="509" class="eyebrow">MICROSOFT ENTRA</text>
+<text x="72" y="548" class="heading">Delegated identity</text>
+<text x="72" y="591" class="body">Optional OAuth profile</text>
+<text x="72" y="622" class="body">Separate API / client registrations</text>
+<text x="72" y="653" class="body">Approved scopes and consent</text>
+<text x="72" y="680" class="small">Retest user and tenant boundaries.</text>
+<rect x="470" y="155" width="1282" height="547" rx="20" fill="#f7fafc" stroke="#9cb4c8" stroke-width="1.5"/>
+<text x="496" y="195" class="eyebrow">AZURE CONTAINER APPS</text>
+<text x="496" y="234" class="heading">One Container App · one initial replica · shared loopback network</text>
+<text x="496" y="268" class="small">Azure terminates HTTPS; internal gateway target is HTTP :8343.</text>
+<rect x="530" y="309" width="330" height="178" rx="14" fill="white" stroke="#b6cadb" stroke-width="1.5"/>
+<text x="554" y="350" class="heading">Caddy gateway</text>
+<text x="554" y="392" class="body">HTTP routes and MCP headers</text>
+<text x="554" y="423" class="body">FastCGI bridge to PHP</text>
+<text x="554" y="454" class="body">Landing page and favicons</text>
+<rect x="926" y="309" width="338" height="178" rx="14" fill="#eef8f4" stroke="#b4d8d4" stroke-width="1.5"/>
+<text x="950" y="350" class="heading">PHP modelling service</text>
+<text x="950" y="392" class="body">Authenticated MCP tools</text>
+<text x="950" y="423" class="body">Source retrieval and model reads</text>
+<text x="950" y="454" class="body">FastCGI :9000</text>
+<rect x="1330" y="309" width="362" height="178" rx="14" fill="white" stroke="#b6cadb" stroke-width="1.5"/>
+<text x="1354" y="350" class="heading">Browser landing service</text>
+<text x="1354" y="392" class="body">Reviews image · HTTP :8350</text>
+<text x="1354" y="423" class="body">Chat and review initially disabled</text>
+<text x="1354" y="454" class="body">Temporary initialization data</text>
+<text x="496" y="598" class="eyebrow">STARTER SETTINGS</text>
+<text x="496" y="633" class="body">Immutable image digests · Key Vault API key · model writes disabled · min/max replicas: 1</text>
+<text x="496" y="663" class="body">Enable browser chat or clinical governance after their identity, storage and role checks.</text>
+<path d="M388 303 H445 V375 H530" class="line"/>
+<rect x="382" y="273" width="96.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="390" y="290" class="label">HTTPS /mcp</text>
+<path d="M860 375 H926" class="line"/>
+<rect x="857" y="344" width="56.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="865" y="361" class="label">:9000</text>
+<path d="M698 487 V534 H1511 V487" class="line"/>
+<rect x="1030" y="512" width="168.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="1038" y="529" class="label">HTTP loopback :8350</text>
+<path d="M218 470 V429" class="line optional"/>
+<rect x="48" y="786" width="340" height="232" rx="14" fill="#f6f8fb" stroke="#ccd8e3" stroke-width="1.5"/>
+<text x="72" y="825" class="eyebrow">APPROVED SOURCE</text>
+<text x="72" y="864" class="heading">GitHub / GHCR</text>
+<text x="72" y="905" class="body">Successful delivery manifest</text>
+<text x="72" y="936" class="body">Source SHA and image digests</text>
+<text x="72" y="967" class="body">Repository + package read access</text>
+<text x="72" y="995" class="small">No rebuild on the deployment host.</text>
+<rect x="480" y="786" width="340" height="232" rx="14" fill="#f6f8fb" stroke="#ccd8e3" stroke-width="1.5"/>
+<text x="504" y="825" class="eyebrow">COMPANY REGISTRY</text>
+<text x="504" y="864" class="heading">Azure Container Registry</text>
+<text x="504" y="905" class="body">Imported approved images</text>
+<text x="504" y="936" class="body">Record destination digests</text>
+<text x="504" y="967" class="body">Managed identity pulls images</text>
+<text x="504" y="995" class="small">Deploy app, ingress and reviews.</text>
+<rect x="912" y="786" width="384" height="232" rx="14" fill="#eef8f4" stroke="#b4d8d4" stroke-width="1.5"/>
+<text x="936" y="825" class="eyebrow">DURABLE MODELS</text>
+<text x="936" y="864" class="heading">Dedicated Azure Files share</text>
+<text x="936" y="905" class="body">Mount /data/models · UID/GID 82</text>
+<text x="936" y="936" class="body">Backup and restore ownership</text>
+<text x="936" y="967" class="body">Accept locks and concurrent writes</text>
+<text x="936" y="995" class="small">Keep writes disabled until accepted.</text>
+<rect x="1388" y="786" width="364" height="232" rx="14" fill="#faf8f2" stroke="#dacfb6" stroke-width="1.5"/>
+<text x="1412" y="825" class="eyebrow">SECRETS AND IDENTITY</text>
+<text x="1412" y="864" class="heading">Key Vault + managed identity</text>
+<text x="1412" y="905" class="body">Versioned MCP-key secret URI</text>
+<text x="1412" y="936" class="body">Secret-read and registry permissions</text>
+<text x="1412" y="967" class="body">Separate optional browser secrets</text>
+<text x="1412" y="995" class="small">Never store credentials in the guide.</text>
+<path d="M388 910 H480" class="line"/>
+<rect x="386" y="879" width="64.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="394" y="896" class="label">import</text>
+<path d="M650 786 V702" class="line"/>
+<rect x="657" y="732" width="96.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="665" y="749" class="label">image pull</text>
+<path d="M1104 786 V702" class="line" marker-start="url(#arrow)"/>
+<rect x="1109" y="729" width="104.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="1117" y="746" class="label">model share</text>
+<path d="M1570 786 V702" class="line"/>
+<rect x="1577" y="732" width="144.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="1585" y="749" class="label">secret reference</text>
+<text x="48" y="1066" class="strong">Acceptance: HTTPS + ready → authenticated MCP calls → published Copilot channel → backups / rollback.</text>
+<text x="48" y="1100" class="small">The company Azure tenant must complete deployment acceptance. Local Docker checks do not establish tenant acceptance.</text>
+</svg>

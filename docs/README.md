@@ -1,6 +1,6 @@
 # openEHR Modelling Assistant documentation
 
-Independently maintained and developed by Michael Anywar.
+Maintained by Michael Anywar.
 
 Copyright © 2026 Michael Anywar.
 
@@ -33,6 +33,7 @@ material retains its respective terms; see the
 ## Development
 
 - [Architecture](ARCHITECTURE.md), [development environment](development.md), [conventions](conventions.md) and [testing](testing.md)
+- [Editable architecture figures](diagrams/README.md): modelling workflow and Azure/Copilot Studio deployment.
 - [Requirements](requirements.md), [traceability](traceability.md) and [architecture decisions](decisions/README.md)
 - [Model API and CLI](MODEL_API.md); OpenAPI contracts for [models](openapi/models.json) and [reviews](openapi/reviews.json)
 - [Planned capabilities](COMPLETION_QUEUE.json) and [external exchange requirements](EXTERNAL_MODELLING_REQUIREMENTS.json)

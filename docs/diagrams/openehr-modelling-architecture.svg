@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1300" viewBox="0 0 1800 1300" role="img" aria-labelledby="title desc">
+<title id="title">Technical architecture and human-governed openEHR modelling workflow</title><desc id="desc">Browser and external MCP clients access authenticated modelling services. Replaceable AI providers propose drafts. Configured knowledge and terminology sources feed service tools, with optional native validation. Persistent model revisions, originals, provenance and governance are separate from AI conversations. Human reviewers make clinical decisions for an exact revision. The lifecycle runs from requirements through reuse, drafting, checks, saved revision, review, refinement and export.</desc>
+<defs>
+  <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0L9 4.5L0 9Z" fill="#52657a"/></marker>
+  <marker id="teal-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0L9 4.5L0 9Z" fill="#148078"/></marker>
+  <style>
+    text { font-family: 'Liberation Sans', Arial, sans-serif; fill: #21364b; }
+    .title { font-size: 32px; font-weight: 700; }
+    .subtitle { font-size: 19px; fill: #52657a; }
+    .eyebrow { font-size: 15px; font-weight: 700; letter-spacing: 1.6px; fill: #52657a; }
+    .heading { font-size: 23px; font-weight: 700; }
+    .body { font-size: 19px; }
+    .strong { font-size: 19px; font-weight: 700; }
+    .small { font-size: 17px; fill: #52657a; }
+    .label { font-size: 15px; font-weight: 700; fill: #52657a; }
+    .white { fill: white; }
+    .teal { fill: #14766f; }
+    .line { fill: none; stroke: #52657a; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; marker-end: url(#arrow); }
+    .optional { stroke-dasharray: 7 6; }
+    .review-line { stroke: #148078; marker-end: url(#teal-arrow); }
+  </style>
+</defs>
+<rect width="1800" height="1300" fill="white"/>
+<text x="48" y="55" class="title">Figure 1. Technical architecture and human-governed modelling workflow</text>
+<text x="48" y="92" class="subtitle">openEHR Modelling Assistant  ·  AI proposes, services check, people review and approve.</text>
+<rect x="48" y="150" width="300" height="446" rx="14" fill="#f6f8fb" stroke="#ccd8e3" stroke-width="1.5"/>
+<text x="72" y="190" class="eyebrow">INTERACTION</text>
+<text x="72" y="225" class="heading">Users and MCP clients</text>
+<rect x="70" y="252" width="256" height="122" rx="14" fill="white" stroke="#ccd8e3" stroke-width="1.5"/>
+<text x="88" y="287" class="strong">Browser workspace</text>
+<text x="88" y="316" class="small">Chat, uploads and identity</text>
+<text x="88" y="341" class="small">Project and model context</text>
+<rect x="70" y="406" width="256" height="144" rx="14" fill="white" stroke="#ccd8e3" stroke-width="1.5"/>
+<text x="88" y="441" class="strong">External MCP clients</text>
+<text x="88" y="470" class="small">Copilot Studio / other agents</text>
+<text x="88" y="495" class="small">Authenticated tool calls</text>
+<text x="88" y="520" class="small">Direct access to MCP services</text>
+<text x="72" y="578" class="small">Access follows configured policy.</text>
+<rect x="402" y="150" width="310" height="446" rx="14" fill="#eff5fc" stroke="#b9cfe5" stroke-width="1.5"/>
+<text x="426" y="190" class="eyebrow">AI ASSISTANCE</text>
+<text x="426" y="225" class="heading">Replaceable providers</text>
+<rect x="424" y="252" width="266" height="122" rx="14" fill="white" stroke="#c9d7e5" stroke-width="1.5"/>
+<text x="442" y="287" class="strong">Session-scoped model</text>
+<text x="442" y="316" class="small">Claude · Codex · Copilot Studio</text>
+<text x="442" y="341" class="small">Drafts and explanations</text>
+<rect x="424" y="406" width="266" height="144" rx="14" fill="white" stroke="#c9d7e5" stroke-width="1.5"/>
+<text x="442" y="441" class="strong">Bounded task context</text>
+<text x="442" y="470" class="small">Retrieved models and guidance</text>
+<text x="442" y="495" class="small">Tool results and saved handoffs</text>
+<text x="442" y="520" class="small">Confirmation before writes</text>
+<text x="426" y="578" class="small">AI output remains a proposal.</text>
+<rect x="776" y="150" width="560" height="446" rx="14" fill="#f0f8f7" stroke="#b4d8d4" stroke-width="1.5"/>
+<text x="802" y="190" class="eyebrow">AUTHENTICATED MCP CORE</text>
+<text x="802" y="225" class="heading">Deterministic modelling services</text>
+<text x="802" y="265" class="strong">Source discovery and reuse</text>
+<text x="802" y="288" class="small">Configured CKM retrieval · source IDs and revisions</text>
+<text x="802" y="318" class="strong">Model construction and inspection</text>
+<text x="802" y="341" class="small">Source-aware ADL / OET drafting and model paths</text>
+<text x="802" y="371" class="strong">Staged validation and project QA</text>
+<text x="802" y="394" class="small">Parse / profile / native findings remain distinct</text>
+<text x="802" y="424" class="strong">Model-aware AQL assistance</text>
+<text x="802" y="447" class="small">Inspect exact model paths · prepare query drafts</text>
+<text x="802" y="477" class="strong">Imports, traceability and comparison</text>
+<text x="802" y="500" class="small">Preserve originals · requirements · revision differences</text>
+<text x="802" y="530" class="strong">Controlled persistence</text>
+<text x="802" y="553" class="small">Exact-revision saves · provenance · stale-write checks</text>
+<rect x="1400" y="150" width="352" height="262" rx="14" fill="#f6f8fb" stroke="#ccd8e3" stroke-width="1.5"/>
+<text x="1424" y="190" class="eyebrow">KNOWLEDGE SOURCES</text>
+<text x="1424" y="229" class="heading">Discover and reference</text>
+<text x="1424" y="273" class="body">Configured openEHR CKMs</text>
+<text x="1424" y="305" class="body">Specifications and model guidance</text>
+<text x="1424" y="337" class="body">Existing archetypes / templates</text>
+<text x="1424" y="369" class="body">Connected repositories and uploads</text>
+<rect x="1400" y="452" width="352" height="232" rx="14" fill="#f6f8fb" stroke="#ccd8e3" stroke-width="1.5"/>
+<text x="1424" y="492" class="eyebrow">TERMINOLOGY · OPTIONAL</text>
+<text x="1424" y="529" class="heading">Configured services</text>
+<text x="1424" y="569" class="body">SNOMED CT · LOINC · ICD-10</text>
+<text x="1424" y="600" class="body">UCUM · available value sets</text>
+<text x="1424" y="631" class="body">Resolve and check terminology</text>
+<text x="1424" y="661" class="small">Subject to access and configuration.</text>
+<rect x="1400" y="732" width="352" height="228" rx="14" fill="#faf8f2" stroke="#dacfb6" stroke-width="1.5" stroke-dasharray="7 6"/>
+<text x="1424" y="772" class="eyebrow">NATIVE ENGINE · OPTIONAL</text>
+<text x="1424" y="809" class="heading">Validation / compilation</text>
+<text x="1424" y="849" class="body">Native archetype checks</text>
+<text x="1424" y="878" class="body">Template compilation · AQL parsing</text>
+<text x="1424" y="916" class="small">Unavailable checks stay explicit.</text>
+<rect x="48" y="680" width="664" height="280" rx="14" fill="#eef8f4" stroke="#afd2c3" stroke-width="1.5"/>
+<text x="74" y="721" class="eyebrow">HUMAN GOVERNANCE</text>
+<text x="74" y="758" class="heading">Review the exact model revision</text>
+<text x="74" y="802" class="body">Inspect model, source references and validation evidence.</text>
+<text x="74" y="834" class="body">Approve, reject or request refinement through human review.</text>
+<text x="74" y="866" class="body">Clinical decisions require the configured roles and qualified checks.</text>
+<text x="74" y="899" class="body">External editors can refine drafts before re-ingestion.</text>
+<text x="74" y="937" class="small">Saving a draft or an AI answer does not grant clinical approval.</text>
+<rect x="776" y="680" width="560" height="280" rx="14" fill="#f6f8fb" stroke="#bccbd9" stroke-width="1.5"/>
+<text x="802" y="721" class="eyebrow">PERSISTENT PROJECT RECORDS</text>
+<text x="802" y="758" class="heading">State survives individual AI sessions</text>
+<text x="802" y="802" class="strong">Models, immutable originals and revision history</text>
+<text x="802" y="828" class="small">Configured filesystem / Git / hosted repository provider</text>
+<text x="802" y="868" class="strong">Requirements, provenance and governance evidence</text>
+<text x="802" y="894" class="small">Authoritative project records and protected audit ledger</text>
+<text x="802" y="935" class="small">Private conversation data remains separately scoped.</text>
+<path d="M348 305 H402" class="line"/>
+<rect x="344" y="274" width="48.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="352" y="291" class="label">chat</text>
+<path d="M712 305 H776" class="line"/>
+<rect x="709" y="274" width="56.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="717" y="291" class="label">tools</text>
+<path d="M348 482 H372 V624 H750 V511 H776" class="line"/>
+<rect x="403" y="602" width="144.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="411" y="619" class="label">direct MCP calls</text>
+<path d="M1400 287 H1336" class="line"/>
+<rect x="1336" y="256" width="80.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="1344" y="273" class="label">retrieve</text>
+<path d="M1336 475 H1360 V566 H1400" class="line optional"/>
+<path d="M1336 584 H1380 V716 H1576 V732" class="line optional"/>
+<path d="M1085 596 V680" class="line" marker-start="url(#arrow)"/>
+<rect x="1089" y="627" width="224.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="1097" y="644" class="label">read / save exact revision</text>
+<path d="M823 596 V653 H326 V680" class="line review-line"/>
+<rect x="418" y="631" width="192.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="426" y="648" class="label">draft + check evidence</text>
+<path d="M712 837 H776" class="line review-line"/>
+<rect x="709" y="804" width="64.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="717" y="821" class="label">record</text>
+<path d="M630 680 V596" fill="none" stroke="white" stroke-width="7"/>
+<path d="M630 680 V596" class="line review-line"/>
+<rect x="48" y="1006" width="1704" height="199" rx="14" fill="#f6f8fb" stroke="#c7d3df" stroke-width="1.5"/>
+<text x="74" y="1047" class="eyebrow">HUMAN-GOVERNED MODELLING LIFECYCLE</text>
+<rect x="74" y="1072" width="193" height="101" rx="9" fill="white" stroke="#d4dee8" stroke-width="1.5"/>
+<text x="86" y="1102" class="label">1</text>
+<text x="86" y="1126" class="strong">Requirement</text>
+<text x="86" y="1153" class="label">Define the concept</text>
+<path d="M267 1122 H283" class="line"/>
+<rect x="283" y="1072" width="193" height="101" rx="9" fill="white" stroke="#d4dee8" stroke-width="1.5"/>
+<text x="295" y="1102" class="label">2</text>
+<text x="295" y="1126" class="strong">Discover / reuse</text>
+<text x="295" y="1153" class="label">Retrieve source models</text>
+<path d="M476 1122 H492" class="line"/>
+<rect x="492" y="1072" width="193" height="101" rx="9" fill="white" stroke="#d4dee8" stroke-width="1.5"/>
+<text x="504" y="1102" class="label">3</text>
+<text x="504" y="1126" class="strong">Draft / adapt</text>
+<text x="504" y="1153" class="label">Prepare a proposal</text>
+<path d="M685 1122 H701" class="line"/>
+<rect x="701" y="1072" width="193" height="101" rx="9" fill="white" stroke="#d4dee8" stroke-width="1.5"/>
+<text x="713" y="1102" class="label">4</text>
+<text x="713" y="1126" class="strong">Run checks</text>
+<text x="713" y="1153" class="label">Retain reported findings</text>
+<path d="M894 1122 H910" class="line"/>
+<rect x="910" y="1072" width="193" height="101" rx="9" fill="white" stroke="#d4dee8" stroke-width="1.5"/>
+<text x="922" y="1102" class="label">5</text>
+<text x="922" y="1126" class="strong">Save revision</text>
+<text x="922" y="1153" class="label">Preserve exact content</text>
+<path d="M1103 1122 H1119" class="line"/>
+<rect x="1119" y="1072" width="193" height="101" rx="9" fill="white" stroke="#d4dee8" stroke-width="1.5"/>
+<text x="1131" y="1102" class="label">6</text>
+<text x="1131" y="1126" class="strong">Human review</text>
+<text x="1131" y="1153" class="label">Accept / reject / refine</text>
+<path d="M1312 1122 H1328" class="line"/>
+<rect x="1328" y="1072" width="193" height="101" rx="9" fill="white" stroke="#d4dee8" stroke-width="1.5"/>
+<text x="1340" y="1102" class="label">7</text>
+<text x="1340" y="1126" class="strong">Refine / recommit</text>
+<text x="1340" y="1153" class="label">Recheck the revision</text>
+<path d="M1521 1122 H1537" class="line"/>
+<rect x="1537" y="1072" width="193" height="101" rx="9" fill="white" stroke="#d4dee8" stroke-width="1.5"/>
+<text x="1549" y="1102" class="label">8</text>
+<text x="1549" y="1126" class="strong">Export / re-ingest</text>
+<text x="1549" y="1153" class="label">Preserve provenance</text>
+<path d="M1430 1205 V1229 H590 V1205" class="line review-line"/>
+<rect x="804" y="1217" width="392.0" height="24" rx="4" fill="white" stroke="white" stroke-width="1.5"/>
+<text x="812" y="1234" class="label">Refinement repeats drafting, checks and review.</text>
+<text x="48" y="1275" class="small">Solid arrows: tool / record flow.  Dashed arrows: optional services.  Human decisions retain clinical authority.</text>
+</svg>

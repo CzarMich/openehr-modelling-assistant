@@ -69,6 +69,11 @@ An authorised workflow may use its scoped `GITHUB_TOKEN` instead.
 
 ## 2. Understand what is being deployed
 
+![Azure deployment with Microsoft Copilot Studio](diagrams/azure-copilot-deployment-architecture.svg)
+
+The figure is an editable SVG. The [general modelling architecture and human review
+workflow](diagrams/openehr-modelling-architecture.svg) shows the broader platform.
+
 ```mermaid
 flowchart LR
     Users[Company users] --> Agent[Copilot Studio agent]
