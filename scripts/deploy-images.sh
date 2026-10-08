@@ -39,7 +39,8 @@ export MODELLING_CA_FILE=/usr/local/share/ca-certificates/hygeoniq-development-c
 base=(docker compose -p "$project" --env-file "$config/runtime.env")
 compose=("${base[@]}" --env-file "$release_dir/deployment/images.env" -f docker-compose.yml)
 if [[ "$environment" == development ]]; then compose+=(-f deploy/compose.dev-host.yml); fi
-if [[ -r "$MODEL_GIT_KEY_HOST_PATH" && -r "$MODEL_GIT_HOSTS_HOST_PATH" ]]; then compose+=(-f deploy/compose.git-secrets.example.yml); fi
+git_overlay=$(bash scripts/delivery-git-mount.sh "$MODEL_GIT_KEY_HOST_PATH" "$MODEL_GIT_HOSTS_HOST_PATH")
+if [[ -n "$git_overlay" ]]; then compose+=(-f "$git_overlay"); fi
 if [[ "$environment" == development && -r "$config/chat.env" ]]; then compose+=(-f deploy/compose.chat-dev.yml); fi
 storage=false
 if [[ -r "$config/storage/governance-password" ]]; then compose+=(-f deploy/compose.storage.yml); storage=true; fi

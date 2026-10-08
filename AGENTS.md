@@ -96,7 +96,7 @@ Keep `## [Unreleased]` entries **short and high-level**: one-line bullets naming
 ### Versioning
 
 - SemVer; `APP_VERSION` in `src/constants.php` is the single source, history is in `CHANGELOG.md`. Never restate the current version here.
-- Tags are bare **`X.Y.Z`** (for example `0.20.0`), no `v` prefix; each has a GitHub release titled with the tag name. Pushing any tag runs `release.yml`, which builds and pushes the Docker image to GHCR.
+- Tags are bare **`X.Y.Z`** (for example `0.20.0`), no `v` prefix; each has a GitHub release titled with the tag name. Pushing a matching version tag runs `release.yml`, which publishes already delivered container digests and packaged release assets.
 - Release housekeeping (README version badge) is in [`CONTRIBUTING.md`](CONTRIBUTING.md#branching-and-versioning).
 
 ### Branching

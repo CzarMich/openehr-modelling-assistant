@@ -237,7 +237,7 @@ requirements:
     canonical: docs/requirements.md
     status: draft
     implementation: landed
-    packages: [docs/MICROSOFT_AGENT_INTEGRATION.md, docs/MCP_CLIENTS.md, Dockerfile, docker-compose.yml, scripts/mcp-smoke.py, scripts/deploy-images.sh, scripts/delivery-images.py, deploy/compose.images.yml, deploy/compose.engine-images.yml, .github/workflows/deploy-vps.yml, .github/workflows/build-images.yml, .github/workflows/release.yml]
+    packages: [docs/MICROSOFT_AGENT_INTEGRATION.md, docs/MCP_CLIENTS.md, Dockerfile, docker-compose.yml, scripts/mcp-smoke.py, scripts/deploy-images.sh, scripts/delivery-images.py, scripts/delivery-git-mount.sh, deploy/compose.images.yml, deploy/compose.engine-images.yml, .github/workflows/deploy-vps.yml, .github/workflows/build-images.yml, .github/workflows/release.yml]
     tests: [tests/Content/InstallDocContractTest.php, scripts/test-image-delivery.py]
     adr: ["0008"]
 
