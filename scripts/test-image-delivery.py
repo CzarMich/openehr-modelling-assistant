@@ -3,10 +3,13 @@
 import copy
 import json
 import os
+import re
 import runpy
 import subprocess
 import tempfile
+import textwrap
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,6 +95,39 @@ class DeliveryTests(unittest.TestCase):
             self.assertEqual(selected.returncode, 0)
             self.assertEqual(selected.stdout.strip(), 'deploy/compose.git-secrets.example.yml')
             self.assertEqual(key.stat().st_mode & 0o777, 0)
+
+    def release_python(self, marker):
+        workflow = (ROOT / '.github/workflows/release.yml').read_text()
+        match = re.search(r"<<'" + marker + r"'\n(.*?)\n\s*" + marker + r"\n", workflow, re.DOTALL)
+        self.assertIsNotNone(match)
+        return textwrap.dedent(match.group(1))
+
+    def test_release_preflight_accepts_both_tag_styles_and_rejects_invalid_refs(self):
+        code = self.release_python('PYREADY')
+        with tempfile.TemporaryDirectory() as directory:
+            output = str(Path(directory) / 'output')
+            for tag in ['0.21.0', 'v0.21.0', 'v1.0.2']:
+                with patch.dict(os.environ, TAG=tag, GITHUB_REPOSITORY='CzarMich/openehr-modelling-assistant', GITHUB_OUTPUT=output), patch('subprocess.run', return_value=subprocess.CompletedProcess([], 1, stderr='HTTP 404')):
+                    exec(compile(code, 'release-preflight', 'exec'), {})
+            for tag in ['main', 'refs/tags/v1.0.2', 'v1.0.2\n', '$(echo unsafe)']:
+                with patch.dict(os.environ, TAG=tag), patch('subprocess.run') as request:
+                    with self.assertRaises(SystemExit):
+                        exec(compile(code, 'release-preflight', 'exec'), {})
+                    request.assert_not_called()
+
+    def test_release_requires_the_tag_source_app_version_including_v_prefix(self):
+        code = self.release_python('PYVERSION')
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'src'
+            source.mkdir()
+            (source / 'constants.php').write_text("<?php define('APP_VERSION', '0.21.0');")
+            for tag in ['0.21.0', 'v0.21.0']:
+                result = subprocess.run(['python3', '-c', code], cwd=directory, env=dict(os.environ, TAG=tag), capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+            mismatched = subprocess.run(['python3', '-c', code], cwd=directory, env=dict(os.environ, TAG='v1.0.2'), capture_output=True, text=True)
+            self.assertNotEqual(mismatched.returncode, 0)
+            self.assertIn('APP_VERSION is 0.21.0', mismatched.stderr)
+            self.assertIn('They must match', mismatched.stderr)
 
 
 if __name__ == '__main__':

@@ -10,7 +10,7 @@ User-facing documentation and UI use **terminology server**, **server**, and **C
 
 ## Ownership and third-party material
 
-The current product is independently maintained and developed by Michael Anywar.
+The current product is maintained by Michael Anywar.
 Keep the project under the MIT License. Use `Copyright © 2026 Michael Anywar.`
 only for his original material. See [LICENSE](LICENSE) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
@@ -96,7 +96,7 @@ Keep `## [Unreleased]` entries **short and high-level**: one-line bullets naming
 ### Versioning
 
 - SemVer; `APP_VERSION` in `src/constants.php` is the single source, history is in `CHANGELOG.md`. Never restate the current version here.
-- Tags are bare **`X.Y.Z`** (for example `0.20.0`), no `v` prefix; each has a GitHub release titled with the tag name. Pushing a matching version tag runs `release.yml`, which publishes already delivered container digests and packaged release assets.
+- Tags may be **`X.Y.Z`** or **`vX.Y.Z`**; their numeric version must match `APP_VERSION`. Each has a GitHub release titled with the original tag name. Pushing a matching version tag runs `release.yml`, which publishes already delivered container digests and packaged release assets.
 - Release housekeeping (README version badge) is in [`CONTRIBUTING.md`](CONTRIBUTING.md#branching-and-versioning).
 
 ### Branching

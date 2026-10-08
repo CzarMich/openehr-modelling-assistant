@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Use neutral maintainer attribution in project documentation.
+
+- Accept optional `v` release-tag prefixes while enforcing the source application version.
+
 - Preserve container-owned Git credentials during automated image delivery.
 
 - Automate container packages, Dev/production delivery and verified versioned releases.
