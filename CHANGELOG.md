@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Preserve container-owned Git credentials during automated image delivery.
+
 - Automate container packages, Dev/production delivery and verified versioned releases.
 - Add browser and home-screen icons to web deployments.
 

@@ -130,7 +130,7 @@ jobs:
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           git archive --format=tar.gz --prefix=openehr-modelling-assistant/ --output="$RUNNER_TEMP/release/source-$TAG.tar.gz" HEAD
-          tar -czf "$RUNNER_TEMP/release/deployment-$TAG.tar.gz" deploy scripts/deploy-images.sh scripts/delivery-images.py LICENSE THIRD_PARTY_NOTICES.md -C "$RUNNER_TEMP/release" images.json
+          tar -czf "$RUNNER_TEMP/release/deployment-$TAG.tar.gz" docker-compose.yml .docker/Caddyfile deploy scripts LICENSE THIRD_PARTY_NOTICES.md -C "$RUNNER_TEMP/release" images.json
           cd "$RUNNER_TEMP/release"
           sha256sum images.json "source-$TAG.tar.gz" "deployment-$TAG.tar.gz" > SHA256SUMS
       - name: Publish the GitHub release and packaged evidence

@@ -31,6 +31,8 @@ Existing Compose project names and volumes are preserved: `openehr-modelling-dev
 
 Source archives, validated manifests, exact current revision and protocol-smoke evidence are retained under the managed state directory. GitHub uploads separate Dev and production evidence for 90 days. Run `scripts/watch-ci.sh <full revision>` after every push and resolve failures, including downstream delivery. The workflow can also be dispatched on main for recovery; its gate still requires a successful exact main validation.
 
+Git credential mounts are selected by file existence, so private keys owned by the application user remain mounted even when the host runner cannot read their contents. A partially configured key/known_hosts pair stops deployment before changing containers. Key ownership and SSH permissions are preserved.
+
 ## Automatic releases
 
 Version selection remains a maintainer action: set `APP_VERSION`, add the matching versioned CHANGELOG section and update the README version badge through review. Push a bare version tag, for example `X.Y.Z`, pointing to a main-history commit that already completed Dev and production delivery. This triggers **Publish verified release**. It can also be dispatched with an existing matching tag after delivery finishes.

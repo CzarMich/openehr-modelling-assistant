@@ -74,6 +74,25 @@ class DeliveryTests(unittest.TestCase):
             result = subprocess.run(['bash', str(ROOT / 'scripts/deploy-images.sh'), *args], capture_output=True, text=True)
             self.assertEqual(result.returncode, 2)
 
+    def test_container_owned_git_keys_remain_mounted_without_runner_read_access(self):
+        with tempfile.TemporaryDirectory() as directory:
+            key, hosts = Path(directory) / 'key', Path(directory) / 'known_hosts'
+            arguments = ['bash', str(ROOT / 'scripts/delivery-git-mount.sh'), str(key), str(hosts)]
+            optional = subprocess.run(arguments, capture_output=True, text=True)
+            self.assertEqual(optional.returncode, 0)
+            self.assertEqual(optional.stdout, '')
+            key.write_text('fixture-only')
+            key.chmod(0)
+            if os.geteuid() != 0:
+                self.assertFalse(os.access(key, os.R_OK))
+            incomplete = subprocess.run(arguments, capture_output=True, text=True)
+            self.assertEqual(incomplete.returncode, 2)
+            hosts.write_text('fixture-only')
+            selected = subprocess.run(arguments, capture_output=True, text=True)
+            self.assertEqual(selected.returncode, 0)
+            self.assertEqual(selected.stdout.strip(), 'deploy/compose.git-secrets.example.yml')
+            self.assertEqual(key.stat().st_mode & 0o777, 0)
+
 
 if __name__ == '__main__':
     unittest.main()
