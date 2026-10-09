@@ -23,6 +23,14 @@ Managed browser URLs:
 
 Dev uses LAN/VPN name mapping and the trusted development CA. Each browser now declares SVG, ICO and PNG touch icons; gateway and browser service routes serve them without a sign-in requirement.
 
+## First platform owner setup
+
+For a new installation with built-in accounts, follow [owner setup on Linux or Azure](REVIEW_DEPLOYMENT.md#generate-the-one-time-owner-setup-token).
+Use the running browser container in the intended environment and your own
+verified server alias. Dev and production tokens and accounts are separate.
+Azure console instructions apply to separately provisioned Azure containers;
+the delivery workflow described here remains the managed Linux delivery path.
+
 ## Host setup and persistence
 
 The dedicated Dev runner has labels `self-hosted, Linux, X64, openehr-modelling-dev`. Only successfully validated current main reaches it. Its managed state is `/opt/hygeoniq/projects/openehr-modelling-assistant`; production uses `/opt/openehr-modelling-assistant`. Each host requires `config/deploy-environment` containing `development` or `production`, plus its existing protected `runtime.env`, browser `chat.env` and optional service/Git/storage keys. The workflow reuses `MODELLING_VPS_SSH_KEY` and pinned `MODELLING_VPS_KNOWN_HOSTS` for production. GHCR uses the short-lived workflow token in an isolated Docker configuration that is removed after delivery.

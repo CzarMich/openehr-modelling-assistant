@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Document platform owner setup on Linux and Azure with generic server examples.
+
 - Use neutral maintainer attribution in project documentation.
 
 - Accept optional `v` release-tag prefixes while enforcing the source application version.
