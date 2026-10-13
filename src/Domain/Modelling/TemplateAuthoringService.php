@@ -27,20 +27,20 @@ final readonly class TemplateAuthoringService
         if (trim($name) === '' || strlen($name) > 200 || !array_is_list($entries) || !array_is_list($placements)
             || count($entries) > 30 || count($placements) > 30
             || ($entries === []) === ($placements === [])) {
-            throw new \InvalidArgumentException('Supply exactly one of 1–30 direct entries or 1–30 explicit placements.');
+            throw new TemplateInputException('DIRECT_INPUT');
         }
         foreach ($entries as $identifier) {
             if (!is_string($identifier) || $identifier === '') {
-                throw new \InvalidArgumentException('Direct entry identifiers must be non-empty strings.');
+                throw new TemplateInputException('ENTRY_IDENTIFIER');
             }
         }
         if (count(array_unique($entries)) !== count($entries)) {
-            throw new \InvalidArgumentException('Duplicate direct archetype placement is not supported by this generator.');
+            throw new TemplateInputException('DUPLICATE_ENTRY');
         }
         $overrides = $this->sourceOverrides($archetypes);
         $root = $this->source($composition, $ckm, $overrides);
         if ($root['rm_class'] !== 'COMPOSITION') {
-            throw new \InvalidArgumentException('The root archetype must be a COMPOSITION.');
+            throw new TemplateInputException('ROOT_CLASS');
         }
         $document = new DOMDocument('1.0', 'UTF-8');
         $document->formatOutput = true;
@@ -80,10 +80,10 @@ final readonly class TemplateAuthoringService
             foreach ($entries as $identifier) {
                 $entry = $this->source($identifier, $ckm, $overrides);
                 if (!in_array($entry['rm_class'], ['OBSERVATION', 'EVALUATION', 'INSTRUCTION', 'ACTION', 'ADMIN_ENTRY'], true)) {
-                    throw new \InvalidArgumentException('Direct placements must be ENTRY archetypes.');
+                    throw new TemplateInputException('ENTRY_CLASS');
                 }
                 if (isset($sources[$entry['id']])) {
-                    throw new \InvalidArgumentException('Duplicate direct archetype placement is not supported by this generator.');
+                    throw new TemplateInputException('DUPLICATE_ENTRY');
                 }
                 $node = $document->createElementNS($namespace, 'Content');
                 $node->setAttributeNS($xsi, 'xsi:type', $entry['rm_class']);
@@ -123,7 +123,7 @@ final readonly class TemplateAuthoringService
     private function appendPlacements(DOMDocument $document, DOMElement $definition, array $root, array $placements, ?string $ckm, array $overrides): array
     {
         if (!array_is_list($placements)) {
-            throw new \InvalidArgumentException('Placements must be a list.');
+            throw new TemplateInputException('PLACEMENTS_LIST');
         }
         $parents = ['root' => ['node' => $definition, 'rm_class' => $root['rm_class']]];
         $sources = [];
@@ -138,7 +138,7 @@ final readonly class TemplateAuthoringService
                 || !is_string($placement['identifier'] ?? null) || $placement['identifier'] === ''
                 || !is_string($placement['path'] ?? null) || strlen($placement['path']) > 2048
                 || !preg_match('~^/(?:[a-z][a-z0-9_]*)(?:\[[A-Za-z0-9_.:-]+\])?(?:/[a-z][a-z0-9_]*(?:\[[A-Za-z0-9_.:-]+\])?)*$~D', $placement['path'])) {
-                throw new \InvalidArgumentException('Invalid explicit OET placement. Parents must precede children and paths must be absolute archetype paths.');
+                throw new TemplateInputException('PLACEMENT_STRUCTURE');
             }
             $parent = $parents[$placement['parent']];
             [$elementName, $allowedClasses] = match ($parent['rm_class']) {
@@ -146,15 +146,15 @@ final readonly class TemplateAuthoringService
                 'SECTION' => ['Item', ['SECTION', 'OBSERVATION', 'EVALUATION', 'INSTRUCTION', 'ACTION', 'ADMIN_ENTRY']],
                 'OBSERVATION', 'EVALUATION', 'INSTRUCTION', 'ACTION', 'ADMIN_ENTRY' => ['Items', ['CLUSTER', 'ELEMENT']],
                 'CLUSTER' => ['Items', ['CLUSTER', 'ELEMENT']],
-                default => throw new \InvalidArgumentException('Unsupported placement parent RM class.'),
+                default => throw new TemplateInputException('PARENT_CLASS'),
             };
             $source = $this->source($placement['identifier'], $ckm, $overrides);
             if (!in_array($source['rm_class'], $allowedClasses, true)) {
-                throw new \InvalidArgumentException('The child RM class is not a supported placement for its parent.');
+                throw new TemplateInputException('CHILD_CLASS');
             }
             $siblingPath = $placement['parent'] . '|' . $placement['path'];
             if (isset($placementPaths[$siblingPath])) {
-                throw new \InvalidArgumentException('Duplicate sibling placement path.');
+                throw new TemplateInputException('DUPLICATE_PATH');
             }
             $placementPaths[$siblingPath] = true;
             $hash = hash('sha256', $source['content']);
@@ -175,14 +175,14 @@ final readonly class TemplateAuthoringService
                 if (isset($placement[$bound])) {
                     $valid = is_string($placement[$bound]) && preg_match($bound === 'min' ? '/^[0-9]+$/D' : '/^(?:[0-9]+|\*)$/D', $placement[$bound]);
                     if (!$valid) {
-                        throw new \InvalidArgumentException('Invalid OET placement occurrence bound.');
+                        throw new TemplateInputException('OCCURRENCES');
                     }
                     $node->setAttribute($bound, $placement[$bound]);
                 }
             }
             if (isset($placement['name'])) {
                 if (!is_string($placement['name']) || trim($placement['name']) === '' || strlen($placement['name']) > 1000) {
-                    throw new \InvalidArgumentException('Invalid OET placement name.');
+                    throw new TemplateInputException('PLACEMENT_NAME');
                 }
                 $node->setAttribute('name', $placement['name']);
             }
@@ -197,22 +197,39 @@ final readonly class TemplateAuthoringService
     private function sourceOverrides(array $archetypes): array
     {
         if (!array_is_list($archetypes) || count($archetypes) > 64) {
-            throw new \InvalidArgumentException('Supply up to 64 exact archetype sources.');
+            throw new TemplateInputException('SOURCES_LIST');
         }
         $sources = [];
         $bytes = 0;
-        foreach ($archetypes as $item) {
-            if (!is_array($item) || !is_string($item['identifier'] ?? null) || !is_string($item['content'] ?? null)
-                || !preg_match(ModelValidator::ARCHETYPE_ID, $item['identifier']) || isset($sources[$item['identifier']])
-                || strlen($item['content']) > 1048576 || str_contains($item['content'], "\0")
-                || !preg_match('/\A\s*(?:--[^\n]*\n\s*)*archetype\b[\s\S]*?\b(openEHR-[^\s]+)\s/', $item['content'], $match)
-                || $match[1] !== $item['identifier']
+        foreach ($archetypes as $index => $item) {
+            if (!is_array($item) || !is_string($item['identifier'] ?? null) || !is_string($item['content'] ?? null)) {
+                throw new TemplateInputException('SOURCE_SHAPE', $index);
+            }
+            if (!preg_match(ModelValidator::ARCHETYPE_ID, $item['identifier'])
                 || !preg_match('/^openEHR-[A-Z_]+-([A-Z_]+)\./', $item['identifier'], $class)) {
-                throw new \InvalidArgumentException('Exact archetype sources must have unique identifiers matching their ADL declarations.');
+                throw new TemplateInputException('SOURCE_IDENTIFIER', $index);
+            }
+            if (isset($sources[$item['identifier']])) {
+                throw new TemplateInputException('SOURCE_DUPLICATE', $index);
+            }
+            if (strlen($item['content']) > 1048576) {
+                throw new TemplateInputException('SOURCE_SIZE', $index);
+            }
+            if (str_contains($item['content'], "\0")) {
+                throw new TemplateInputException('SOURCE_NUL', $index);
+            }
+            // Decode only the optional signature for inspection. Preserve original
+            // bytes for dependency hashes, source attribution and native compilation.
+            $inspectionContent = str_starts_with($item['content'], "\xEF\xBB\xBF") ? substr($item['content'], 3) : $item['content'];
+            if (!preg_match('/\A\s*(?:--[^\n]*\n\s*)*archetype\b[\s\S]*?\b(openEHR-[^\s]+)\s/', $inspectionContent, $match)) {
+                throw new TemplateInputException('SOURCE_DECLARATION', $index);
+            }
+            if ($match[1] !== $item['identifier']) {
+                throw new TemplateInputException('SOURCE_MISMATCH', $index);
             }
             $bytes += strlen($item['content']);
             if ($bytes > 6291456) {
-                throw new \InvalidArgumentException('Exact archetype sources exceed 6 MiB.');
+                throw new TemplateInputException('SOURCE_TOTAL');
             }
             $sources[$item['identifier']] = ['id' => $item['identifier'], 'rm_class' => $class[1], 'content' => $item['content'],
                 'provenance' => ['kind' => 'supplied_source', 'sha256' => hash('sha256', $item['content'])]];

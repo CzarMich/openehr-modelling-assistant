@@ -22,6 +22,48 @@ final class TemplateAuthoringTest extends TestCase
         'observation' => ['id' => 'openEHR-EHR-OBSERVATION.fixture.v1', 'rm_class' => 'OBSERVATION'],
     ];
 
+    public function test_bom_sources_preserve_exact_bytes_and_hashes_through_compile_check(): void
+    {
+        $root = self::ARCHETYPES['composition']['id'];
+        $entry = self::ARCHETYPES['evaluation']['id'];
+        $sources = [
+            ['identifier' => $root, 'content' => "\xEF\xBB\xBF-- original attribution\narchetype (adl_version=1.4)\n" . $root . "\n"],
+            ['identifier' => $entry, 'content' => "\xEF\xBB\xBFarchetype (adl_version=1.4)\n" . $entry . "\n"],
+        ];
+        $ckm = $this->createMock(ArchetypeSource::class);
+        $ckm->expects(self::never())->method('fetch');
+        $engine = $this->createMock(OpenEhrEngine::class);
+        $engine->expects(self::once())->method('compile')->with(self::isType('string'), self::callback(static function (array $dependencies) use ($sources): bool {
+            self::assertSame(array_column($sources, 'content'), array_column($dependencies, 'content'));
+            self::assertSame(array_map(static fn (array $source): string => hash('sha256', $source['content']), $sources), array_column($dependencies, 'sha256'));
+            return true;
+        }))->willReturn(['valid' => true, 'profile' => 'OET14_COMPILATION_RM_STRUCTURE', 'checks' => [], 'findings' => [], 'limitations' => [], 'clinical_approval' => false]);
+        $result = (new TemplateAuthoringService($ckm, new ModelValidator(), $engine))->generateOet('BOM sources', $root, [$entry], archetypes: $sources);
+        self::assertSame('DRAFT', $result['status']);
+        self::assertSame('PASS', $result['native_compile_check']['status']);
+        self::assertSame($sources[0]['content'], $result['dependencies'][0]['content']);
+        self::assertSame(hash('sha256', $sources[1]['content']), $result['provenance'][$entry]['sha256']);
+        self::assertFalse($result['clinical_approval']);
+    }
+
+    public function test_tool_errors_identify_source_constraints_without_echoing_submitted_data(): void
+    {
+        $service = new TemplateAuthoringService($this->source(), new ModelValidator());
+        $root = self::ARCHETYPES['composition']['id'];
+        $entry = self::ARCHETYPES['evaluation']['id'];
+        $response = \OpenEHR\Assistant\Helpers\ToolResult::run(fn (): array => $service->generateOet('Mismatch', $root, [$entry], archetypes: [
+            ['identifier' => $root, 'content' => "archetype\n" . $entry . "\nSECRET-SUBMITTED-SOURCE"],
+        ]));
+        self::assertSame('INVALID_INPUT', $response['error']['code']);
+        self::assertStringContainsString('archetypes[0]', $response['error']['message']);
+        self::assertStringContainsString('match its ADL declaration', $response['error']['message']);
+        self::assertStringNotContainsString('SECRET-SUBMITTED-SOURCE', json_encode($response, JSON_THROW_ON_ERROR));
+        $response = \OpenEHR\Assistant\Helpers\ToolResult::run(fn (): array => $service->generateOet('No entries', $root, []));
+        self::assertStringContainsString('exactly one', $response['error']['message']);
+        $response = \OpenEHR\Assistant\Helpers\ToolResult::run(static fn (): array => throw new \InvalidArgumentException('SECRET-RAW-FAILURE'));
+        self::assertSame('Input does not meet the documented operation constraints.', $response['error']['message']);
+    }
+
     private function source(): ArchetypeSource
     {
         return new class implements ArchetypeSource {
@@ -148,7 +190,7 @@ final class TemplateAuthoringTest extends TestCase
             $service->generateOet('Nested fixture', 'composition', [], placements: $placements);
             self::fail('A CLUSTER was accepted as a direct SECTION item.');
         } catch (\InvalidArgumentException $error) {
-            self::assertSame('The child RM class is not a supported placement for its parent.', $error->getMessage());
+            self::assertSame('placements: The child RM class is not a supported placement for its parent.', $error->getMessage());
         }
 
         $placements = $this->placements();
@@ -159,7 +201,7 @@ final class TemplateAuthoringTest extends TestCase
             $service->generateOet('Nested fixture', 'composition', [], placements: $placements);
             self::fail('Repeated sibling path accepted.');
         } catch (\InvalidArgumentException $error) {
-            self::assertSame('Duplicate sibling placement path.', $error->getMessage());
+            self::assertSame('placements: Duplicate sibling placement path.', $error->getMessage());
         }
     }
 }
