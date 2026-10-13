@@ -7,13 +7,20 @@ services:
       - path: ${MODELLING_ENV_FILE:?Set MODELLING_ENV_FILE to the dev runtime configuration}
         required: true
   ingress:
-    networks: [default, proxy]
+    environment:
+      MODELLING_APP_UPSTREAM: openehr-modelling-dev-app-1:9000
+      MODELLING_CHAT_UPSTREAM: openehr-modelling-dev-chat-1:8350
+    networks:
+      default: {}
+      proxy:
+        ipv4_address: 172.18.0.242
     labels:
       - traefik.enable=true
       - traefik.docker.network=hygeoniq-proxy
       - traefik.http.routers.openehr-modelling-dev.rule=Host(`dev-openehr-modelling.sandbox.hygeoniq.com`)
       - traefik.http.routers.openehr-modelling-dev.entrypoints=websecure
       - traefik.http.routers.openehr-modelling-dev.tls=true
+      - traefik.http.routers.openehr-modelling-dev.service=openehr-modelling-dev
       - traefik.http.services.openehr-modelling-dev.loadbalancer.server.port=8343
 networks:
   proxy:

@@ -228,8 +228,8 @@ requirements:
     canonical: docs/requirements.md
     status: draft
     implementation: landed
-    packages: [src/Auth/*.php, src/Integrations/Auth/*.php, src/Apis/HttpClientFactory.php, src/Helpers/ToolResult.php]
-    tests: [tests/Enterprise/ConfigurationAndAuthTest.php, tests/Enterprise/OidcAuthenticationTest.php]
+    packages: [src/Auth/*.php, src/Integrations/Auth/*.php, src/Apis/HttpClientFactory.php, src/Helpers/ToolResult.php, src/Domain/Modelling/TemplateInputException.php]
+    tests: [tests/Enterprise/ConfigurationAndAuthTest.php, tests/Enterprise/OidcAuthenticationTest.php, tests/Enterprise/TemplateAuthoringTest.php]
     adr: ["0008", "0009", "0010", "0011"]
 
   - id: REQ-N12
@@ -237,7 +237,7 @@ requirements:
     canonical: docs/requirements.md
     status: draft
     implementation: landed
-    packages: [docs/MICROSOFT_AGENT_INTEGRATION.md, docs/MCP_CLIENTS.md, Dockerfile, docker-compose.yml, scripts/mcp-smoke.py, scripts/deploy-images.sh, scripts/delivery-images.py, scripts/delivery-git-mount.sh, deploy/compose.images.yml, deploy/compose.engine-images.yml, .github/workflows/deploy-vps.yml, .github/workflows/build-images.yml, .github/workflows/release.yml]
+    packages: [docs/MICROSOFT_AGENT_INTEGRATION.md, docs/MCP_CLIENTS.md, Dockerfile, docker-compose.yml, scripts/mcp-smoke.py, scripts/deploy-images.sh, scripts/delivery-images.py, scripts/delivery-git-mount.sh, deploy/compose.images.yml, deploy/compose.engine-images.yml, .github/workflows/deploy-vps.yml, .github/workflows/build-images.yml, .github/workflows/release.yml, .docker/Caddyfile, deploy/compose.dev-host.yml]
     tests: [tests/Content/InstallDocContractTest.php, scripts/test-image-delivery.py]
     adr: ["0008"]
 

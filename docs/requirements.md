@@ -87,3 +87,8 @@ Native ADL 2/OPT 2 compilation and AQL syntax parsing are available through the 
 | **REQ-F24** | Provide a separate AQL workspace with native syntax and exact-template path validation, model-derived queries, automatic revision-pinned template dependency loading, exact-path completion and assistant query drafting directly into the query editor from loaded artefacts, bounded encrypted revision-aware archetype caching, profile-private encrypted CDR connections, standard read-only Query API execution, cancellation, bounded results, user-and-environment-scoped saved queries/history and remote template inspection while prohibiting AI query execution, result access and reads of potentially identifying query-library contents; results are not persisted. | [CDR workspace](CDR_WORKSPACE.md), provider-neutral CDR adapter and controlled MCP tools |
 
 | **REQ-F25** | Execute browser AI tasks with configurable context budgets, selective tool/source retrieval, bounded session affinity and independent-review isolation; persist project task handoffs, exact drafts, dependency packages and usage/evidence outside chat history while preserving repository/decision authority, identity boundaries and revision-conditional writes. | [Task execution](TASK_EXECUTION.md), browser task orchestrator and provider adapters |
+
+Template source validation accepts an optional leading UTF-8 BOM for inspection
+while retaining original dependency bytes and hashes (REQ-F13). Fixed template
+constraint messages may identify the input field/source index; arbitrary exception
+text and source content remain redacted (REQ-N11). No draft check confers approval.

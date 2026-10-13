@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OpenEHR\Assistant\Helpers;
 
+use OpenEHR\Assistant\Domain\Modelling\TemplateInputException;
+
 /** Shared error envelope for new deterministic services; legacy tool contracts remain intact. */
 final class ToolResult
 {
@@ -36,7 +38,7 @@ final class ToolResult
                 $code = $e->getMessage();
             }
             return ['success' => false, 'result' => null, 'error' => ['code' => $code,
-                'message' => match ($code) {
+                'message' => $e instanceof TemplateInputException ? $e->getMessage() : match ($code) {
                     'INVALID_INPUT' => 'Input does not meet the documented operation constraints.',
                     'REVISION_CONFLICT' => 'The artefact changed. Read the current revision before retrying.',
                     'WRITES_DISABLED' => 'Repository writes are disabled by deployment configuration.',
