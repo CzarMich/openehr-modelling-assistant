@@ -73,9 +73,11 @@ project,path=sys.argv[1:]
 ids=subprocess.check_output(['docker','ps','-q','--filter','label=com.docker.compose.project='+project],text=True).split()
 items=json.loads(subprocess.check_output(['docker','inspect',*ids])) if ids else []
 services={i['Config']['Labels']['com.docker.compose.service']:i['Image'] for i in items if i['Config']['Labels']['com.docker.compose.service'] in ['app','chat','ingress','engine']}
-app=next((i for i in items if i['Config']['Labels']['com.docker.compose.service']=='app'),None)
-labels=app['Config']['Labels'] if app else {}
-json.dump({'images':services,'cwd':labels.get('com.docker.compose.project.working_dir'),'files':labels.get('com.docker.compose.project.config_files','').split(',') if app else [],'environmentFiles':labels.get('com.docker.compose.project.environment_file','').split(',') if app else []},open(path,'w'))
+# The ingress can have an operator recovery overlay absent from the app labels.
+stack=next((i for i in items if i['Config']['Labels']['com.docker.compose.service']=='ingress'),None)
+if stack is None: stack=next((i for i in items if i['Config']['Labels']['com.docker.compose.service']=='app'),None)
+labels=stack['Config']['Labels'] if stack else {}
+json.dump({'images':services,'cwd':labels.get('com.docker.compose.project.working_dir'),'files':labels.get('com.docker.compose.project.config_files','').split(',') if stack else [],'environmentFiles':labels.get('com.docker.compose.project.environment_file','').split(',') if stack else []},open(path,'w'))
 PY
 rollback() {
   echo 'Deployment failed; restoring recorded images without rebuilding or deleting volumes.' >&2

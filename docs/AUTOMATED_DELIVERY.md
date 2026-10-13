@@ -44,3 +44,13 @@ This automation concerns distributable application container and deployment pack
 ## Verification
 
 `python3 scripts/test-image-delivery.py` checks source mismatches, missing components, mutable/untrusted registry references, invalid deployment selectors and rendered Compose settings/volume names. CI runs these boundaries alongside the existing PHP, browser, native-engine, persistence and protocol checks. Full delivery is complete only after both protected environments pass health and authenticated MCP smoke tests.
+
+## Shared Dev routing
+
+The Dev ingress reserves `172.18.0.242` on `hygeoniq-proxy`, distinct from the
+openEHR/FHIR Modeller fork gateway (`172.18.0.241`). These are internal Docker
+addresses; LAN DNS keeps each separate hostname on host `192.168.178.20`.
+The Dev overlay supplies `MODELLING_APP_UPSTREAM` and `MODELLING_CHAT_UPSTREAM`
+using unique project container names. Generic `app` and `chat` aliases can resolve
+to unrelated containers on the shared proxy network, making readiness fail and
+Traefik return 404. Isolated local and production projects retain Caddy defaults.

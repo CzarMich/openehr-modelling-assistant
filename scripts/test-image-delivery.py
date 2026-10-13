@@ -72,6 +72,23 @@ class DeliveryTests(unittest.TestCase):
             self.assertEqual(config['volumes']['chat-data']['name'], 'openehr-modelling-dev_chat-data')
             self.assertEqual(config['volumes']['governance-postgres']['name'], 'openehr-modelling-dev_governance-postgres')
 
+    def test_shared_dev_gateway_uses_its_own_address_and_upstreams(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory) / 'runtime.env'
+            runtime.write_text('')
+            env = dict(os.environ, MODELLING_ENV_FILE=str(runtime))
+            result = subprocess.run(['docker', 'compose', '-p', 'openehr-modelling-dev',
+                '-f', 'docker-compose.yml', '-f', 'deploy/compose.dev-host.yml',
+                'config', '--format', 'json'], cwd=ROOT, env=env, capture_output=True, text=True, check=True)
+        ingress = json.loads(result.stdout)['services']['ingress']
+        self.assertEqual(ingress['networks']['proxy']['ipv4_address'], '172.18.0.242')
+        self.assertEqual(ingress['environment']['MODELLING_APP_UPSTREAM'], 'openehr-modelling-dev-app-1:9000')
+        self.assertEqual(ingress['environment']['MODELLING_CHAT_UPSTREAM'], 'openehr-modelling-dev-chat-1:8350')
+        self.assertEqual(ingress['labels']['traefik.http.routers.openehr-modelling-dev.service'], 'openehr-modelling-dev')
+        caddy = (ROOT / '.docker/Caddyfile').read_text()
+        upstreams = [line.strip().split()[1] for line in caddy.splitlines() if line.strip().startswith('reverse_proxy ')]
+        self.assertEqual(set(upstreams), {'{$MODELLING_APP_UPSTREAM:app:9000}', '{$MODELLING_CHAT_UPSTREAM:chat:8350}'})
+
     def test_wrong_environment_or_revision_cannot_start_a_deployment(self):
         for args in [('unexpected', SHA), ('production', 'moving-main')]:
             result = subprocess.run(['bash', str(ROOT / 'scripts/deploy-images.sh'), *args], capture_output=True, text=True)

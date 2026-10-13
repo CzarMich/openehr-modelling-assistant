@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- Isolate Dev gateway addresses and upstreams on shared Docker networks.
+
 - Template drafting accepts UTF-8 BOM sources and reports safe input constraint details.
 
 - Use neutral maintainer attribution in project documentation.
