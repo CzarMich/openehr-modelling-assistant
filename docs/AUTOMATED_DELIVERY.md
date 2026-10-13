@@ -23,6 +23,18 @@ Managed browser URLs:
 
 Dev uses LAN/VPN name mapping and the trusted development CA. Each browser now declares SVG, ICO and PNG touch icons; gateway and browser service routes serve them without a sign-in requirement.
 
+The shorter Dev browser hostname `dev-openehr-modeller.sandbox.hygeoniq.com`
+redirects to the original openEHR application's canonical `dev-openehr-modelling`
+hostname, preserving the path and query. Keep both names mapped to the Dev host;
+the redirect preserves the existing sign-in origin, identity issuer and sessions.
+Use the canonical URL directly for MCP clients. The openEHR/FHIR fork retains
+its separate `dev-openehr-fhir-modeller` hostname.
+
+```text
+192.168.178.20 dev-openehr-modeller.sandbox.hygeoniq.com dev-openehr-modelling.sandbox.hygeoniq.com
+192.168.178.20 dev-openehr-fhir-modeller.sandbox.hygeoniq.com
+```
+
 ## Host setup and persistence
 
 The dedicated Dev runner has labels `self-hosted, Linux, X64, openehr-modelling-dev`. Only successfully validated current main reaches it. Its managed state is `/opt/hygeoniq/projects/openehr-modelling-assistant`; production uses `/opt/openehr-modelling-assistant`. Each host requires `config/deploy-environment` containing `development` or `production`, plus its existing protected `runtime.env`, browser `chat.env` and optional service/Git/storage keys. The workflow reuses `MODELLING_VPS_SSH_KEY` and pinned `MODELLING_VPS_KNOWN_HOSTS` for production. GHCR uses the short-lived workflow token in an isolated Docker configuration that is removed after delivery.
