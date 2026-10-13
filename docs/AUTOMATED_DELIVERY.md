@@ -66,3 +66,5 @@ The Dev overlay supplies `MODELLING_APP_UPSTREAM` and `MODELLING_CHAT_UPSTREAM`
 using unique project container names. Generic `app` and `chat` aliases can resolve
 to unrelated containers on the shared proxy network, making readiness fail and
 Traefik return 404. Isolated local and production projects retain Caddy defaults.
+
+When the native engine is configured, managed delivery also verifies actual legacy/native ADL parsing, specialisation compilation and missing-parent rejection using read-only synthetic inputs. Readiness checks the private listener without running heavy compiler work.

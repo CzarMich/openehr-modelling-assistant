@@ -106,7 +106,9 @@ file,origin,evidence=sys.argv[1:]
 for line in Path(file).read_text().splitlines():
  if line.startswith(('AUTH_API_KEY=','AUTH_API_KEY_HEADER=','MCP_SERVER_NAME=')):
   key,value=line.split('=',1);os.environ[key]=value.strip('"\'')
-subprocess.run(['python3','scripts/mcp-smoke.py','--url',origin+'/mcp','--evidence',evidence],check=True)
+command=['python3','scripts/mcp-smoke.py','--url',origin+'/mcp','--evidence',evidence]
+if Path(file).with_name('engine-key').is_file(): command.append('--openehr-engine')
+subprocess.run(command,check=True)
 PY
 printf '%s\n' "$revision" > "$state_dir/current-revision"
 cp "$release_dir/deployment/images.json" "$state_dir/deployment/evidence/$revision-images.json"

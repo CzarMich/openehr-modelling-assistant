@@ -97,6 +97,7 @@ final readonly class TemplateAuthoringService
                 }
             }
         }
+        $this->appendAncestors($nativeDependencies, $sources, $ckm, $overrides);
         $xml = $document->saveXML();
         if ($xml === false) {
             throw new \RuntimeException('OET serialization failed.');
@@ -235,6 +236,42 @@ final readonly class TemplateAuthoringService
                 'provenance' => ['kind' => 'supplied_source', 'sha256' => hash('sha256', $item['content'])]];
         }
         return $sources;
+    }
+
+    /** Resolve the complete exact legacy inheritance closure before compiling or retaining a package.
+     * @param list<array{identifier: string, content: string, sha256: string}> $dependencies
+     * @param array<string, array<string, mixed>> $provenance
+     * @param array<string, array{id: string, rm_class: string, content: string, provenance: array<string, mixed>}> $overrides */
+    private function appendAncestors(array &$dependencies, array &$provenance, ?string $ckm, array $overrides): void
+    {
+        $seen = array_fill_keys(array_column($dependencies, 'identifier'), true);
+        $bytes = array_sum(array_map(static fn (array $item): int => strlen($item['content']), $dependencies));
+        for ($index = 0; $index < count($dependencies); $index++) {
+            if (!preg_match('/\A(?:\xEF\xBB\xBF)?(?:\s|--[^\r\n]*(?:\r?\n|$))*archetype\b(?:\s*\([^)]*\))?\s+openEHR-[^\s;]+\s+speciali[sz]e\s+(openEHR-[^\s;]+)(?=\s|$)/', $dependencies[$index]['content'], $match)) {
+                continue;
+            }
+            $identifier = $match[1];
+            if (!preg_match(ModelValidator::ARCHETYPE_ID, $identifier)) {
+                throw new \InvalidArgumentException('Invalid specialisation parent identifier.');
+            }
+            if (isset($seen[$identifier])) {
+                continue;
+            }
+            if (count($dependencies) >= 64) {
+                throw new \InvalidArgumentException('ENGINE_DEPENDENCY_LIMIT');
+            }
+            $parent = $this->source($identifier, $ckm, $overrides);
+            if ($parent['id'] !== $identifier) {
+                throw new \RuntimeException('ENGINE_DEPENDENCY_ID_MISMATCH');
+            }
+            $bytes += strlen($parent['content']);
+            if ($bytes > 6291456) {
+                throw new \InvalidArgumentException('Exact archetype sources exceed 6 MiB.');
+            }
+            $seen[$identifier] = true;
+            $dependencies[] = ['identifier' => $identifier, 'content' => $parent['content'], 'sha256' => hash('sha256', $parent['content'])];
+            $provenance[$identifier] = $parent['provenance'];
+        }
     }
 
     /** @param array<string, array{id: string, rm_class: string, content: string, provenance: array<string, mixed>}> $overrides
