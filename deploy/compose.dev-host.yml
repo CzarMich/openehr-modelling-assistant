@@ -22,6 +22,14 @@ services:
       - traefik.http.routers.openehr-modelling-dev.tls=true
       - traefik.http.routers.openehr-modelling-dev.service=openehr-modelling-dev
       - traefik.http.services.openehr-modelling-dev.loadbalancer.server.port=8343
+      - traefik.http.routers.openehr-modelling-dev-alias.rule=Host(`dev-openehr-modeller.sandbox.hygeoniq.com`)
+      - traefik.http.routers.openehr-modelling-dev-alias.entrypoints=websecure
+      - traefik.http.routers.openehr-modelling-dev-alias.tls=true
+      - traefik.http.routers.openehr-modelling-dev-alias.service=openehr-modelling-dev
+      - traefik.http.routers.openehr-modelling-dev-alias.middlewares=openehr-modelling-dev-canonical
+      - traefik.http.middlewares.openehr-modelling-dev-canonical.redirectregex.regex=^https://dev-openehr-modeller\.sandbox\.hygeoniq\.com(?::443)?(/.*)$$
+      - traefik.http.middlewares.openehr-modelling-dev-canonical.redirectregex.replacement=https://dev-openehr-modelling.sandbox.hygeoniq.com$${1}
+      - traefik.http.middlewares.openehr-modelling-dev-canonical.redirectregex.permanent=false
 networks:
   proxy:
     external: true

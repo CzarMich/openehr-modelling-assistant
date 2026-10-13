@@ -85,6 +85,26 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(ingress['environment']['MODELLING_APP_UPSTREAM'], 'openehr-modelling-dev-app-1:9000')
         self.assertEqual(ingress['environment']['MODELLING_CHAT_UPSTREAM'], 'openehr-modelling-dev-chat-1:8350')
         self.assertEqual(ingress['labels']['traefik.http.routers.openehr-modelling-dev.service'], 'openehr-modelling-dev')
+        labels = ingress['labels']
+        router = 'traefik.http.routers.openehr-modelling-dev-alias.'
+        self.assertEqual(labels[router + 'rule'], 'Host(`dev-openehr-modeller.sandbox.hygeoniq.com`)')
+        self.assertEqual(labels[router + 'entrypoints'], 'websecure')
+        self.assertEqual(labels[router + 'tls'], 'true')
+        self.assertEqual(labels[router + 'service'], 'openehr-modelling-dev')
+        self.assertEqual(labels[router + 'middlewares'], 'openehr-modelling-dev-canonical')
+        middleware = 'traefik.http.middlewares.openehr-modelling-dev-canonical.redirectregex.'
+        # Compose's serialized config may re-escape dollars for a subsequent read.
+        pattern = labels[middleware + 'regex'].replace('$$', '$')
+        replacement = labels[middleware + 'replacement'].replace('$$', '$')
+        self.assertEqual(replacement, 'https://dev-openehr-modelling.sandbox.hygeoniq.com${1}')
+        self.assertEqual(labels[middleware + 'permanent'], 'false')
+        for suffix in ['/', '/chat/', '/chat/?scope=global', '/chat/auth/login']:
+            for port in ['', ':443']:
+                match = re.fullmatch(pattern, 'https://dev-openehr-modeller.sandbox.hygeoniq.com' + port + suffix)
+                self.assertIsNotNone(match)
+                self.assertEqual(match.group(1), suffix)
+        for host in ['dev-openehr-fhir-modeller.sandbox.hygeoniq.com', 'dev-openehr-modeller.sandbox.hygeoniq.com.evil.example']:
+            self.assertIsNone(re.fullmatch(pattern, 'https://' + host + '/chat/'))
         caddy = (ROOT / '.docker/Caddyfile').read_text()
         upstreams = [line.strip().split()[1] for line in caddy.splitlines() if line.strip().startswith('reverse_proxy ')]
         self.assertEqual(set(upstreams), {'{$MODELLING_APP_UPSTREAM:app:9000}', '{$MODELLING_CHAT_UPSTREAM:chat:8350}'})
